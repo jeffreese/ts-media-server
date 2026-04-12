@@ -1,0 +1,40 @@
+---
+description: Vitest testing conventions and patterns
+globs: ["test/**/*.ts", "**/*.test.ts", "**/*.spec.ts", "vitest.config.ts"]
+---
+
+# Testing Conventions
+
+## Framework
+
+- Vitest with ESM support
+- Test files mirror `src/` structure under `test/` (e.g., `test/services/thumbnail.test.ts`)
+- Alternatively, co-locate as `*.test.ts` next to source files
+
+## Patterns
+
+- Use `describe`/`it` blocks with descriptive names
+- Prefer `expect` assertions over manual checks
+- Use `beforeEach`/`afterEach` for setup and teardown
+- Use `vi.mock()` for module mocking, `vi.fn()` for function stubs
+- Mock `child_process.execFile` for FFmpeg tests (don't require FFmpeg in CI)
+- Use in-memory SQLite for database tests (`:memory:`)
+
+## What to Test
+
+- Service logic: input → output, edge cases, error conditions
+- Route handlers: request/response shape, auth enforcement, status codes
+- Utility functions: pure functions with known inputs/outputs
+- Security filter: per-model access control rules
+
+## What Not to Test
+
+- Drizzle schema definitions (tested implicitly by migrations)
+- sharp/onnxruntime internals (trust the library, test your wrapper)
+- Fastify framework behavior (test your handlers, not the framework)
+
+## Running Tests
+
+- `pnpm test` — run all tests once
+- `pnpm vitest run path/to/test.ts` — run a single test file
+- `pnpm test:watch` — watch mode for development

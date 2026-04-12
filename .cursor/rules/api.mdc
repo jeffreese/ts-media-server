@@ -1,0 +1,47 @@
+---
+description: Fastify route patterns, authentication, and API conventions
+globs: ["src/server/**/*.ts"]
+---
+
+# API Conventions
+
+## Fastify Route Structure
+
+Routes are registered as Fastify plugins. Each route file exports an async function:
+
+```typescript
+import type { FastifyInstance } from 'fastify';
+
+export async function imageRoutes(app: FastifyInstance) {
+  app.get('/image/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
+    // handler
+  });
+}
+```
+
+## Authentication
+
+- JWT via `@fastify/jwt` — tokens issued at `POST /auth/login`
+- Protected routes use `preHandler: [app.authenticate]`
+- Disabled auth mode: bypass when `auth_status` setting is `"disabled"`
+- BCrypt cost factor 12 for password hashing
+- Admin-only endpoints check access level via security filter preHandler
+
+## Route Organization
+
+- `src/server/routes/` — Custom endpoint handlers
+- `src/server/routes/models/` — Auto-generated CRUD for Drizzle tables
+- Generic CRUD: GET (by id), LIST (offset/limit pagination), SAVE (create/update), DELETE
+
+## Response Patterns
+
+- Media serving routes (`/image`, `/video`, `/face`) use version-based caching with 301 redirects
+- Settings API returns plain text for GET, accepts JSON for POST
+- CRUD routes return JSON
+- Use Fastify's `reply.send()` for JSON, `reply.type().send()` for other content types
+
+## WebSocket
+
+- `@fastify/websocket` for real-time event broadcasting
+- Message format: `action,model,id,userId`
+- NotificationService (EventEmitter) bridges between services and WebSocket clients

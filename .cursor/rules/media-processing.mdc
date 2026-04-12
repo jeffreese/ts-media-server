@@ -1,0 +1,52 @@
+---
+description: Image processing, video processing, face detection, and perceptual hashing patterns
+globs: ["src/services/**/*.ts", "src/utils/image.ts", "src/utils/ffmpeg.ts"]
+---
+
+# Media Processing Conventions
+
+## Image Processing (sharp)
+
+- sharp handles all image formats: JPEG, PNG, WebP, TIFF, HEIC
+- Auto-rotate based on EXIF orientation before any other operation
+- Resize preserving aspect ratio (`sharp.resize({ fit: 'inside' })`)
+- Sharpen small thumbnails (≤300px)
+- JPEG quality: 100% for ≤300px thumbnails, 90% for larger
+- For ONNX preprocessing: convert to raw RGB pixel buffer via `sharp.raw().toBuffer()`
+
+## Thumbnails
+
+- 5 resolution tiers: 1920x1080, 1280x720, 640x480, 300x300, 150x100
+- Stored as individual JPEG files in `.thumbnails/` subdirectory
+- Naming: `{name}_{width}.jpg`
+- Skip tiers larger than the source image
+- Atomic writes: temp file + rename
+
+## Video Processing (FFmpeg)
+
+- FFmpeg/ffprobe called via `child_process.execFile` (not `exec` — avoids shell injection)
+- Frame extraction at 4-second mark for video thumbnails
+- MOV → MP4: stream copy (fast). Other formats → MP4: libx264 + yuv420p + faststart
+- Metadata via `ffprobe -v quiet -print_format json -show_format -show_streams`
+
+## Face Detection (onnxruntime-node)
+
+- YuNet ONNX model for detection, SFace for recognition
+- Resize input to 600px max width for detection performance
+- Scale coordinates back to original dimensions after detection
+- Filter out images with >20 detections (false positive heuristic)
+- Generate 300px max face thumbnail crops stored as blob in DB
+- Cosine similarity for face comparison (threshold: 0.363)
+- Transitive matching via BFS up to 10 levels deep
+
+## Perceptual Hashing
+
+- Resize to 32x32 grayscale → DCT → extract top-left 8x8 low-frequency coefficients → binary hash from median comparison
+- Hamming distance via XOR + popcount
+- Two-phase matching: in-memory cache for recent items, then batched DB scan
+
+## Concurrency
+
+- `p-limit` controls concurrent file processing (default: CPU core count)
+- sharp and onnxruntime manage their own native thread pools
+- Never use unbounded `Promise.all` on large file lists
