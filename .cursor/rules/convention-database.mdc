@@ -23,6 +23,7 @@ globs: ["src/db/**/*.ts", "drizzle/**/*", "drizzle.config.ts"]
 ## SQLite Configuration
 
 - WAL mode enabled for concurrent reads during writes
+- `foreign_keys = ON` for referential integrity enforcement
 - `busy_timeout` pragma set to handle lock contention
 - Serialize writes through an async queue if needed to prevent `SQLITE_BUSY`
 

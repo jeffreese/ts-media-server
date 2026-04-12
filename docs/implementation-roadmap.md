@@ -57,11 +57,11 @@ Establish the project structure, toolchain, and core infrastructure that everyth
 Set up the database layer that all data operations depend on.
 
 ### SQLite + SpatiaLite Setup
-- [ ] Install `better-sqlite3`, `@types/better-sqlite3`
-- [ ] Create database client (`src/db/client.ts`): open SQLite database, enable WAL mode, set `busy_timeout` pragma
-- [ ] Implement SpatiaLite extension loading with auto-detection of common install paths
-- [ ] Initialize SpatiaLite metadata tables (`InitSpatialMetaData`)
-- [ ] Write tests for database creation, WAL mode, and SpatiaLite loading
+- [x] Install `better-sqlite3`, `@types/better-sqlite3`
+- [x] Create database client (`src/db/client.ts`): open SQLite database, enable WAL mode, set `busy_timeout` pragma
+- [x] Implement SpatiaLite extension loading with auto-detection of common install paths
+- [x] Initialize SpatiaLite metadata tables (`InitSpatialMetaData`)
+- [x] Write tests for database creation, WAL mode, and SpatiaLite loading
 
 ### Drizzle ORM Setup
 - [ ] Install `drizzle-orm`, `drizzle-kit`
