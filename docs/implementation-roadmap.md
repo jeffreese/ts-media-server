@@ -211,14 +211,14 @@ Build the low-level utility modules that the indexing and serving layers depend 
 - [x] Write tests for hash computation (known images), Hamming distance calculation
 
 ### Hash Matching Service
-- [ ] Implement hash matching in `src/services/file-index.ts` (or separate `src/services/hash-matcher.ts`):
-  - [ ] `matchHash(mediaId, hash)` — compare against all existing hashes
-  - [ ] Two-phase matching: in-memory cache for recent items, then batched DB scan
-  - [ ] Hamming distance threshold (0 = exact match)
-  - [ ] Deduplication: skip comparisons where targetId >= sourceId
-  - [ ] Check for existing match records before inserting
-  - [ ] Create `media_match` records with match info (hamming_distance, match_date)
-- [ ] Write tests for matching logic, deduplication, batch scanning
+- [x] Implement hash matching in `src/services/file-index.ts` (or separate `src/services/hash-matcher.ts`):
+  - [x] `matchHash(mediaId, hash)` — compare against all existing hashes
+  - [x] Two-phase matching: in-memory cache for recent items, then batched DB scan
+  - [x] Hamming distance threshold (0 = exact match)
+  - [x] Deduplication: skip comparisons where targetId >= sourceId
+  - [x] Check for existing match records before inserting
+  - [x] Create `media_match` records with match info (hamming_distance, match_date)
+- [x] Write tests for matching logic, deduplication, batch scanning
 
 ---
 
