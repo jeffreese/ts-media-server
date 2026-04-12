@@ -183,19 +183,19 @@ Build the low-level utility modules that the indexing and serving layers depend 
 ## Phase 4: Thumbnail Generation
 
 ### Thumbnail Service
-- [ ] Implement `src/services/thumbnail.ts`:
-  - [ ] Define 5 resolution tiers: 1920x1080, 1280x720, 640x480, 300x300, 150x100
-  - [ ] `createThumbnails(image, primaryFile)` — generate all applicable tiers
-  - [ ] Skip tiers larger than the source image
-  - [ ] Apply sharpening for ≤300px thumbnails
-  - [ ] Set JPEG quality: 100% for ≤300px, 90% for larger
-  - [ ] Write to `.thumbnails` subdirectory with naming convention: `{name}_{width}.jpg`
-  - [ ] Atomic writes via temp file + rename
-  - [ ] `getThumbnailDirectory(file)` — return `.thumbnails` path for a given file
-  - [ ] `getThumbnailPath(file, width)` — return path for a specific thumbnail size
-  - [ ] `deleteThumbnails(directory)` — recursively delete all `.thumbnails` subdirectories
-  - [ ] `listThumbnails(mediaId)` — list available thumbnail sizes for a media item
-- [ ] Write tests for thumbnail generation, tier selection, naming, quality settings
+- [x] Implement `src/services/thumbnail.ts`:
+  - [x] Define 5 resolution tiers: 1920x1080, 1280x720, 640x480, 300x300, 150x100
+  - [x] `createThumbnails(image, primaryFile)` — generate all applicable tiers
+  - [x] Skip tiers larger than the source image
+  - [x] Apply sharpening for ≤300px thumbnails
+  - [x] Set JPEG quality: 100% for ≤300px, 90% for larger
+  - [x] Write to `.thumbnails` subdirectory with naming convention: `{name}_{width}.jpg`
+  - [x] Atomic writes via temp file + rename
+  - [x] `getThumbnailDirectory(file)` — return `.thumbnails` path for a given file
+  - [x] `getThumbnailPath(file, width)` — return path for a specific thumbnail size
+  - [x] `deleteThumbnails(directory)` — recursively delete all `.thumbnails` subdirectories
+  - [x] `listThumbnails(mediaId)` — list available thumbnail sizes for a media item
+- [x] Write tests for thumbnail generation, tier selection, naming, quality settings
 
 ---
 
