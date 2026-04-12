@@ -16,7 +16,6 @@ export const MODEL_REGISTRY: Record<string, SQLiteTableWithColumns<any>> = {
   host: schema.host,
   path: schema.path,
   file: schema.file,
-  mediaItem: schema.mediaItem,
   keyword: schema.keyword,
   mediaMatch: schema.mediaMatch,
   mediaAccess: schema.mediaAccess,

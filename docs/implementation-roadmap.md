@@ -459,9 +459,9 @@ This is the core indexing engine that ties together all the services from Phases
 - [x] Write tests for thumbnail listing
 
 ### Media Item Details
-- [ ] Implement media item route (`src/server/routes/media-item.ts`):
-  - [ ] `GET /mediaItem/:id` — retrieve media item details (exclude files from response)
-- [ ] Write tests for media item retrieval
+- [x] Implement media item route (`src/server/routes/media-item.ts`):
+  - [x] `GET /mediaItem/:id` — retrieve media item details (exclude files from response)
+- [x] Write tests for media item retrieval
 
 ### File Browser (Admin)
 - [ ] Implement dir routes (`src/server/routes/dir.ts`):
