@@ -64,55 +64,55 @@ Set up the database layer that all data operations depend on.
 - [x] Write tests for database creation, WAL mode, and SpatiaLite loading
 
 ### Drizzle ORM Setup
-- [ ] Install `drizzle-orm`, `drizzle-kit`
-- [ ] Configure `drizzle.config.ts`
-- [ ] Define Drizzle schema (`src/db/schema.ts`) for all 33 tables:
+- [x] Install `drizzle-orm`, `drizzle-kit`
+- [x] Configure `drizzle.config.ts`
+- [x] Define Drizzle schema (`src/db/schema.ts`) for all 33 tables:
 
 #### Core Media Tables
-- [ ] `host` table (id, name, description, metadata)
-- [ ] `path` table (id, dir, hostId) with unique index on (dir, hostId)
-- [ ] `file` table (id, name, extension, pathId, type, date, size, hash, metadata) with unique index on (pathId, name, extension)
-- [ ] `media_item` table (id, name, description, type, startDate, endDate, hash, location, info)
-- [ ] `media_item_file` junction table (mediaItemId, fileId, isPrimary)
-- [ ] `keyword` table (id, word) with unique constraint
-- [ ] `media_item_keyword` junction table (mediaItemId, keywordId)
-- [ ] `media_match` table (id, mediaItemId, matchingItemId, matchInfo, ignoreMatch)
-- [ ] `media_access` table (id, itemId, groupId, readOnly)
-- [ ] `media_log` table (id, itemId, userId, date, action)
-- [ ] `folder` table (id, name, description, parentId, info) with unique index on (name, parentId)
-- [ ] `folder_entry` table (id, folderId, itemId, index, info) with unique index on (folderId, itemId)
+- [x] `host` table (id, name, description, metadata)
+- [x] `path` table (id, dir, hostId) with unique index on (dir, hostId)
+- [x] `file` table (id, name, extension, pathId, type, date, size, hash, metadata) with unique index on (pathId, name, extension)
+- [x] `media_item` table (id, name, description, type, startDate, endDate, hash, location, info)
+- [x] `media_item_file` junction table (mediaItemId, fileId, isPrimary)
+- [x] `keyword` table (id, word) with unique constraint
+- [x] `media_item_keyword` junction table (mediaItemId, keywordId)
+- [x] `media_match` table (id, mediaItemId, matchingItemId, matchInfo, ignoreMatch)
+- [x] `media_access` table (id, itemId, groupId, readOnly)
+- [x] `media_log` table (id, itemId, userId, date, action)
+- [x] `folder` table (id, name, description, parentId, info) with unique index on (name, parentId)
+- [x] `folder_entry` table (id, folderId, itemId, index, info) with unique index on (folderId, itemId)
 
 #### Feature/Face Tables
-- [ ] `feature` table (id, itemId, coordinates, thumbnail, label, info)
-- [ ] `feature_match` table (id, featureId, matchingFeatureId, matchInfo, ignoreMatch)
+- [x] `feature` table (id, itemId, coordinates, thumbnail, label, info)
+- [x] `feature_match` table (id, featureId, matchingFeatureId, matchInfo, ignoreMatch)
 
 #### People/Places Tables
-- [ ] `person` table (id, gender, birthday, info)
-- [ ] `person_name` table (id, personId, name, preferred, info)
-- [ ] `person_address` table (id, addressId, personId, type, preferred, info)
-- [ ] `person_contact` table (id, personId, contact, type, info)
-- [ ] `person_feature` table (id, featureId, personId, info)
-- [ ] `place` table (id, location, info)
-- [ ] `place_name` table (id, placeId, name, preferred, info)
-- [ ] `place_media` table (id, mediaId, placeId, info)
-- [ ] `address` table (id, street, city, state, postalCode, searchTerm, placeId)
+- [x] `person` table (id, gender, birthday, info)
+- [x] `person_name` table (id, personId, name, preferred, info)
+- [x] `person_address` table (id, addressId, personId, type, preferred, info)
+- [x] `person_contact` table (id, personId, contact, type, info)
+- [x] `person_feature` table (id, featureId, personId, info)
+- [x] `place` table (id, location, info)
+- [x] `place_name` table (id, placeId, name, preferred, info)
+- [x] `place_media` table (id, mediaId, placeId, info)
+- [x] `address` table (id, street, city, state, postalCode, searchTerm, placeId)
 
 #### User Management Tables
-- [ ] `user` table (id, personId, status)
-- [ ] `user_access` table (id, userId, componentId, level, info)
-- [ ] `user_authentication` table (id, userId, service, key, value, info)
-- [ ] `user_preference` table (id, userId, key, value)
-- [ ] `user_activity` table (id, userId, hour, minute, count)
-- [ ] `user_rating` table (id, userId, itemId, date, rating, comment)
-- [ ] `user_group` table (id, name, description)
-- [ ] `user_group_user` junction table (userGroupId, userId, isAdmin)
+- [x] `user` table (id, personId, status)
+- [x] `user_access` table (id, userId, componentId, level, info)
+- [x] `user_authentication` table (id, userId, service, key, value, info)
+- [x] `user_preference` table (id, userId, key, value)
+- [x] `user_activity` table (id, userId, hour, minute, count)
+- [x] `user_rating` table (id, userId, itemId, date, rating, comment)
+- [x] `user_group` table (id, name, description)
+- [x] `user_group_user` junction table (userGroupId, userId, isAdmin)
 
 #### System Tables
-- [ ] `component` table (id, key, label, description, info)
-- [ ] `setting` table (id, key, value)
-- [ ] `datatype` table (id, label)
-- [ ] `data` table (id, name, description, typeId, data, date, thumbnail)
-- [ ] `data_access` table (id, datasetId, groupId, readOnly)
+- [x] `component` table (id, key, label, description, info)
+- [x] `setting` table (id, key, value)
+- [x] `datatype` table (id, label)
+- [x] `data` table (id, name, description, typeId, data, date, thumbnail)
+- [x] `data_access` table (id, datasetId, groupId, readOnly)
 
 ### Migrations & Initialization
 - [ ] Generate initial Drizzle migration from schema
