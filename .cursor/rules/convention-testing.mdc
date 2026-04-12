@@ -17,8 +17,9 @@ globs: ["test/**/*.ts", "**/*.test.ts", "**/*.spec.ts", "vitest.config.ts"]
 - Prefer `expect` assertions over manual checks
 - Use `beforeEach`/`afterEach` for setup and teardown
 - Use `vi.mock()` for module mocking, `vi.fn()` for function stubs
+- ESM namespace objects are frozen — `vi.spyOn()` cannot intercept exports from `node:` built-in modules. Use `vi.mock()` with a factory instead, or test behavior at the integration level.
 - Mock `child_process.execFile` for FFmpeg tests (don't require FFmpeg in CI)
-- Use in-memory SQLite for database tests (`:memory:`)
+- Use in-memory SQLite for database tests (`:memory:`). Note: in-memory databases cannot use WAL mode — use a temp file when testing WAL-specific behavior.
 
 ## What to Test
 
