@@ -404,14 +404,14 @@ This is the core indexing engine that ties together all the services from Phases
 - [x] Write tests for CRUD operations, pagination, security enforcement
 
 ### User Management Routes
-- [ ] User CRUD with Person record linkage
-- [ ] User activity tracking:
-  - [ ] Increment request counter per user per minute (in-memory)
-  - [ ] Batch write to `user_activity` table on interval (every 2 minutes)
-  - [ ] Join last access data on user list queries
-- [ ] User preference upsert (create or update by key)
-- [ ] User group management with many-to-many user membership
-- [ ] Write tests for user creation, activity tracking, preference upsert
+- [x] User CRUD with Person record linkage
+- [x] User activity tracking:
+  - [x] Increment request counter per user per minute (in-memory)
+  - [x] Batch write to `user_activity` table on interval (every 2 minutes)
+  - [x] Join last access data on user list queries
+- [x] User preference upsert (create or update by key)
+- [x] User group management with many-to-many user membership
+- [x] Write tests for user creation, activity tracking, preference upsert
 
 ---
 

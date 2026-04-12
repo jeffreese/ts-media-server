@@ -11,6 +11,7 @@ import type { Config, LogLevel } from '../config/schema.js';
 import { authPlugin } from './auth.js';
 import { settingsPlugin } from './routes/settings.js';
 import { modelCrudPlugin } from './routes/models/index.js';
+import { userRoutesPlugin } from './routes/users.js';
 import type { NotificationService } from '../services/notification.js';
 
 const FILE_WATCH_DEBOUNCE_MS = 500;
@@ -63,6 +64,7 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
   if (db) {
     await server.register(authPlugin, { db });
     await server.register(settingsPlugin, { db });
+    await server.register(userRoutesPlugin, { db });
     await server.register(modelCrudPlugin, { db, notificationService });
   }
 
