@@ -429,11 +429,11 @@ This is the core indexing engine that ties together all the services from Phases
 - [x] Write tests for thumbnail selection, version redirect, path-based lookup
 
 ### Video Serving
-- [ ] Implement video route (`src/server/routes/video.ts`):
-  - [ ] `GET /video/:id` — serve MP4 file by media item ID
-  - [ ] Version-based caching with 301 redirect
-  - [ ] Stream file with appropriate Content-Type
-- [ ] Write tests for video serving, version redirect
+- [x] Implement video route (`src/server/routes/video.ts`):
+  - [x] `GET /video/:id` — serve MP4 file by media item ID
+  - [x] Version-based caching with 301 redirect
+  - [x] Stream file with appropriate Content-Type
+- [x] Write tests for video serving, version redirect
 
 ### Face Serving
 - [ ] Implement face routes (`src/server/routes/face.ts`):

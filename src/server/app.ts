@@ -13,6 +13,7 @@ import { settingsPlugin } from './routes/settings.js';
 import { modelCrudPlugin } from './routes/models/index.js';
 import { userRoutesPlugin } from './routes/users.js';
 import { imagePlugin } from './routes/image.js';
+import { videoPlugin } from './routes/video.js';
 import type { NotificationService } from '../services/notification.js';
 
 const FILE_WATCH_DEBOUNCE_MS = 500;
@@ -68,6 +69,7 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
     await server.register(userRoutesPlugin, { db });
     await server.register(modelCrudPlugin, { db, notificationService });
     await server.register(imagePlugin, { db });
+    await server.register(videoPlugin, { db });
   }
 
   let watcher: FSWatcher | undefined;
