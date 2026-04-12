@@ -202,13 +202,13 @@ Build the low-level utility modules that the indexing and serving layers depend 
 ## Phase 5: Perceptual Hashing & Duplicate Detection
 
 ### pHash Implementation
-- [ ] Implement `src/services/phash.ts`:
-  - [ ] `computeHash(image)` — resize to 32x32 grayscale, compute DCT, generate 64-bit hash
-  - [ ] `hammingDistance(hash1, hash2)` — XOR + popcount
-  - [ ] DCT implementation (2D discrete cosine transform on 32x32 matrix)
-  - [ ] Extract top-left 8x8 low-frequency coefficients
-  - [ ] Generate binary hash string from median comparison
-- [ ] Write tests for hash computation (known images), Hamming distance calculation
+- [x] Implement `src/services/phash.ts`:
+  - [x] `computeHash(image)` — resize to 32x32 grayscale, compute DCT, generate 64-bit hash
+  - [x] `hammingDistance(hash1, hash2)` — character comparison on binary hash string
+  - [x] DCT implementation (2D discrete cosine transform on 32x32 matrix)
+  - [x] Extract top-left 8x8 low-frequency coefficients
+  - [x] Generate binary hash string from median comparison
+- [x] Write tests for hash computation (known images), Hamming distance calculation
 
 ### Hash Matching Service
 - [ ] Implement hash matching in `src/services/file-index.ts` (or separate `src/services/hash-matcher.ts`):
