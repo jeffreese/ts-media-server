@@ -464,12 +464,12 @@ This is the core indexing engine that ties together all the services from Phases
 - [x] Write tests for media item retrieval
 
 ### File Browser (Admin)
-- [ ] Implement dir routes (`src/server/routes/dir.ts`):
-  - [ ] `GET /dir` — list files/directories on server filesystem (SysAdmin only)
-  - [ ] `POST /dir/upload` — upload files to server (SysAdmin only)
-  - [ ] `GET /dir/download` — download files from server (SysAdmin only)
-  - [ ] Validate SysAdmin access level
-- [ ] Write tests for file browsing, upload, download, admin enforcement
+- [x] Implement dir routes (`src/server/routes/dir.ts`):
+  - [x] `GET /dir` — list files/directories on server filesystem (SysAdmin only)
+  - [x] `POST /dir/upload` — upload files to server (SysAdmin only)
+  - [x] `GET /dir/download` — download files from server (SysAdmin only)
+  - [x] Validate SysAdmin access level
+- [x] Write tests for file browsing, upload, download, admin enforcement
 
 ---
 
