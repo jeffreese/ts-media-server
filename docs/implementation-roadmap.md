@@ -231,17 +231,17 @@ Build the low-level utility modules that the indexing and serving layers depend 
 - [x] Implement model loading and session creation
 
 ### Face Detection Service
-- [ ] Implement `src/services/face-detection.ts`:
-  - [ ] Load face detection ONNX model (YuNet or equivalent)
-  - [ ] Preprocess image with sharp: resize to model input dimensions, convert to RGB buffer, normalize
-  - [ ] Run inference via onnxruntime-node
-  - [ ] Post-process detections: extract bounding boxes, confidence scores, facial landmarks
-  - [ ] Scale coordinates back to original image dimensions
-  - [ ] Filter detections by confidence threshold
-  - [ ] Filter out images with >20 detections (likely false positives)
-  - [ ] Generate face thumbnail crops (300px max) via sharp
-  - [ ] Serialize detection data as JSON for database storage
-- [ ] Write tests for preprocessing, post-processing, coordinate scaling
+- [x] Implement `src/services/face-detection.ts`:
+  - [x] Load face detection ONNX model (YuNet or equivalent)
+  - [x] Preprocess image with sharp: resize to model input dimensions, convert to RGB buffer, normalize
+  - [x] Run inference via onnxruntime-node
+  - [x] Post-process detections: extract bounding boxes, confidence scores, facial landmarks
+  - [x] Scale coordinates back to original image dimensions
+  - [x] Filter detections by confidence threshold
+  - [x] Filter out images with >20 detections (likely false positives)
+  - [x] Generate face thumbnail crops (300px max) via sharp
+  - [x] Serialize detection data as JSON for database storage
+- [x] Write tests for preprocessing, post-processing, coordinate scaling
 
 ### Face Recognition Service
 - [ ] Implement `src/services/face-recognition.ts`:
