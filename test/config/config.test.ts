@@ -107,6 +107,14 @@ describe('loadConfig', () => {
       expect(config.temp).toBe('/env/tmp');
     });
 
+    it('overrides logLevel from LOG_LEVEL env var', async () => {
+      vi.stubEnv('LOG_LEVEL', 'debug');
+      const config = await loadConfig({
+        configPath: join(TEST_DIR, 'nonexistent.json'),
+      });
+      expect(config.logLevel).toBe('debug');
+    });
+
     it('overrides concurrency from CONCURRENCY env var', async () => {
       vi.stubEnv('CONCURRENCY', '2');
       const config = await loadConfig({

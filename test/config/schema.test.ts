@@ -14,6 +14,7 @@ describe('configSchema', () => {
       '150x100',
     ]);
     expect(config.concurrency).toBeGreaterThan(0);
+    expect(config.logLevel).toBe('info');
     expect(config.jwt).toBeUndefined();
     expect(config.webDir).toBeUndefined();
     expect(config.logDir).toBeUndefined();
@@ -73,5 +74,16 @@ describe('configSchema', () => {
 
   it('rejects empty jwt secret', () => {
     expect(() => configSchema.parse({ jwt: { secret: '' } })).toThrow();
+  });
+
+  it('accepts valid log levels', () => {
+    for (const level of ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent']) {
+      const config = configSchema.parse({ logLevel: level });
+      expect(config.logLevel).toBe(level);
+    }
+  });
+
+  it('rejects invalid log level', () => {
+    expect(() => configSchema.parse({ logLevel: 'verbose' })).toThrow();
   });
 });

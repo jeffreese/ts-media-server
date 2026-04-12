@@ -31,11 +31,11 @@ Establish the project structure, toolchain, and core infrastructure that everyth
 - [x] Write tests for config loading, env var overrides, and validation error messages
 
 ### Logging
-- [ ] Install `pino`
-- [ ] Create logger factory (`src/utils/logger.ts`) that creates pino instances from config
-- [ ] Support configurable log level (via config and `LOG_LEVEL` env var)
-- [ ] Support file transport for log directory output (when `logDir` is configured)
-- [ ] Write tests for logger creation and level configuration
+- [x] Install `pino`
+- [x] Create logger factory (`src/utils/logger.ts`) that creates pino instances from config
+- [x] Support configurable log level (via config and `LOG_LEVEL` env var)
+- [x] Support file transport for log directory output (when `logDir` is configured)
+- [x] Write tests for logger creation and level configuration
 
 ### CLI Framework
 - [ ] Install `commander`

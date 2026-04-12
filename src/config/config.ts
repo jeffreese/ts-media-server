@@ -32,6 +32,7 @@ const ENV_MAP: Record<string, (value: string, config: Record<string, unknown>) =
     db.path = v;
     c.database = db;
   },
+  LOG_LEVEL: (v, c) => { c.logLevel = v; },
   CONCURRENCY: (v, c) => { c.concurrency = Number(v); },
   JWT_SECRET: (v, c) => {
     const jwt = (c.jwt ?? {}) as Record<string, unknown>;
