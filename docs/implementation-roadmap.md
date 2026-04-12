@@ -14,14 +14,14 @@ This roadmap breaks the JavaXT Media Server Node/TypeScript conversion into sequ
 Establish the project structure, toolchain, and core infrastructure that everything else depends on.
 
 ### Project Setup
-- [ ] Create new repository with `pnpm init`
-- [ ] Configure `tsconfig.json` (strict mode, ESM, path aliases)
-- [ ] Configure `tsup.config.ts` for production builds
-- [ ] Configure Vitest (`vitest.config.ts`)
-- [ ] Add `.gitignore`, `.nvmrc` (pin Node version), `.editorconfig`
-- [ ] Set up `package.json` scripts: `dev`, `build`, `test`, `test:watch`, `lint`
-- [ ] Install core dev dependencies: `typescript`, `tsx`, `tsup`, `vitest`, `@types/node`
-- [ ] Install `semgrep` for static security analysis (`brew install semgrep`)
+- [x] Create new repository with `pnpm init`
+- [x] Configure `tsconfig.json` (strict mode, ESM, path aliases)
+- [x] Configure `tsup.config.ts` for production builds
+- [x] Configure Vitest (`vitest.config.ts`)
+- [x] Add `.gitignore`, `.nvmrc` (pin Node version), `.editorconfig`
+- [x] Set up `package.json` scripts: `dev`, `build`, `test`, `test:watch`, `lint`
+- [x] Install core dev dependencies: `typescript`, `tsx`, `tsup`, `vitest`, `@types/node`
+- [x] Install `semgrep` for static security analysis (`brew install semgrep`)
 
 ### Configuration System
 - [ ] Install `zod`
