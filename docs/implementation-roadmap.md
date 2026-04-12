@@ -418,13 +418,13 @@ This is the core indexing engine that ties together all the services from Phases
 ## Phase 10: Media Serving API
 
 ### Image Serving
-- [ ] Implement image route (`src/server/routes/image.ts`):
-  - [ ] `GET /image/:id` — serve image by media item ID
-  - [ ] Support `width` and `height` query parameters for thumbnail selection
-  - [ ] Find best-fit thumbnail from available sizes
-  - [ ] Fall back to original file for sizes larger than largest thumbnail
-  - [ ] Version-based caching: compare `v` and `db` query params, redirect with 301 if stale
-  - [ ] Set appropriate Content-Type and Last-Modified headers
+- [x] Implement image route (`src/server/routes/image.ts`):
+  - [x] `GET /image/:id` — serve image by media item ID
+  - [x] Support `width` and `height` query parameters for thumbnail selection
+  - [x] Find best-fit thumbnail from available sizes
+  - [x] Fall back to original file for sizes larger than largest thumbnail
+  - [x] Version-based caching: compare `v` and `db` query params, redirect with 301 if stale
+  - [x] Set appropriate Content-Type and Last-Modified headers
   - [ ] Support path-based media item lookup (resolve by directory + filename)
 - [ ] Write tests for thumbnail selection, version redirect, path-based lookup
 
