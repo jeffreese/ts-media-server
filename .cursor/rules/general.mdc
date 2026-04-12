@@ -1,0 +1,68 @@
+---
+description: Project-wide conventions, commands, and architecture overview for the ts-media-server project
+globs: ["**/*"]
+---
+
+# ts-media-server
+
+A TypeScript/Node.js media server converted from the JavaXT Media Server. Manages photo and video libraries with indexing, thumbnails, face detection, perceptual hashing, and a REST API.
+
+## Commands
+
+- `pnpm dev` — Start dev server (tsx watch mode)
+- `pnpm build` — Production build (tsup → dist/)
+- `pnpm test` — Run tests (vitest)
+- `pnpm test:watch` — Run tests in watch mode
+- `pnpm typecheck` — Run tsc --noEmit
+
+Prefer running a single test file when iterating: `pnpm vitest run src/path/to/test.ts`
+
+## Tech Stack
+
+- **Language:** TypeScript (pure ESM, strict mode)
+- **Runtime:** Node.js
+- **Package manager:** pnpm
+- **Web framework:** Fastify
+- **Database:** SQLite + SpatiaLite via better-sqlite3
+- **ORM:** Drizzle ORM
+- **Image processing:** sharp
+- **Face detection/recognition:** onnxruntime-node (ONNX models)
+- **Video processing:** FFmpeg via child_process
+- **Auth:** JWT + BCrypt
+- **Config validation:** Zod
+- **CLI:** Commander.js
+- **Concurrency:** p-limit
+- **Logging:** pino (via Fastify)
+- **Testing:** Vitest
+- **Build (dev):** tsx
+- **Build (prod):** tsup
+
+## Project Structure
+
+Single package, pure ESM. See `docs/tech-spec.md` for the full directory layout.
+
+- `src/config/` — Zod config schema and loader
+- `src/db/` — Drizzle schema, client, migrations
+- `src/server/` — Fastify app, auth, WebSocket, routes
+- `src/services/` — Business logic (indexing, thumbnails, faces, hashing, metadata)
+- `src/utils/` — Low-level helpers (FFmpeg, sharp, file system)
+- `src/cli/` — Commander.js subcommands
+- `test/` — Vitest test files mirroring src/ structure
+- `docs/` — Tech spec, feature list, ADRs, implementation roadmap
+
+## Key Conventions
+
+- Always use ES modules (`import`/`export`), never CommonJS (`require`)
+- Destructure imports: `import { foo } from 'bar'`
+- Use `node:` prefix for Node.js built-ins: `import { readFile } from 'node:fs/promises'`
+- Prefer `async`/`await` over raw Promises or callbacks
+- Use `p-limit` for concurrency control, never unbounded `Promise.all` on large arrays
+- Atomic file writes: write to temp file, then rename
+- All config validated through Zod schemas at startup
+
+## Reference Documents
+
+- `docs/tech-spec.md` — Full technology choices and architecture
+- `docs/feature-list.md` — Complete feature inventory
+- `docs/implementation-roadmap.md` — Phased build plan
+- `docs/adr/` — Architecture Decision Records (17 ADRs covering all major decisions)

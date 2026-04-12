@@ -1,0 +1,40 @@
+---
+description: TypeScript coding patterns and style conventions
+globs: ["src/**/*.ts", "test/**/*.ts"]
+---
+
+# TypeScript Conventions
+
+## Module System
+
+- Pure ESM — all files use `import`/`export`
+- Include `.js` extension in relative imports (required for ESM): `import { foo } from './utils/foo.js'`
+- Use `node:` prefix for Node built-ins: `import { join } from 'node:path'`
+
+## Type Safety
+
+- `strict: true` in tsconfig — no implicit any, strict null checks
+- Prefer explicit return types on exported functions
+- Use Zod for runtime validation of external input (config, API payloads, CLI args)
+- Use Drizzle's inferred types for database records: `type MediaItem = typeof mediaItem.$inferSelect`
+
+## Error Handling
+
+- Throw typed errors, not strings
+- Use `try`/`catch` at service boundaries, let errors propagate within a service
+- Fastify error handler formats responses — don't catch-and-rethrow just to format
+
+## Patterns
+
+- Prefer `interface` for object shapes, `type` for unions and intersections
+- Use `const` by default, `let` only when reassignment is needed
+- Prefer `for...of` over `.forEach()` for iteration
+- Use optional chaining (`?.`) and nullish coalescing (`??`) over manual null checks
+- Prefer template literals over string concatenation
+
+## Naming
+
+- `camelCase` for variables, functions, and methods
+- `PascalCase` for types, interfaces, and classes
+- `UPPER_SNAKE_CASE` for constants and environment variables
+- File names: `kebab-case.ts`

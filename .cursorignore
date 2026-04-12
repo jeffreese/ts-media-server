@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+
+# ONNX model files (large binaries)
+*.onnx
+models/*.onnx
+
+# Generated thumbnails
+.thumbnails/
+
+# Media test fixtures (large binaries)
+test/fixtures/media/**/*.jpg
+test/fixtures/media/**/*.heic
+test/fixtures/media/**/*.mov
+test/fixtures/media/**/*.mp4
+
+# Drizzle migration metadata
+drizzle/meta/
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db

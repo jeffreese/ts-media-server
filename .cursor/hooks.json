@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "bash .cursor/hooks/typecheck.sh",
+        "type": "command",
+        "timeout": 30,
+        "matcher": "*.ts"
+      }
+    ],
+    "stop": [
+      {
+        "command": "bash .cursor/hooks/grind.sh",
+        "type": "command",
+        "timeout": 60,
+        "loop_limit": 5
+      }
+    ]
+  }
+}
