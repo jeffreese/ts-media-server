@@ -253,17 +253,17 @@ Build the low-level utility modules that the indexing and serving layers depend 
 - [x] Write tests for embedding extraction, cosine similarity computation
 
 ### Face Matching Pipeline
-- [ ] Implement face matching in `src/services/file-index.ts` (or separate `src/services/face-matcher.ts`):
-  - [ ] `matchFace(featureId)` — compare against all existing face features
-  - [ ] Two-phase matching: in-memory cache for recent features, then batched DB scan
-  - [ ] Deduplication: skip comparisons where targetId >= sourceId
-  - [ ] Check for existing match records before inserting
-  - [ ] Create `feature_match` records with match info (similarity, match_date)
-  - [ ] Support `ignore_match` flag for false positives
-- [ ] Implement transitive face matching:
-  - [ ] `getMatchingFaces(featureId)` — BFS traversal up to 10 levels deep
-  - [ ] Return distinct media items for matched features
-- [ ] Write tests for matching pipeline, transitive matching, deduplication
+- [x] Implement face matching in `src/services/file-index.ts` (or separate `src/services/face-matcher.ts`):
+  - [x] `matchFace(featureId)` — compare against all existing face features
+  - [x] Two-phase matching: in-memory cache for recent features, then batched DB scan
+  - [x] Deduplication: skip comparisons where targetId >= sourceId
+  - [x] Check for existing match records before inserting
+  - [x] Create `feature_match` records with match info (similarity, match_date)
+  - [x] Support `ignore_match` flag for false positives
+- [x] Implement transitive face matching:
+  - [x] `getMatchingFaces(featureId)` — BFS traversal up to 10 levels deep
+  - [x] Return distinct media items for matched features
+- [x] Write tests for matching pipeline, transitive matching, deduplication
 
 ---
 
