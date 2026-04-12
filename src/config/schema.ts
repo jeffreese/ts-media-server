@@ -6,10 +6,14 @@ const thumbnailSizeSchema = z.string().regex(
   'Thumbnail size must be in WIDTHxHEIGHT format (e.g. "1920x1080")',
 );
 
+export const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'] as const;
+export type LogLevel = (typeof LOG_LEVELS)[number];
+
 export const configSchema = z.object({
   port: z.number().int().min(1).max(65535).default(8080),
   webDir: z.string().optional(),
   logDir: z.string().optional(),
+  logLevel: z.enum(LOG_LEVELS).default('info'),
   temp: z.string().optional(),
   database: z
     .object({
