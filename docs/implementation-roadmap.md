@@ -272,12 +272,12 @@ Build the low-level utility modules that the indexing and serving layers depend 
 This is the core indexing engine that ties together all the services from Phases 3–6.
 
 ### Notification Service
-- [ ] Implement `src/services/notification.ts`:
-  - [ ] EventEmitter-based notification bus
-  - [ ] `notify(event, source, data)` — emit typed events
-  - [ ] `addListener(callback)` — register event handlers
-  - [ ] Event types: create, update, delete (for models), progress (for indexing)
-- [ ] Write tests for event emission and listener registration
+- [x] Implement `src/services/notification.ts`:
+  - [x] EventEmitter-based notification bus
+  - [x] `notify(event, source, data)` — emit typed events
+  - [x] `addListener(callback)` — register event handlers
+  - [x] Event types: create, update, delete (for models), progress (for indexing)
+- [x] Write tests for event emission and listener registration
 
 ### File Index Service
 - [ ] Install `p-limit`
