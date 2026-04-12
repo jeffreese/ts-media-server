@@ -165,18 +165,18 @@ Build the low-level utility modules that the indexing and serving layers depend 
 - [x] Write tests for image loading, resize, rotation, crop
 
 ### Metadata Extraction
-- [ ] Install `exifr`
-- [ ] Implement `src/services/metadata.ts`:
-  - [ ] Extract EXIF metadata from image files via sharp + exifr
-  - [ ] Parse date (DateTimeOriginal + OffsetTimeOriginal)
-  - [ ] Parse camera info (make, model, lens make, lens model)
-  - [ ] Parse exposure info (focal length, aperture, f-stop, shutter speed, exposure time, ISO)
-  - [ ] Parse GPS coordinates (latitude, longitude, datum, azimuth)
-  - [ ] Convert GPS coordinates to WKT POINT string
-  - [ ] Parse IPTC tags
-  - [ ] Extract video metadata via FFmpeg wrapper
-  - [ ] Sidecar JPEG metadata fallback (check for same-name .JPG when primary has no EXIF)
-- [ ] Write tests for EXIF parsing, GPS coordinate conversion, video metadata extraction
+- [x] Install `exifr`
+- [x] Implement `src/services/metadata.ts`:
+  - [x] Extract EXIF metadata from image files via sharp + exifr
+  - [x] Parse date (DateTimeOriginal + OffsetTimeOriginal)
+  - [x] Parse camera info (make, model, lens make, lens model)
+  - [x] Parse exposure info (focal length, aperture, f-stop, shutter speed, exposure time, ISO)
+  - [x] Parse GPS coordinates (latitude, longitude, datum, azimuth)
+  - [x] Convert GPS coordinates to WKT POINT string
+  - [x] Parse IPTC tags
+  - [x] Extract video metadata via FFmpeg wrapper
+  - [x] Sidecar JPEG metadata fallback (check for same-name .JPG when primary has no EXIF)
+- [x] Write tests for EXIF parsing, GPS coordinate conversion, video metadata extraction
 
 ---
 
