@@ -11,24 +11,13 @@ Always use this command to ship work. The value is the bundled hygiene, not the 
 
 ### Phase 2: Quality gates (parallel)
 
-Launch three agents in parallel. Gate on all three — if any fails, report all results and stop.
+Launch three subagents in parallel. Gate on all three — if any fails, report all results and stop.
 
-**Agent A — Security scan**
-- Run `/security-check` on changed files
-- If blocking findings exist, report as failure
-- Warnings are reported but don't fail
+- `/ship-security` — Security scan on changed files
+- `/ship-checks` — Typecheck and test suite
+- `/ship-review` — Self-review against conventions and ADRs
 
-**Agent B — Checks**
-- Run `pnpm typecheck` and `pnpm test`
-- If either fails, report failures
-
-**Agent C — Self-review**
-- Run the same review process as `/review`:
-  - Check changed files against `.cursor/rules/`, ADRs in `docs/adr/`, and project conventions
-  - Flag type safety issues, error handling gaps, security concerns, performance issues, missing tests
-- If issues are found, report them
-
-After all three agents complete, collect their results. If any agent reported a failure, present all findings together and stop for the user to address. Otherwise, proceed.
+Each subagent returns a structured result starting with `## Result: PASS | FAIL`. After all three complete, collect their results. If any returned FAIL, present all findings together and stop for the user to address. Otherwise, proceed.
 
 ### Phase 3: Session audit
 Catch documentation and config gaps before they ship. Scan the conversation for decisions, discoveries, conventions, and corrections made during this session.
