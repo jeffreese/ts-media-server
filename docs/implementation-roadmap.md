@@ -115,12 +115,12 @@ Set up the database layer that all data operations depend on.
 - [x] `data_access` table (id, datasetId, groupId, readOnly)
 
 ### Migrations & Initialization
-- [ ] Generate initial Drizzle migration from schema
-- [ ] Add SpatiaLite geometry columns and spatial indexes via custom migration SQL
-- [ ] Implement migration runner (`src/db/migrate.ts`)
-- [ ] Implement schema initialization: create default user, default person, default components (SysAdmin, UserAdmin, Media, Contact), grant admin access
-- [ ] Seed `setting` table with initial values (db_date, auth_status=disabled)
-- [ ] Write tests for migration, schema initialization, and seed data
+- [x] Generate initial Drizzle migration from schema
+- [x] Add SpatiaLite geometry columns and spatial indexes via custom migration SQL
+- [x] Implement migration runner (`src/db/migrate.ts`)
+- [x] Implement schema initialization: create default user, default person, default components (SysAdmin, UserAdmin, Media, Contact), grant admin access
+- [x] Seed `setting` table with initial values (db_date, auth_status=disabled)
+- [x] Write tests for migration, schema initialization, and seed data
 
 ---
 
