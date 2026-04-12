@@ -152,17 +152,17 @@ Build the low-level utility modules that the indexing and serving layers depend 
 - [x] Write tests for metadata parsing, extension detection (mock execFile for unit tests)
 
 ### Image Utilities (sharp)
-- [ ] Install `sharp`
-- [ ] Implement `src/utils/image.ts`:
-  - [ ] Load image from file (JPEG, PNG, WebP, TIFF, HEIC)
-  - [ ] Get image dimensions
-  - [ ] Auto-rotate based on EXIF orientation
-  - [ ] Resize with aspect ratio preservation
-  - [ ] Sharpen (for small thumbnails)
-  - [ ] Crop region (for face thumbnail extraction)
-  - [ ] Convert to JPEG buffer with configurable quality
-  - [ ] Convert to raw pixel buffer (for ONNX preprocessing)
-- [ ] Write tests for image loading, resize, rotation, crop
+- [x] Install `sharp`
+- [x] Implement `src/utils/image.ts`:
+  - [x] Load image from file (JPEG, PNG, WebP, TIFF, HEIC)
+  - [x] Get image dimensions
+  - [x] Auto-rotate based on EXIF orientation
+  - [x] Resize with aspect ratio preservation
+  - [x] Sharpen (for small thumbnails)
+  - [x] Crop region (for face thumbnail extraction)
+  - [x] Convert to JPEG buffer with configurable quality
+  - [x] Convert to raw pixel buffer (for ONNX preprocessing)
+- [x] Write tests for image loading, resize, rotation, crop
 
 ### Metadata Extraction
 - [ ] Install `exifr`

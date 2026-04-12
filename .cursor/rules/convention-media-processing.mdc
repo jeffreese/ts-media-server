@@ -13,6 +13,7 @@ globs: ["src/services/**/*.ts", "src/utils/image.ts", "src/utils/ffmpeg.ts"]
 - Sharpen small thumbnails (≤300px)
 - JPEG quality: 100% for ≤300px thumbnails, 90% for larger
 - For ONNX preprocessing: convert to raw RGB pixel buffer via `sharp.raw().toBuffer()`
+- **Dimensions gotcha:** `metadata.width`/`height` return the raw pixel layout, ignoring EXIF orientation. Use `metadata.autoOrient.width`/`height` for post-rotation (display) dimensions. `getDimensions()` in `src/utils/image.ts` handles this.
 
 ## Thumbnails
 
