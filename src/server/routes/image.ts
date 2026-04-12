@@ -259,7 +259,8 @@ export const imagePlugin = fp<ImagePluginOptions>(
 
       const fileStat = await stat(servePath);
 
-      return void reply
+      // Return `reply` so the async handler does not resolve before the stream is sent.
+      return reply
         .type(contentType)
         .header('Last-Modified', fileStat.mtime.toUTCString())
         .header('Cache-Control', 'public, max-age=31536000, immutable')
