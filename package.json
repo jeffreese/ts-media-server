@@ -1,0 +1,39 @@
+{
+  "name": "ts-media-server",
+  "version": "0.1.0",
+  "description": "TypeScript/Node.js media server with indexing, thumbnails, face detection, and REST API",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "media-server": "dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "media",
+    "server",
+    "photo",
+    "video",
+    "indexing",
+    "thumbnails",
+    "face-detection"
+  ],
+  "license": "ISC",
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
+  }
+}
