@@ -436,13 +436,13 @@ This is the core indexing engine that ties together all the services from Phases
 - [x] Write tests for video serving, version redirect
 
 ### Face Serving
-- [ ] Implement face routes (`src/server/routes/face.ts`):
-  - [ ] `GET /face/:id` — serve face thumbnail by feature ID
-  - [ ] Version-based caching with 301 redirect
-  - [ ] `GET /matchingFaces/:id` — find media items matching a face
-  - [ ] Transitive matching (BFS up to 10 levels)
-  - [ ] Pagination support (offset/limit)
-- [ ] Write tests for face thumbnail serving, transitive matching results
+- [x] Implement face routes (`src/server/routes/face.ts`):
+  - [x] `GET /face/:id` — serve face thumbnail by feature ID
+  - [x] Version-based caching with 301 redirect
+  - [x] `GET /matchingFaces/:id` — find media items matching a face
+  - [x] Transitive matching (BFS up to 10 levels)
+  - [x] Pagination support (offset/limit)
+- [x] Write tests for face thumbnail serving, transitive matching results
 
 ### Folder Browsing
 - [ ] Implement index route (`src/server/routes/index.ts`):
