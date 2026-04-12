@@ -358,13 +358,13 @@ This is the core indexing engine that ties together all the services from Phases
 - [x] Write tests for login, token verification, disabled auth mode
 
 ### WebSocket Event Broadcasting
-- [ ] Implement WebSocket handler (`src/server/websocket.ts`):
-  - [ ] Track connected clients in a Map
-  - [ ] Subscribe to NotificationService events
-  - [ ] Broadcast events to all connected clients
-  - [ ] Message format: `action,model,id,userId`
-  - [ ] Handle client connect/disconnect
-- [ ] Write tests for event broadcasting, client management
+- [x] Implement WebSocket handler (`src/server/websocket.ts`):
+  - [x] Track connected clients in a Map
+  - [x] Subscribe to NotificationService events
+  - [x] Broadcast events to all connected clients
+  - [x] Message format: `action,model,id,userId`
+  - [x] Handle client connect/disconnect
+- [x] Write tests for event broadcasting, client management
 
 ### Settings API
 - [ ] Implement settings routes (`src/server/routes/settings.ts`):
