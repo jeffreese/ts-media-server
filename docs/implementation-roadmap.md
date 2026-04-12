@@ -395,13 +395,13 @@ This is the core indexing engine that ties together all the services from Phases
 - [x] Write tests for each model's security rules, admin protection
 
 ### Generic Model CRUD Routes
-- [ ] Implement CRUD route generator (`src/server/routes/models/`):
-  - [ ] Auto-register GET (by id), LIST (with pagination), SAVE (create/update), DELETE for each Drizzle table
-  - [ ] JSON request body parsing
-  - [ ] Offset/limit pagination via query parameters
-  - [ ] Apply security filter as preHandler hook per model
-  - [ ] Emit create/update/delete notifications via NotificationService
-- [ ] Write tests for CRUD operations, pagination, security enforcement
+- [x] Implement CRUD route generator (`src/server/routes/models/`):
+  - [x] Auto-register GET (by id), LIST (with pagination), SAVE (create/update), DELETE for each Drizzle table
+  - [x] JSON request body parsing
+  - [x] Offset/limit pagination via query parameters
+  - [x] Apply security filter as preHandler hook per model
+  - [x] Emit create/update/delete notifications via NotificationService
+- [x] Write tests for CRUD operations, pagination, security enforcement
 
 ### User Management Routes
 - [ ] User CRUD with Person record linkage
