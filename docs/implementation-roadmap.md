@@ -280,55 +280,55 @@ This is the core indexing engine that ties together all the services from Phases
 - [x] Write tests for event emission and listener registration
 
 ### File Index Service
-- [ ] Install `p-limit`
-- [ ] Implement `src/services/file-index.ts`:
+- [x] Install `p-limit`
+- [x] Implement `src/services/file-index.ts`:
 
 #### Path & File Registration
-  - [ ] `addPaths(directory, fileFilter)` — scan directory, create `path` records, return path IDs
-  - [ ] `addFiles(pathIds, fileFilter)` — create `file` records for media files, group by name, return ordered file ID groups
-  - [ ] Skip hidden directories and `_`-prefixed directories
-  - [ ] Compute MD5 hash for each file
+  - [x] `addPaths(directory, fileFilter)` — scan directory, create `path` records, return path IDs
+  - [x] `addFiles(pathIds, fileFilter)` — create `file` records for media files, group by name, return ordered file ID groups
+  - [x] Skip hidden directories and `_`-prefixed directories
+  - [x] Compute MD5 hash for each file
 
 #### Media Item Creation
-  - [ ] `createMediaItem(fileIds, folderId, folderIndex)` — create or update a media item from a file group
-  - [ ] Identify primary file from group (HEIC > non-JPEG > JPEG, skip short MOV sidecars)
-  - [ ] Extract image via sharp (handle images, videos, HEIC)
-  - [ ] Extract metadata (EXIF/IPTC/GPS for images, ffprobe for videos)
-  - [ ] Compute perceptual hash
-  - [ ] Generate thumbnails (5 tiers)
-  - [ ] Create MP4 for non-MP4 video files
-  - [ ] Store media item record (name, type, hash, dates, location, metadata)
-  - [ ] Create `media_item_file` junction records with primary flag
-  - [ ] Run face detection and store `feature` records with thumbnail crops
+  - [x] `createMediaItem(fileIds, folderId, folderIndex)` — create or update a media item from a file group
+  - [x] Identify primary file from group (HEIC > non-JPEG > JPEG, skip short MOV sidecars)
+  - [x] Extract image via sharp (handle images, videos, HEIC)
+  - [x] Extract metadata (EXIF/IPTC/GPS for images, ffprobe for videos)
+  - [x] Compute perceptual hash
+  - [x] Generate thumbnails (5 tiers)
+  - [x] Create MP4 for non-MP4 video files
+  - [x] Store media item record (name, type, hash, dates, location, metadata)
+  - [x] Create `media_item_file` junction records with primary flag
+  - [x] Run face detection and store `feature` records with thumbnail crops
 
 #### Folder Management
-  - [ ] `getOrCreateFolder(directory, parentFolder)` — mirror directory structure as virtual folders
-  - [ ] Create root folder on initialization
-  - [ ] Create `folder_entry` records linking media items to folders with sort index
+  - [x] `getOrCreateFolder(directory, parentFolder)` — mirror directory structure as virtual folders
+  - [x] Create root folder on initialization
+  - [x] Create `folder_entry` records linking media items to folders with sort index
 
 #### Directory Indexing Orchestration
-  - [ ] `addDirectory(directory, fileFilter, concurrency)` — main entry point
-  - [ ] Delete orphans before indexing
-  - [ ] Scan paths and files
-  - [ ] Process file groups with p-limit concurrency control
-  - [ ] Queue hash matching after media item creation
-  - [ ] Queue face matching after feature extraction
-  - [ ] Emit progress notifications during indexing
-  - [ ] Wait for all matching operations to complete
+  - [x] `addDirectory(directory, fileFilter, concurrency)` — main entry point
+  - [x] Delete orphans before indexing
+  - [x] Scan paths and files
+  - [x] Process file groups with p-limit concurrency control
+  - [x] Queue hash matching after media item creation
+  - [x] Queue face matching after feature extraction
+  - [x] Emit progress notifications during indexing
+  - [x] Wait for all matching operations to complete
 
 #### Orphan Cleanup
-  - [ ] `deleteOrphans()` — check all DB files against disk, remove missing
-  - [ ] Delete media items left with no files
-  - [ ] Delete orphaned thumbnails
-  - [ ] Delete paths with no files
-  - [ ] Delete empty folders (recursive)
+  - [x] `deleteOrphans()` — check all DB files against disk, remove missing
+  - [x] Delete media items left with no files
+  - [x] Delete orphaned thumbnails
+  - [x] Delete paths with no files
+  - [x] Delete empty folders (recursive)
 
 ### Integration Tests
-- [ ] Test full indexing pipeline with sample image directory
-- [ ] Test orphan cleanup with deleted files
-- [ ] Test re-indexing (update existing media items)
-- [ ] Test file grouping with mixed formats (HEIC + JPG, MOV + MP4)
-- [ ] Test progress notification emission
+- [x] Test full indexing pipeline with sample image directory
+- [x] Test orphan cleanup with deleted files
+- [x] Test re-indexing (update existing media items)
+- [x] Test file grouping with mixed formats (HEIC + JPG, MOV + MP4)
+- [x] Test progress notification emission
 
 ---
 
