@@ -38,17 +38,17 @@ Establish the project structure, toolchain, and core infrastructure that everyth
 - [x] Write tests for logger creation and level configuration
 
 ### CLI Framework
-- [ ] Install `commander`
-- [ ] Create entry point (`src/index.ts`) with Commander.js program definition
-- [ ] Register subcommands: `serve`, `add`, `delete`, `test`
-- [ ] Implement `serve` subcommand skeleton (options: `--port`, `--config`, `--web`)
-- [ ] Implement `add directory` subcommand skeleton (options: `--path`, `--concurrency`)
-- [ ] Implement `delete thumbnails` subcommand skeleton (options: `--path`)
-- [ ] Implement `delete orphans` subcommand skeleton
-- [ ] Implement `test ffmpeg` subcommand skeleton
-- [ ] Implement `test metadata` subcommand skeleton (options: `--file`)
-- [ ] Implement `test faces` subcommand skeleton (options: `--file`)
-- [ ] Verify CLI runs via `tsx src/index.ts --help`
+- [x] Install `commander`
+- [x] Create entry point (`src/index.ts`) with Commander.js program definition
+- [x] Register subcommands: `serve`, `add`, `delete`, `test`
+- [x] Implement `serve` subcommand skeleton (options: `--port`, `--config`, `--web`)
+- [x] Implement `add directory` subcommand skeleton (options: `--path`, `--concurrency`)
+- [x] Implement `delete thumbnails` subcommand skeleton (options: `--path`)
+- [x] Implement `delete orphans` subcommand skeleton
+- [x] Implement `test ffmpeg` subcommand skeleton
+- [x] Implement `test metadata` subcommand skeleton (options: `--file`)
+- [x] Implement `test faces` subcommand skeleton (options: `--file`)
+- [x] Verify CLI runs via `tsx src/index.ts --help`
 
 ---
 
