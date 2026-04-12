@@ -39,3 +39,7 @@ globs: ["src/db/**/*.ts", "drizzle/**/*", "drizzle.config.ts"]
 - Use `db.select()`, `db.insert()`, `db.update()`, `db.delete()` — avoid raw SQL unless needed for SpatiaLite functions
 - SpatiaLite functions (`GeomFromText`, `AsText`, `ST_Distance`) via `sql` template tag
 - Offset/limit pagination on list endpoints
+
+## Gotchas
+
+- **Self-referential columns cause circular type inference.** The `folder.parentId` column references its own table. When you build a conditional expression involving that column and assign the query result back to a variable in a loop, TypeScript reports `TS7022` ("implicitly has type 'any' … referenced directly or indirectly in its own initializer"). Fix by adding explicit type annotations: `const condition: SQL | undefined = …` (import `SQL` from `drizzle-orm`).

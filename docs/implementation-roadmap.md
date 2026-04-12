@@ -445,12 +445,12 @@ This is the core indexing engine that ties together all the services from Phases
 - [x] Write tests for face thumbnail serving, transitive matching results
 
 ### Folder Browsing
-- [ ] Implement index route (`src/server/routes/index.ts`):
-  - [ ] `GET /index/*` — browse folder hierarchy by path
-  - [ ] Return folders and media items at the requested level
-  - [ ] Support `recursive` query parameter for deep listing
-  - [ ] Pagination support (offset/limit)
-- [ ] Write tests for folder browsing, recursive listing, pagination
+- [x] Implement index route (`src/server/routes/index.ts`):
+  - [x] `GET /index/*` — browse folder hierarchy by path
+  - [x] Return folders and media items at the requested level
+  - [x] Support `recursive` query parameter for deep listing
+  - [x] Pagination support (offset/limit)
+- [x] Write tests for folder browsing, recursive listing, pagination
 
 ### Thumbnail Listing
 - [ ] Implement thumbnails route (`src/server/routes/thumbnails.ts`):

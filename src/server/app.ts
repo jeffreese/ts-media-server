@@ -15,6 +15,7 @@ import { userRoutesPlugin } from './routes/users.js';
 import { imagePlugin } from './routes/image.js';
 import { videoPlugin } from './routes/video.js';
 import { facePlugin } from './routes/face.js';
+import { indexPlugin } from './routes/index.js';
 import type { NotificationService } from '../services/notification.js';
 
 const FILE_WATCH_DEBOUNCE_MS = 500;
@@ -72,6 +73,7 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
     await server.register(imagePlugin, { db });
     await server.register(videoPlugin, { db });
     await server.register(facePlugin, { db });
+    await server.register(indexPlugin, { db });
   }
 
   let watcher: FSWatcher | undefined;
