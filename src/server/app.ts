@@ -10,6 +10,8 @@ import type Database from 'better-sqlite3';
 import type { Config, LogLevel } from '../config/schema.js';
 import { authPlugin } from './auth.js';
 import { settingsPlugin } from './routes/settings.js';
+import { modelCrudPlugin } from './routes/models/index.js';
+import type { NotificationService } from '../services/notification.js';
 
 const FILE_WATCH_DEBOUNCE_MS = 500;
 
@@ -17,6 +19,7 @@ export interface CreateAppOptions {
   config: Config;
   db?: Database.Database;
   loggerOptions?: { level?: LogLevel; name?: string };
+  notificationService?: NotificationService;
 }
 
 export interface App {
@@ -32,7 +35,7 @@ export interface App {
  * route that uses `request.jwtVerify`.
  */
 export async function createApp(options: CreateAppOptions): Promise<App> {
-  const { config, db, loggerOptions } = options;
+  const { config, db, loggerOptions, notificationService } = options;
 
   const server = Fastify({
     logger: {
@@ -60,6 +63,7 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
   if (db) {
     await server.register(authPlugin, { db });
     await server.register(settingsPlugin, { db });
+    await server.register(modelCrudPlugin, { db, notificationService });
   }
 
   let watcher: FSWatcher | undefined;
