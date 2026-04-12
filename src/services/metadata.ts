@@ -182,7 +182,7 @@ function asNumber(value: unknown): number | undefined {
   return undefined;
 }
 
-function formatShutterSpeed(exposureTime: number | undefined): string | undefined {
+export function formatShutterSpeed(exposureTime: number | undefined): string | undefined {
   if (exposureTime == null) return undefined;
   if (exposureTime >= 1) return `${exposureTime}s`;
   const denominator = Math.round(1 / exposureTime);

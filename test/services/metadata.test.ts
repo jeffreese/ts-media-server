@@ -8,10 +8,11 @@ import {
   extractVideoMetadata,
   extractMetadata,
   toWktPoint,
+  formatShutterSpeed,
   type GpsInfo,
   type MediaMetadata,
 } from '../../src/services/metadata.js';
-import { FFmpeg, type VideoMetadata } from '../../src/utils/ffmpeg.js';
+import { type FFmpeg, type VideoMetadata } from '../../src/utils/ffmpeg.js';
 
 // ---------------------------------------------------------------------------
 // Test image helpers
@@ -325,19 +326,25 @@ describe('metadata service', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Shutter speed formatting
+  // formatShutterSpeed
   // -------------------------------------------------------------------------
 
-  describe('shutter speed formatting', () => {
-    it('formats fractional exposure times as 1/N', async () => {
-      const filePath = await createJpegWithExif(tempDir, 'shutter.jpg');
-      const meta = await extractImageMetadata(filePath);
+  describe('formatShutterSpeed', () => {
+    it('returns undefined for undefined input', () => {
+      expect(formatShutterSpeed(undefined)).toBeUndefined();
+    });
 
-      // We can't inject EXIF exposure time via sharp easily, so we test
-      // the formatting indirectly via the toWktPoint-style unit approach.
-      // The formatShutterSpeed function is internal, but its behavior is
-      // verified through integration tests with real EXIF data.
-      expect(meta.exposure.shutterSpeed).toBeUndefined();
+    it('formats whole-second exposures', () => {
+      expect(formatShutterSpeed(1)).toBe('1s');
+      expect(formatShutterSpeed(2)).toBe('2s');
+      expect(formatShutterSpeed(30)).toBe('30s');
+    });
+
+    it('formats fractional exposures as 1/N', () => {
+      expect(formatShutterSpeed(0.004)).toBe('1/250s');
+      expect(formatShutterSpeed(1 / 125)).toBe('1/125s');
+      expect(formatShutterSpeed(1 / 1000)).toBe('1/1000s');
+      expect(formatShutterSpeed(0.5)).toBe('1/2s');
     });
   });
 
