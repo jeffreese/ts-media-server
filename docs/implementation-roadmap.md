@@ -244,13 +244,13 @@ Build the low-level utility modules that the indexing and serving layers depend 
 - [x] Write tests for preprocessing, post-processing, coordinate scaling
 
 ### Face Recognition Service
-- [ ] Implement `src/services/face-recognition.ts`:
-  - [ ] Load face recognition ONNX model (SFace or equivalent)
-  - [ ] Align and crop face from image using detection landmarks
-  - [ ] Extract face feature embedding via inference
-  - [ ] `compareFaces(embedding1, embedding2)` — compute cosine similarity
-  - [ ] Configurable similarity threshold (default: 0.363)
-- [ ] Write tests for embedding extraction, cosine similarity computation
+- [x] Implement `src/services/face-recognition.ts`:
+  - [x] Load face recognition ONNX model (SFace or equivalent)
+  - [x] Align and crop face from image using detection landmarks
+  - [x] Extract face feature embedding via inference
+  - [x] `compareFaces(embedding1, embedding2)` — compute cosine similarity
+  - [x] Configurable similarity threshold (default: 0.363)
+- [x] Write tests for embedding extraction, cosine similarity computation
 
 ### Face Matching Pipeline
 - [ ] Implement face matching in `src/services/file-index.ts` (or separate `src/services/face-matcher.ts`):
