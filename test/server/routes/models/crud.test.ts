@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { createDatabaseClient, type DatabaseClient } from '../../../../src/db/client.js';
 import { runMigrations } from '../../../../src/db/migrate.js';
 import { seedDatabase } from '../../../../src/db/seed.js';
@@ -539,6 +539,56 @@ describe('generic model CRUD routes', () => {
 
       expect(response.statusCode).toBe(403);
       expect(response.json().error).toContain('own preferences');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Password hashing
+  // ---------------------------------------------------------------------------
+
+  describe('userAuthentication password hashing', () => {
+    it('hashes password values before storing', async () => {
+      const client = setupDb();
+      await setupApp(client);
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: '/userAuthentication',
+        payload: { userId: 1, service: 'database', key: 'password', value: 'secret123' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const created = response.json();
+
+      const db = drizzle(client.db, { schema });
+      const stored = db.select()
+        .from(schema.userAuthentication)
+        .where(
+          and(
+            eq(schema.userAuthentication.id, created.id),
+            eq(schema.userAuthentication.key, 'password'),
+          ),
+        )
+        .get();
+
+      expect(stored).toBeDefined();
+      expect(stored!.value).not.toBe('secret123');
+      expect(stored!.value).toMatch(/^\$2[aby]\$/);
+    });
+
+    it('does not hash non-password keys', async () => {
+      const client = setupDb();
+      await setupApp(client);
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: '/userAuthentication',
+        payload: { userId: 1, service: 'oauth', key: 'token', value: 'abc123' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const created = response.json();
+      expect(created.value).toBe('abc123');
     });
   });
 

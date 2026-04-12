@@ -32,12 +32,9 @@ export interface ModelCrudPluginOptions {
 
 type Db = BetterSQLite3Database<typeof schema>;
 
-function getIdColumn(table: (typeof MODEL_REGISTRY)[string]): ReturnType<typeof table['id']['getSQL']> | undefined {
-  const columns = table as Record<string, unknown>;
-  if ('id' in columns) {
-    return (columns as { id: { getSQL: () => unknown } }).id as never;
-  }
-  return undefined;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getIdColumn(table: (typeof MODEL_REGISTRY)[string]): any | undefined {
+  return (table as Record<string, unknown>).id;
 }
 
 /**
@@ -151,8 +148,7 @@ function registerList(
       return reply.code(403).send({ error: result.reason });
     }
 
-    const query = request.query as Record<string, unknown>;
-    const pagination = paginationSchema.safeParse(query);
+    const pagination = paginationSchema.safeParse(request.query);
     if (!pagination.success) {
       return reply.code(400).send({ error: 'Invalid pagination parameters' });
     }
@@ -195,12 +191,11 @@ function registerSave(
     }
 
     const isUpdate = body.id !== undefined && body.id !== null;
-    const action = isUpdate ? 'save' : 'save';
 
     const secResult = await checkSecurity(
       modelName,
       securityContext(db, userId),
-      action,
+      'save',
       body,
     );
     if (!secResult.allowed) {
