@@ -57,7 +57,7 @@ User approves which items to act on — updates get bundled into the commit. If 
 - Commit (respect hooks — never `--no-verify`)
 
 ### Phase 7: Push and create PR
-- Push the feature branch to origin with `-u` flag
-- Use `gh pr create` with a descriptive title and body
+- Give the user the `git push -u origin <branch>` command to run manually (pushing is blocked from the agent)
+- Once the user confirms the push succeeded, run `gh pr create` with a descriptive title and body
 - Body should include a Summary section (2-3 bullet points) and a Test Plan section
 - Report the PR URL when done
