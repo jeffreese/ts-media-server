@@ -335,16 +335,16 @@ This is the core indexing engine that ties together all the services from Phases
 ## Phase 8: Web Server & Core API
 
 ### Fastify Server Setup
-- [ ] Install `fastify`, `@fastify/static`, `@fastify/cors`, `@fastify/websocket`, `@fastify/jwt`, `@fastify/multipart`
-- [ ] Implement Fastify app factory (`src/server/app.ts`):
-  - [ ] Create Fastify instance with pino logger
-  - [ ] Register CORS plugin
-  - [ ] Register static file serving for web directory
-  - [ ] Register WebSocket plugin
-  - [ ] Register JWT plugin
-  - [ ] Register multipart plugin (for file uploads)
+- [x] Install `fastify`, `@fastify/static`, `@fastify/cors`, `@fastify/websocket`, `@fastify/jwt`, `@fastify/multipart`
+- [x] Implement Fastify app factory (`src/server/app.ts`):
+  - [x] Create Fastify instance with pino logger
+  - [x] Register CORS plugin
+  - [x] Register static file serving for web directory
+  - [x] Register WebSocket plugin
+  - [x] Register JWT plugin
+  - [x] Register multipart plugin (for file uploads)
   - [ ] Register all route plugins
-  - [ ] File watching on web directory with debounced notifications
+  - [x] File watching on web directory with debounced notifications
 
 ### Authentication
 - [ ] Install `bcrypt`, `@types/bcrypt`
