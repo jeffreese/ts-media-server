@@ -26,4 +26,4 @@ The `FFmpeg` utility class will provide:
 - `getMetadata(file)` — parse ffprobe JSON output
 - `getDuration(file)` — extract duration
 - `isMovie(file)` — check file extension against known video formats
-- Constructor validates ffmpeg/ffprobe paths by running `ffmpeg -version`
+- `validate()` — confirms ffmpeg/ffprobe are reachable by running `-version` (async; called after construction since JS constructors cannot be async)

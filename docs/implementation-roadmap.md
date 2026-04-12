@@ -141,15 +141,15 @@ Build the low-level utility modules that the indexing and serving layers depend 
 - [x] Write tests for file grouping, primary file detection, hidden dir filtering, hash computation
 
 ### FFmpeg Wrapper
-- [ ] Implement `src/utils/ffmpeg.ts`:
-  - [ ] Constructor: validate ffmpeg/ffprobe paths by running `ffmpeg -version`
-  - [ ] `createJPEG(input, output)` — extract frame at 4-second mark
-  - [ ] `createMP4(input, output)` — transcode to MP4 (stream copy for MOV, libx264 for others)
-  - [ ] `getMetadata(file)` — parse ffprobe JSON output (date, width, height, duration, frameRate)
-  - [ ] `getDuration(file)` — extract duration in seconds
-  - [ ] `isMovie(file)` — check extension against supported video formats
-  - [ ] `getSupportedExtensions()` — return list of video extensions
-- [ ] Write tests for metadata parsing, extension detection (mock execFile for unit tests)
+- [x] Implement `src/utils/ffmpeg.ts`:
+  - [x] Constructor: validate ffmpeg/ffprobe paths by running `ffmpeg -version`
+  - [x] `createJPEG(input, output)` — extract frame at 4-second mark
+  - [x] `createMP4(input, output)` — transcode to MP4 (stream copy for MOV, libx264 for others)
+  - [x] `getMetadata(file)` — parse ffprobe JSON output (date, width, height, duration, frameRate)
+  - [x] `getDuration(file)` — extract duration in seconds
+  - [x] `isMovie(file)` — check extension against supported video formats
+  - [x] `getSupportedExtensions()` — return list of video extensions
+- [x] Write tests for metadata parsing, extension detection (mock execFile for unit tests)
 
 ### Image Utilities (sharp)
 - [ ] Install `sharp`
