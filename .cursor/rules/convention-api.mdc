@@ -19,6 +19,23 @@ export async function imageRoutes(app: FastifyInstance) {
 }
 ```
 
+## Route Handler Typing
+
+`@fastify/websocket` adds an overload to `app.get`/`app.post`/etc. that requires `{ websocket: true }`. This conflicts with Fastify's generic type parameters (e.g., `FastifyRequest<{ Params: { id: string } }>`), causing "no overload matches this call" errors.
+
+Use untyped handler signatures and validate inside the handler with Zod:
+
+```typescript
+app.get('/setting/:key', { preHandler: [app.authenticate] }, async (request, reply) => {
+  const parsed = paramsSchema.safeParse(request.params);
+  if (!parsed.success) return reply.code(400).send({ error: 'Invalid params' });
+  const { key } = parsed.data;
+  // ...
+});
+```
+
+Do **not** use `FastifyRequest<{ Params: ... }>` generics on route handlers — they will fail to typecheck when `@fastify/websocket` is registered.
+
 ## Authentication
 
 - JWT via `@fastify/jwt` — tokens issued at `POST /auth/login`

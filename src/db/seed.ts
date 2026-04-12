@@ -1,15 +1,14 @@
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import type { DatabaseClient } from './client.js';
 import * as schema from './schema.js';
+import { SYSADMIN_KEY, ADMIN_ACCESS_LEVEL } from './constants.js';
 
 const DEFAULT_COMPONENTS = [
-  { key: 'SysAdmin', label: 'System Administration', description: 'Full system access' },
+  { key: SYSADMIN_KEY, label: 'System Administration', description: 'Full system access' },
   { key: 'UserAdmin', label: 'User Administration', description: 'Manage users and groups' },
   { key: 'Media', label: 'Media', description: 'Access to media library' },
   { key: 'Contact', label: 'Contacts', description: 'Access to contacts and people' },
 ] as const;
-
-const ADMIN_ACCESS_LEVEL = 5;
 
 function defaultSettings(): Array<{ key: string; value: string }> {
   return [

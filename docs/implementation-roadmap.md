@@ -343,7 +343,7 @@ This is the core indexing engine that ties together all the services from Phases
   - [x] Register WebSocket plugin
   - [x] Register JWT plugin
   - [x] Register multipart plugin (for file uploads)
-  - [ ] Register all route plugins
+  - [x] Register all route plugins
   - [x] File watching on web directory with debounced notifications
 
 ### Authentication
@@ -367,13 +367,13 @@ This is the core indexing engine that ties together all the services from Phases
 - [x] Write tests for event broadcasting, client management
 
 ### Settings API
-- [ ] Implement settings routes (`src/server/routes/settings.ts`):
-  - [ ] `GET /setting/:key` — retrieve setting value by key (plain text)
-  - [ ] `POST /setting/:key` — create/update setting (admin only)
-  - [ ] Validate FFmpeg path on save (attempt to run `ffmpeg -version`)
-  - [ ] Validate ONNX model paths on save (check file exists and has .onnx extension)
-  - [ ] Prevent setting deletion
-- [ ] Write tests for get/save settings, validation, admin-only enforcement
+- [x] Implement settings routes (`src/server/routes/settings.ts`):
+  - [x] `GET /setting/:key` — retrieve setting value by key (plain text)
+  - [x] `POST /setting/:key` — create/update setting (admin only)
+  - [x] Validate FFmpeg path on save (attempt to run `ffmpeg -version`)
+  - [x] Validate ONNX model paths on save (check file exists and has .onnx extension)
+  - [x] Prevent setting deletion
+- [x] Write tests for get/save settings, validation, admin-only enforcement
 
 ---
 
