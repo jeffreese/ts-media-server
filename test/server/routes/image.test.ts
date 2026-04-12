@@ -46,8 +46,16 @@ function seedMediaItem(
     extension: string;
     type?: string;
     createThumbnails?: number[];
+    /** Primary file bytes on disk (default: random) */
+    originalContent?: Buffer;
+    /** Thumbnail bytes per width; omitted widths use random bytes */
+    thumbnailContents?: Partial<Record<number, Buffer>>;
   },
-): { mediaItemId: number; filePath: string } {
+): {
+  mediaItemId: number;
+  filePath: string;
+  written: { original: Buffer; thumbnails: Record<number, Buffer> };
+} {
   const db = drizzle(client.db, { schema });
 
   const host = db.insert(schema.host).values({ name: 'test' }).returning().get();
@@ -83,18 +91,26 @@ function seedMediaItem(
 
   const ext = options.extension ? `.${options.extension}` : '';
   const filePath = join(options.dir, `${options.fileName}${ext}`);
-  writeFileSync(filePath, randomBytes(128));
+  const originalWritten = options.originalContent ?? randomBytes(128);
+  writeFileSync(filePath, originalWritten);
 
+  const thumbnails: Record<number, Buffer> = {};
   if (options.createThumbnails) {
     const thumbDir = join(options.dir, '.thumbnails');
     mkdirSync(thumbDir, { recursive: true });
     for (const width of options.createThumbnails) {
       const thumbPath = getThumbnailPath(filePath, width);
-      writeFileSync(thumbPath, randomBytes(64));
+      const buf = options.thumbnailContents?.[width] ?? randomBytes(64);
+      thumbnails[width] = buf;
+      writeFileSync(thumbPath, buf);
     }
   }
 
-  return { mediaItemId: mediaItem.id, filePath };
+  return {
+    mediaItemId: mediaItem.id,
+    filePath,
+    written: { original: originalWritten, thumbnails },
+  };
 }
 
 describe('image routes', () => {
@@ -303,6 +319,13 @@ describe('image routes', () => {
 
     it('redirects with 301 for stale version params while preserving dir and file', async () => {
       const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const dbDate = db
+        .select({ value: schema.setting.value })
+        .from(schema.setting)
+        .where(eq(schema.setting.key, 'db_date'))
+        .get();
+
       seedMediaItem(client, {
         dir: tmpDir,
         fileName: 'versionedPath',
@@ -319,8 +342,37 @@ describe('image routes', () => {
       });
 
       expect(response.statusCode).toBe(301);
-      expect(response.headers.location).toContain('dir=');
-      expect(response.headers.location).toContain('file=versionedPath.jpg');
+      const loc = new URL(response.headers.location!, 'http://localhost');
+      expect(loc.pathname).toBe('/image');
+      expect(loc.searchParams.get('dir')).toBe(normalizePath(tmpDir));
+      expect(loc.searchParams.get('file')).toBe('versionedPath.jpg');
+      expect(loc.searchParams.get('v')).toBe(dbDate!.value);
+      expect(loc.searchParams.get('db')).toBe(dbDate!.value);
+    });
+
+    it('serves path-based lookup with thumbnail width selection', async () => {
+      const client = setupDb();
+      const thumbBuf = Buffer.from('path-lookup-thumb-300');
+      seedMediaItem(client, {
+        dir: tmpDir,
+        fileName: 'pathThumb',
+        extension: 'jpg',
+        createThumbnails: [300, 640],
+        thumbnailContents: { 300: thumbBuf },
+      });
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const dirParam = encodeURIComponent(normalizePath(tmpDir));
+      const response = await app.server.inject({
+        method: 'GET',
+        url: `/image?dir=${dirParam}&file=pathThumb.jpg&width=300`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-type']).toContain('image/jpeg');
+      expect(response.rawPayload).toEqual(thumbBuf);
     });
   });
 
@@ -331,11 +383,13 @@ describe('image routes', () => {
   describe('thumbnail selection', () => {
     it('serves a thumbnail when width is requested', async () => {
       const client = setupDb();
-      const { mediaItemId } = seedMediaItem(client, {
+      const thumb300 = Buffer.from('thumb-300-bytes');
+      const { mediaItemId, written } = seedMediaItem(client, {
         dir: tmpDir,
         fileName: 'photo3',
         extension: 'jpg',
         createThumbnails: [150, 300, 640, 1280, 1920],
+        thumbnailContents: { 300: thumb300 },
       });
 
       app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
@@ -347,37 +401,49 @@ describe('image routes', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.headers['content-type']).toContain('image/jpeg');
+      expect(response.rawPayload).toEqual(written.thumbnails[300]);
     });
 
     it('selects the smallest thumbnail >= requested width', async () => {
       const client = setupDb();
-      const { mediaItemId } = seedMediaItem(client, {
+      const b300 = Buffer.from('tier-300');
+      const b640 = Buffer.from('tier-640');
+      const { mediaItemId, written } = seedMediaItem(client, {
         dir: tmpDir,
         fileName: 'photo4',
         extension: 'jpg',
         createThumbnails: [150, 300, 640, 1280, 1920],
+        thumbnailContents: { 300: b300, 640: b640 },
       });
 
       app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
       await app.server.ready();
 
-      const response = await app.server.inject({
+      const r200 = await app.server.inject({
         method: 'GET',
         url: `/image/${mediaItemId}?width=200`,
       });
+      expect(r200.statusCode).toBe(200);
+      expect(r200.rawPayload).toEqual(written.thumbnails[300]);
 
-      expect(response.statusCode).toBe(200);
-      expect(response.headers['content-type']).toContain('image/jpeg');
+      const r500 = await app.server.inject({
+        method: 'GET',
+        url: `/image/${mediaItemId}?width=500`,
+      });
+      expect(r500.statusCode).toBe(200);
+      expect(r500.rawPayload).toEqual(written.thumbnails[640]);
     });
 
     it('falls back to largest thumbnail when requested width exceeds all tiers', async () => {
       const client = setupDb();
-      const { mediaItemId } = seedMediaItem(client, {
+      const b150 = Buffer.from('tier-150');
+      const b300 = Buffer.from('tier-300');
+      const { mediaItemId, written } = seedMediaItem(client, {
         dir: tmpDir,
         fileName: 'photo5',
         extension: 'jpg',
         createThumbnails: [150, 300],
+        thumbnailContents: { 150: b150, 300: b300 },
       });
 
       app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
@@ -389,15 +455,17 @@ describe('image routes', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.headers['content-type']).toContain('image/jpeg');
+      expect(response.rawPayload).toEqual(written.thumbnails[300]);
     });
 
     it('falls back to original when no thumbnails exist', async () => {
       const client = setupDb();
-      const { mediaItemId } = seedMediaItem(client, {
+      const original = Buffer.from('original-png-bytes');
+      const { mediaItemId, written } = seedMediaItem(client, {
         dir: tmpDir,
         fileName: 'photo6',
         extension: 'png',
+        originalContent: original,
       });
 
       app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
@@ -409,16 +477,18 @@ describe('image routes', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.headers['content-type']).toContain('image/png');
+      expect(response.rawPayload).toEqual(written.original);
     });
 
     it('supports height query parameter', async () => {
       const client = setupDb();
-      const { mediaItemId } = seedMediaItem(client, {
+      const b640 = Buffer.from('height-uses-640');
+      const { mediaItemId, written } = seedMediaItem(client, {
         dir: tmpDir,
         fileName: 'photo7',
         extension: 'jpg',
         createThumbnails: [300, 640],
+        thumbnailContents: { 300: Buffer.from('t300'), 640: b640 },
       });
 
       app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
@@ -430,6 +500,7 @@ describe('image routes', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(response.rawPayload).toEqual(written.thumbnails[640]);
     });
   });
 
@@ -440,6 +511,13 @@ describe('image routes', () => {
   describe('version redirect', () => {
     it('redirects with 301 when v param does not match db_date', async () => {
       const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const dbDate = db
+        .select({ value: schema.setting.value })
+        .from(schema.setting)
+        .where(eq(schema.setting.key, 'db_date'))
+        .get();
+
       const { mediaItemId } = seedMediaItem(client, {
         dir: tmpDir,
         fileName: 'photo8',
@@ -457,6 +535,9 @@ describe('image routes', () => {
       expect(response.statusCode).toBe(301);
       expect(response.headers.location).toBeDefined();
       expect(response.headers.location).toContain(`/image/${mediaItemId}`);
+      const loc = new URL(response.headers.location!, 'http://localhost');
+      expect(loc.searchParams.get('v')).toBe(dbDate!.value);
+      expect(loc.searchParams.get('db')).toBe(dbDate!.value);
     });
 
     it('serves normally when v param matches db_date', async () => {
