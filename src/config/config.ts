@@ -2,8 +2,9 @@ import { readFile } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 import { configSchema, type Config } from './schema.js';
 
-interface LoadConfigOptions {
+export interface LoadConfigOptions {
   configPath?: string;
+  overrides?: Record<string, unknown>;
 }
 
 /**
@@ -80,6 +81,15 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Confi
   const fileConfig = await readConfigFile(configPath);
 
   applyEnvOverrides(fileConfig, process.env);
+
+  if (options.overrides) {
+    for (const [key, value] of Object.entries(options.overrides)) {
+      if (value !== undefined) {
+        fileConfig[key] = value;
+      }
+    }
+  }
+
   resolvePaths(fileConfig, resolve(configPath, '..'));
 
   return configSchema.parse(fileConfig);
