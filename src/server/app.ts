@@ -9,6 +9,7 @@ import { randomBytes } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { Config, LogLevel } from '../config/schema.js';
 import { authPlugin } from './auth.js';
+import { settingsPlugin } from './routes/settings.js';
 
 const FILE_WATCH_DEBOUNCE_MS = 500;
 
@@ -58,6 +59,7 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
 
   if (db) {
     await server.register(authPlugin, { db });
+    await server.register(settingsPlugin, { db });
   }
 
   let watcher: FSWatcher | undefined;
