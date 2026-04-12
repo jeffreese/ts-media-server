@@ -129,16 +129,16 @@ Set up the database layer that all data operations depend on.
 Build the low-level utility modules that the indexing and serving layers depend on.
 
 ### File System Utilities
-- [ ] Implement `src/utils/file.ts`:
-  - [ ] Async recursive directory walker with file filter support
-  - [ ] File grouping by name (group related files: HEIC + JPG, MOV + MP4, iPhone sidecars)
-  - [ ] Primary file identification logic (prioritize HEIC, then non-JPEG media, then JPEG)
-  - [ ] Hidden directory detection (skip `.` and `_` prefixed directories)
-  - [ ] MD5 hash computation for files
-  - [ ] SHA1 hash computation for file integrity verification
-  - [ ] Atomic file write (write to temp, rename)
-  - [ ] Cross-platform path normalization
-- [ ] Write tests for file grouping, primary file detection, hidden dir filtering, hash computation
+- [x] Implement `src/utils/file.ts`:
+  - [x] Async recursive directory walker with file filter support
+  - [x] File grouping by name (group related files: HEIC + JPG, MOV + MP4, iPhone sidecars)
+  - [x] Primary file identification logic (prioritize HEIC, then non-JPEG media, then JPEG)
+  - [x] Hidden directory detection (skip `.` and `_` prefixed directories)
+  - [x] MD5 hash computation for files
+  - [x] SHA1 hash computation for file integrity verification
+  - [x] Atomic file write (write to temp, rename)
+  - [x] Cross-platform path normalization
+- [x] Write tests for file grouping, primary file detection, hidden dir filtering, hash computation
 
 ### FFmpeg Wrapper
 - [ ] Implement `src/utils/ffmpeg.ts`:
