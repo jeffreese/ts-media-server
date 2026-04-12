@@ -225,10 +225,10 @@ Build the low-level utility modules that the indexing and serving layers depend 
 ## Phase 6: Face Detection & Recognition
 
 ### ONNX Runtime Setup
-- [ ] Install `onnxruntime-node`
-- [ ] Research and select ONNX models for face detection and recognition
-- [ ] Document model download/setup instructions
-- [ ] Implement model loading and session creation
+- [x] Install `onnxruntime-node`
+- [x] Research and select ONNX models for face detection and recognition
+- [x] Document model download/setup instructions
+- [x] Implement model loading and session creation
 
 ### Face Detection Service
 - [ ] Implement `src/services/face-detection.ts`:
