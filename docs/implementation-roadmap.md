@@ -24,11 +24,11 @@ Establish the project structure, toolchain, and core infrastructure that everyth
 - [x] Install `semgrep` for static security analysis (`brew install semgrep`)
 
 ### Configuration System
-- [ ] Install `zod`
-- [ ] Define Zod config schema (`src/config/schema.ts`) with all config options and defaults
-- [ ] Implement config loader (`src/config/config.ts`): read `config.json`, merge env var overrides, validate with Zod
-- [ ] Support `--config` CLI flag for custom config file path
-- [ ] Write tests for config loading, env var overrides, and validation error messages
+- [x] Install `zod`
+- [x] Define Zod config schema (`src/config/schema.ts`) with all config options and defaults
+- [x] Implement config loader (`src/config/config.ts`): read `config.json`, merge env var overrides, validate with Zod
+- [x] Support `--config` CLI flag for custom config file path
+- [x] Write tests for config loading, env var overrides, and validation error messages
 
 ### Logging
 - [ ] Install `pino`
