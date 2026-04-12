@@ -17,10 +17,11 @@ export const serveCommand = new Command('serve')
   .option('-c, --config <path>', 'path to config file')
   .option('-w, --web <path>', 'path to web directory')
   .action(async (options: ServeOptions) => {
-    const config = await loadConfig({ configPath: options.config });
+    const overrides: Record<string, unknown> = {};
+    if (options.port) overrides.port = Number(options.port);
+    if (options.web) overrides.webDir = options.web;
 
-    if (options.port) config.port = Number(options.port);
-    if (options.web) config.webDir = options.web;
+    const config = await loadConfig({ configPath: options.config, overrides });
 
     const client = createDatabaseClient({ path: config.database.path });
     runMigrations(client);

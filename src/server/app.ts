@@ -5,10 +5,9 @@ import fastifyJwt from '@fastify/jwt';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
-import type { Config } from '../config/schema.js';
-import type { LogLevel } from '../config/schema.js';
+import { randomBytes } from 'node:crypto';
+import type { Config, LogLevel } from '../config/schema.js';
 
-const DEFAULT_JWT_SECRET = 'media-server-dev-secret';
 const FILE_WATCH_DEBOUNCE_MS = 500;
 
 export interface CreateAppOptions {
@@ -40,8 +39,14 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
 
   await server.register(fastifyCors);
 
+  let jwtSecret = config.jwt?.secret;
+  if (!jwtSecret) {
+    jwtSecret = randomBytes(32).toString('base64url');
+    server.log.warn('no jwt.secret configured — using a random ephemeral secret (tokens will not survive restarts)');
+  }
+
   await server.register(fastifyJwt, {
-    secret: config.jwt?.secret ?? DEFAULT_JWT_SECRET,
+    secret: jwtSecret,
     sign: { expiresIn: config.jwt?.expiresIn ?? '24h' },
   });
 

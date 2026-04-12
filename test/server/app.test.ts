@@ -118,6 +118,15 @@ describe('createApp', () => {
     expect(token.split('.')).toHaveLength(3);
   });
 
+  it('generates an ephemeral secret when jwt config is omitted', async () => {
+    app = await createApp({ config: makeConfig(), loggerOptions });
+    await app.server.ready();
+
+    const token = app.server.jwt.sign({ ephemeral: true });
+    const decoded = app.server.jwt.verify<{ ephemeral: boolean }>(token);
+    expect(decoded.ephemeral).toBe(true);
+  });
+
   // ---------------------------------------------------------------------------
   // WebSocket
   // ---------------------------------------------------------------------------
