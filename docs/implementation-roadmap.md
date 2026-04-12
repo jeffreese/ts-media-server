@@ -21,6 +21,7 @@ Establish the project structure, toolchain, and core infrastructure that everyth
 - [ ] Add `.gitignore`, `.nvmrc` (pin Node version), `.editorconfig`
 - [ ] Set up `package.json` scripts: `dev`, `build`, `test`, `test:watch`, `lint`
 - [ ] Install core dev dependencies: `typescript`, `tsx`, `tsup`, `vitest`, `@types/node`
+- [ ] Install `semgrep` for static security analysis (`brew install semgrep`)
 
 ### Configuration System
 - [ ] Install `zod`

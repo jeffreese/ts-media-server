@@ -8,14 +8,6 @@
         "timeout": 30,
         "matcher": "*.ts"
       }
-    ],
-    "stop": [
-      {
-        "command": "bash .cursor/hooks/grind.sh",
-        "type": "command",
-        "timeout": 60,
-        "loop_limit": 5
-      }
     ]
   }
 }

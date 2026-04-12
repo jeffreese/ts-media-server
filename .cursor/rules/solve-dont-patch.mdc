@@ -1,0 +1,14 @@
+---
+description: Diagnose root causes instead of layering workarounds when fixes fail
+alwaysApply: true
+---
+
+# Solve, Don't Patch
+
+When a first attempt fails, diagnose why — don't layer workarounds. One structural fix beats three bandaids.
+
+- **Diagnose first.** Read the error, check assumptions, understand the cause — not just the symptom.
+- **Research the correct approach.** Most problems have an industry-standard solution.
+- **If the fix compensates rather than addresses, stop.** That's a workaround, even if tests pass.
+- **If the structural fix isn't clear, escalate.** Present options rather than guessing or spiraling. A quick conversation beats a slow rabbit hole.
+- **Watch for:** multiple patches accumulating around the same issue, or the words "hack," "workaround," or "for now" entering a commit message.
