@@ -380,19 +380,19 @@ This is the core indexing engine that ties together all the services from Phases
 ## Phase 9: Security & User Management
 
 ### Security Filter
-- [ ] Implement security filter (`src/services/security.ts`):
-  - [ ] `getAccessLevel(user, component)` — query user_access for permission level
-  - [ ] Per-model query modification:
-    - [ ] User: check UserAdmin access for save/delete of other users, protect last admin
-    - [ ] UserPreference: scope queries to requesting user
-    - [ ] UserAuthentication: enforce BCrypt hashing on password save, check permissions
-    - [ ] UserAccess: validate admin count constraints, check UserAdmin permission
-    - [ ] Component: require SysAdmin for save/delete
-    - [ ] Datatype: require SysAdmin for save/delete
-    - [ ] DataAccess: filter by user permissions, enforce read-only
-    - [ ] Setting: prevent deletion
-  - [ ] `getAdminCount(excludeUserId, component)` — count remaining admins
-- [ ] Write tests for each model's security rules, admin protection
+- [x] Implement security filter (`src/services/security.ts`):
+  - [x] `getAccessLevel(user, component)` — query user_access for permission level
+  - [x] Per-model query modification:
+    - [x] User: check UserAdmin access for save/delete of other users, protect last admin
+    - [x] UserPreference: scope queries to requesting user
+    - [x] UserAuthentication: enforce BCrypt hashing on password save, check permissions
+    - [x] UserAccess: validate admin count constraints, check UserAdmin permission
+    - [x] Component: require SysAdmin for save/delete
+    - [x] Datatype: require SysAdmin for save/delete
+    - [x] DataAccess: filter by user permissions, enforce read-only
+    - [x] Setting: prevent deletion
+  - [x] `getAdminCount(excludeUserId, component)` — count remaining admins
+- [x] Write tests for each model's security rules, admin protection
 
 ### Generic Model CRUD Routes
 - [ ] Implement CRUD route generator (`src/server/routes/models/`):
