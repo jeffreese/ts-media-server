@@ -1,0 +1,14 @@
+---
+description: Pause and confirm decisions the user likely cares about before implementing
+alwaysApply: true
+---
+
+# Confirm Decisions Before Implementing
+
+When a task involves decisions the user likely cares about, pause and present the options before coding.
+
+This includes:
+- **Technical approach:** swapping a library, replacing an API/pattern, altering architecture
+- **Feature design:** choosing what options to expose, where to persist state, what UI controls to use — any choice where reasonable people would disagree
+
+Skip confirmation for implementation details that follow naturally from established patterns.

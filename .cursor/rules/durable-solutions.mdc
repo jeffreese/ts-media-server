@@ -1,0 +1,24 @@
+---
+description: Default to long-term solutions over quick fixes — challenge expedient impulses
+alwaysApply: true
+---
+
+# Favor Durable Solutions Over Expedient Ones
+
+Default to the solution that will hold up long-term. Quick fixes are a rare exception.
+
+## Challenge these impulses
+- "Let's do X for now, we can refactor later."
+- Shims, feature flags, or env toggles that defer a decision instead of making it.
+- Expedient data structures (flat list when a tree fits; strings when enums fit; duplicated state when one source of truth fits).
+- The first library that mostly works, instead of the one that actually fits.
+
+"For now" is almost always a tell. "Later" rarely comes.
+
+## When expedience IS right
+
+Only when ALL of these hold: the problem is genuinely scoped (one-off, throwaway, demo tomorrow); the user has said speed matters; and nothing else will grow on top of the shortcut. If unsure, ask.
+
+## How to apply
+- When two paths exist, present both but lead with the durable one.
+- If you catch yourself writing "for now," "temporary," "quick fix," "workaround," or "placeholder" — stop and reconsider.
