@@ -38,12 +38,12 @@ export const websocketPlugin = fp<WebSocketPluginOptions>(
     opts: WebSocketPluginOptions,
   ): Promise<void> {
     const { notificationService } = opts;
-    const clients = new Map<WebSocket, boolean>();
+    const clients = new Set<WebSocket>();
 
     const dispose = notificationService.addListener(
       (event: NotificationEvent) => {
         const message = formatMessage(event);
-        for (const [socket] of clients) {
+        for (const socket of clients) {
           if (socket.readyState === socket.OPEN) {
             socket.send(message);
           }
@@ -52,7 +52,7 @@ export const websocketPlugin = fp<WebSocketPluginOptions>(
     );
 
     app.get('/ws', { websocket: true }, (socket: WebSocket) => {
-      clients.set(socket, true);
+      clients.add(socket);
 
       socket.on('close', () => {
         clients.delete(socket);
@@ -65,7 +65,7 @@ export const websocketPlugin = fp<WebSocketPluginOptions>(
 
     app.addHook('onClose', () => {
       dispose();
-      for (const [socket] of clients) {
+      for (const socket of clients) {
         socket.close();
       }
       clients.clear();
