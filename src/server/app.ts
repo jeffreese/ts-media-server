@@ -6,12 +6,15 @@ import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
 import { randomBytes } from 'node:crypto';
+import type Database from 'better-sqlite3';
 import type { Config, LogLevel } from '../config/schema.js';
+import { authPlugin } from './auth.js';
 
 const FILE_WATCH_DEBOUNCE_MS = 500;
 
 export interface CreateAppOptions {
   config: Config;
+  db?: Database.Database;
   loggerOptions?: { level?: LogLevel; name?: string };
 }
 
@@ -28,7 +31,7 @@ export interface App {
  * route that uses `request.jwtVerify`.
  */
 export async function createApp(options: CreateAppOptions): Promise<App> {
-  const { config, loggerOptions } = options;
+  const { config, db, loggerOptions } = options;
 
   const server = Fastify({
     logger: {
@@ -52,6 +55,10 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
 
   await server.register(fastifyWebsocket);
   await server.register(fastifyMultipart);
+
+  if (db) {
+    await server.register(authPlugin, { db });
+  }
 
   let watcher: FSWatcher | undefined;
 

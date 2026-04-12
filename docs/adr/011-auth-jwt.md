@@ -25,7 +25,7 @@ We will use **JWT** for authentication, with **BCrypt** retained for password st
 - JWT contains user ID and expiration
 - BCrypt (cost factor 12) for password hashing in `user_authentication` table
 - `@fastify/jwt` decorates Fastify requests with `request.jwtVerify()`
-- Fastify `onRequest` hook checks for valid JWT on protected routes
+- Fastify `preHandler` hook checks for valid JWT on protected routes (`onRequest` fires before body parsing; `preHandler` is the correct lifecycle point for auth checks that need to coexist with body-dependent routes)
 - Disabled auth mode: when `auth_status` setting is "disabled", all requests are treated as the default admin user (matching Java behavior for fresh installs)
 
 ## Tradeoffs

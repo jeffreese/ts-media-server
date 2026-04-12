@@ -347,15 +347,15 @@ This is the core indexing engine that ties together all the services from Phases
   - [x] File watching on web directory with debounced notifications
 
 ### Authentication
-- [ ] Install `bcrypt`, `@types/bcrypt`
-- [ ] Implement JWT auth plugin (`src/server/auth.ts`):
-  - [ ] `POST /auth/login` — validate credentials, issue JWT
-  - [ ] `POST /auth/refresh` — refresh expiring token
-  - [ ] JWT verification `onRequest` hook for protected routes
-  - [ ] Disabled auth mode: bypass auth when `auth_status` setting is "disabled"
-  - [ ] Extract user from JWT and attach to request
-  - [ ] BCrypt password hashing (cost factor 12) for credential storage
-- [ ] Write tests for login, token verification, disabled auth mode
+- [x] Install `bcrypt`, `@types/bcrypt`
+- [x] Implement JWT auth plugin (`src/server/auth.ts`):
+  - [x] `POST /auth/login` — validate credentials, issue JWT
+  - [x] `POST /auth/refresh` — refresh expiring token
+  - [x] JWT verification `onRequest` hook for protected routes
+  - [x] Disabled auth mode: bypass auth when `auth_status` setting is "disabled"
+  - [x] Extract user from JWT and attach to request
+  - [x] BCrypt password hashing (cost factor 12) for credential storage
+- [x] Write tests for login, token verification, disabled auth mode
 
 ### WebSocket Event Broadcasting
 - [ ] Implement WebSocket handler (`src/server/websocket.ts`):
