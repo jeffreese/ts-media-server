@@ -1,14 +1,15 @@
 import { createReadStream } from 'node:fs';
 import { access, constants, stat } from 'node:fs/promises';
-import { join } from 'node:path';
-import type { FastifyInstance } from 'fastify';
+import { join, parse } from 'node:path';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or, isNull } from 'drizzle-orm';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type Database from 'better-sqlite3';
 import { z } from 'zod/v4';
 import * as schema from '../../db/schema.js';
 import { getThumbnailPath, THUMBNAIL_TIERS } from '../../services/thumbnail.js';
+import { normalizePath } from '../../utils/file.js';
 
 const paramsSchema = z.object({
   id: z.coerce.number().int().positive(),
@@ -20,6 +21,20 @@ const querySchema = z.object({
   v: z.string().optional(),
   db: z.string().optional(),
 });
+
+/** Query params for `GET /image` path-based lookup (directory + filename). */
+const pathLookupQuerySchema = querySchema.extend({
+  dir: z.string().min(1),
+  file: z
+    .string()
+    .min(1)
+    .refine((f) => !f.includes('/') && !f.includes('\\'), {
+      message: 'file must be a basename only',
+    })
+    .refine((f) => f !== '.' && f !== '..', { message: 'invalid file name' }),
+});
+
+type ImageQuery = z.infer<typeof querySchema>;
 
 const CONTENT_TYPE_JPEG = 'image/jpeg';
 
@@ -70,6 +85,43 @@ function getPrimaryFile(
     .get();
 
   return row ?? undefined;
+}
+
+/**
+ * Resolve a media item ID from an indexed directory path and file basename.
+ * `directory` is normalized the same way as stored `path.dir` values from indexing.
+ */
+function resolveMediaItemIdByPath(
+  db: BetterSQLite3Database<typeof schema>,
+  directory: string,
+  fileBasename: string,
+): number | undefined {
+  const normalizedDir = normalizePath(directory);
+  const parsed = parse(fileBasename);
+  const fileName = parsed.name;
+  const extension = parsed.ext.replace(/^\./, '');
+
+  const extensionClause =
+    extension === ''
+      ? or(eq(schema.file.extension, ''), isNull(schema.file.extension))
+      : eq(schema.file.extension, extension);
+
+  const row = db
+    .select({ mediaItemId: schema.mediaItemFile.mediaItemId })
+    .from(schema.file)
+    .innerJoin(schema.path, eq(schema.path.id, schema.file.pathId))
+    .innerJoin(schema.mediaItemFile, eq(schema.mediaItemFile.fileId, schema.file.id))
+    .where(
+      and(
+        eq(schema.path.dir, normalizedDir),
+        eq(schema.file.name, fileName),
+        extensionClause,
+        eq(schema.mediaItemFile.isPrimary, true),
+      ),
+    )
+    .get();
+
+  return row?.mediaItemId;
 }
 
 function buildFilePath(name: string, extension: string | null, dir: string): string {
@@ -134,6 +186,8 @@ function getDbVersion(db: BetterSQLite3Database<typeof schema>): string | undefi
  * Image serving routes.
  *
  * - `GET /image/:id` — serve image by media item ID
+ * - `GET /image?dir=…&file=…` — resolve the primary file under an indexed directory
+ *   (same `dir` string as stored in `path.dir` after normalization) and serve like `:id`
  *
  * Supports `width`/`height` query params for thumbnail selection,
  * version-based caching via `v` and `db` query params, and falls
@@ -146,20 +200,13 @@ export const imagePlugin = fp<ImagePluginOptions>(
   ): Promise<void> {
     const db = drizzle(opts.db, { schema });
 
-    app.get('/image/:id', {
-      preHandler: [app.authenticate],
-    }, async (request, reply) => {
-      const paramsParsed = paramsSchema.safeParse(request.params);
-      if (!paramsParsed.success) {
-        return reply.code(400).send({ error: 'Invalid image ID' });
-      }
-      const { id } = paramsParsed.data;
-
-      const queryParsed = querySchema.safeParse(request.query);
-      if (!queryParsed.success) {
-        return reply.code(400).send({ error: 'Invalid query parameters' });
-      }
-      const { width, height, v, db: dbParam } = queryParsed.data;
+    async function serveImageForMediaItem(
+      request: FastifyRequest,
+      reply: FastifyReply,
+      id: number,
+      query: ImageQuery,
+    ): Promise<void> {
+      const { width, height, v, db: dbParam } = query;
 
       const mediaItemRow = db
         .select()
@@ -168,7 +215,7 @@ export const imagePlugin = fp<ImagePluginOptions>(
         .get();
 
       if (!mediaItemRow) {
-        return reply.code(404).send({ error: 'Media item not found' });
+        return void reply.code(404).send({ error: 'Media item not found' });
       }
 
       if (v !== undefined && dbParam !== undefined) {
@@ -177,13 +224,13 @@ export const imagePlugin = fp<ImagePluginOptions>(
           const url = new URL(request.url, `http://${request.hostname}`);
           url.searchParams.set('v', currentVersion);
           url.searchParams.set('db', currentVersion);
-          return reply.redirect(url.pathname + url.search, 301);
+          return void reply.redirect(url.pathname + url.search, 301);
         }
       }
 
       const primary = getPrimaryFile(db, id);
       if (!primary) {
-        return reply.code(404).send({ error: 'No primary file found for media item' });
+        return void reply.code(404).send({ error: 'No primary file found for media item' });
       }
 
       const originalPath = buildFilePath(primary.name, primary.extension, primary.dir);
@@ -207,16 +254,50 @@ export const imagePlugin = fp<ImagePluginOptions>(
       }
 
       if (!await fileExists(servePath)) {
-        return reply.code(404).send({ error: 'File not found on disk' });
+        return void reply.code(404).send({ error: 'File not found on disk' });
       }
 
       const fileStat = await stat(servePath);
 
-      return reply
+      return void reply
         .type(contentType)
         .header('Last-Modified', fileStat.mtime.toUTCString())
         .header('Cache-Control', 'public, max-age=31536000, immutable')
         .send(createReadStream(servePath));
+    }
+
+    app.get('/image', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const queryParsed = pathLookupQuerySchema.safeParse(request.query);
+      if (!queryParsed.success) {
+        return reply.code(400).send({ error: 'Invalid path lookup (require dir and file basename)' });
+      }
+
+      const { dir, file, ...rest } = queryParsed.data;
+      const mediaItemId = resolveMediaItemIdByPath(db, dir, file);
+      if (mediaItemId === undefined) {
+        return reply.code(404).send({ error: 'Media item not found for path' });
+      }
+
+      return serveImageForMediaItem(request, reply, mediaItemId, rest);
+    });
+
+    app.get('/image/:id', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const paramsParsed = paramsSchema.safeParse(request.params);
+      if (!paramsParsed.success) {
+        return reply.code(400).send({ error: 'Invalid image ID' });
+      }
+      const { id } = paramsParsed.data;
+
+      const queryParsed = querySchema.safeParse(request.query);
+      if (!queryParsed.success) {
+        return reply.code(400).send({ error: 'Invalid query parameters' });
+      }
+
+      return serveImageForMediaItem(request, reply, id, queryParsed.data);
     });
   },
   { name: 'image-routes', dependencies: ['auth'] },

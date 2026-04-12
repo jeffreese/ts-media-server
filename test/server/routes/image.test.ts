@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, normalize } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomBytes } from 'node:crypto';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
@@ -11,6 +11,7 @@ import { seedDatabase } from '../../../src/db/seed.js';
 import { createApp, type App } from '../../../src/server/app.js';
 import * as schema from '../../../src/db/schema.js';
 import { getThumbnailPath } from '../../../src/services/thumbnail.js';
+import { normalizePath } from '../../../src/utils/file.js';
 import type { Config } from '../../../src/config/schema.js';
 
 function makeConfig(overrides: Partial<Config> = {}): Config {
@@ -216,6 +217,110 @@ describe('image routes', () => {
 
       expect(response.statusCode).toBe(404);
       expect(response.json().error).toContain('File not found');
+    });
+  });
+
+  describe('GET /image (path-based lookup)', () => {
+    it('serves the image when dir and file match the primary file', async () => {
+      const client = setupDb();
+      seedMediaItem(client, {
+        dir: tmpDir,
+        fileName: 'byPathPhoto',
+        extension: 'jpg',
+      });
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const dirParam = encodeURIComponent(normalizePath(tmpDir));
+      const response = await app.server.inject({
+        method: 'GET',
+        url: `/image?dir=${dirParam}&file=byPathPhoto.jpg`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-type']).toContain('image/jpeg');
+    });
+
+    it('accepts a directory string normalized like the indexer', async () => {
+      const client = setupDb();
+      const nested = join(tmpDir, 'sub');
+      mkdirSync(nested, { recursive: true });
+      seedMediaItem(client, {
+        dir: nested,
+        fileName: 'nested',
+        extension: 'png',
+      });
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const dirWithDots = join(tmpDir, 'sub', '..', 'sub');
+      const dirParam = encodeURIComponent(normalizePath(dirWithDots));
+      const response = await app.server.inject({
+        method: 'GET',
+        url: `/image?dir=${dirParam}&file=nested.png`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-type']).toContain('image/png');
+    });
+
+    it('returns 404 when no file matches the path', async () => {
+      const client = setupDb();
+      seedMediaItem(client, {
+        dir: tmpDir,
+        fileName: 'onlyThis',
+        extension: 'jpg',
+      });
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const dirParam = encodeURIComponent(normalize(tmpDir));
+      const response = await app.server.inject({
+        method: 'GET',
+        url: `/image?dir=${dirParam}&file=missing.jpg`,
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error).toContain('not found');
+    });
+
+    it('returns 400 when file contains a path separator', async () => {
+      const client = setupDb();
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const dirParam = encodeURIComponent(normalize(tmpDir));
+      const response = await app.server.inject({
+        method: 'GET',
+        url: `/image?dir=${dirParam}&file=sub%2Fphoto.jpg`,
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('redirects with 301 for stale version params while preserving dir and file', async () => {
+      const client = setupDb();
+      seedMediaItem(client, {
+        dir: tmpDir,
+        fileName: 'versionedPath',
+        extension: 'jpg',
+      });
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const dirParam = encodeURIComponent(normalizePath(tmpDir));
+      const response = await app.server.inject({
+        method: 'GET',
+        url: `/image?dir=${dirParam}&file=versionedPath.jpg&v=old&db=old`,
+      });
+
+      expect(response.statusCode).toBe(301);
+      expect(response.headers.location).toContain('dir=');
+      expect(response.headers.location).toContain('file=versionedPath.jpg');
     });
   });
 

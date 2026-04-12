@@ -425,7 +425,7 @@ This is the core indexing engine that ties together all the services from Phases
   - [x] Fall back to original file for sizes larger than largest thumbnail
   - [x] Version-based caching: compare `v` and `db` query params, redirect with 301 if stale
   - [x] Set appropriate Content-Type and Last-Modified headers
-  - [ ] Support path-based media item lookup (resolve by directory + filename)
+  - [x] Support path-based media item lookup (resolve by directory + filename)
 - [ ] Write tests for thumbnail selection, version redirect, path-based lookup
 
 ### Video Serving
