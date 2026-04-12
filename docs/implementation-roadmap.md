@@ -453,10 +453,10 @@ This is the core indexing engine that ties together all the services from Phases
 - [x] Write tests for folder browsing, recursive listing, pagination
 
 ### Thumbnail Listing
-- [ ] Implement thumbnails route (`src/server/routes/thumbnails.ts`):
-  - [ ] `GET /thumbnails/:id` — list available thumbnail sizes for a media item
-  - [ ] Version-based caching with 301 redirect
-- [ ] Write tests for thumbnail listing
+- [x] Implement thumbnails route (`src/server/routes/thumbnails.ts`):
+  - [x] `GET /thumbnails/:id` — list available thumbnail sizes for a media item
+  - [x] Version-based caching with 301 redirect
+- [x] Write tests for thumbnail listing
 
 ### Media Item Details
 - [ ] Implement media item route (`src/server/routes/media-item.ts`):
