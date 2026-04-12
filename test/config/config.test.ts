@@ -149,6 +149,20 @@ describe('loadConfig', () => {
       const config = await loadConfig({ configPath });
       expect(config.port).toBe(3000);
     });
+
+    it('rejects non-numeric PORT env var via Zod', async () => {
+      vi.stubEnv('PORT', 'abc');
+      await expect(
+        loadConfig({ configPath: join(TEST_DIR, 'nonexistent.json') }),
+      ).rejects.toThrow();
+    });
+
+    it('rejects JWT_EXPIRES_IN without JWT_SECRET', async () => {
+      vi.stubEnv('JWT_EXPIRES_IN', '2h');
+      await expect(
+        loadConfig({ configPath: join(TEST_DIR, 'nonexistent.json') }),
+      ).rejects.toThrow();
+    });
   });
 
   describe('validation errors', () => {
