@@ -533,13 +533,13 @@ Wire the CLI subcommands to the services built in previous phases.
 - [x] Address CRUD linked to places
 
 ### Generic Data Store
-- [ ] Datatype CRUD
-- [ ] Data CRUD with typed records, JSON payload, binary thumbnails
-- [ ] Data access control via groups with read-only enforcement
+- [x] Datatype CRUD
+- [x] Data CRUD with typed records, JSON payload, binary thumbnails
+- [x] Data access control via groups with read-only enforcement
 
 ### Media Access Control
-- [ ] Media access CRUD (link media items to user groups)
-- [ ] Read-only enforcement per group
+- [x] Media access CRUD (link media items to user groups)
+- [x] Read-only enforcement per group
 
 ---
 

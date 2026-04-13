@@ -17,6 +17,7 @@ import {
   checkComponent,
   checkDatatype,
   checkDataAccess,
+  checkMediaAccess,
   checkSetting,
   checkSecurity,
   hashPasswordField,
@@ -404,6 +405,71 @@ describe('security service', () => {
       const result = checkDataAccess(ctx(db, nonAdminId), 'save', { groupId: group.id, readOnly: true });
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('Read-only');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // checkMediaAccess
+  // -------------------------------------------------------------------------
+
+  describe('checkMediaAccess', () => {
+    it('allows get and list for any user', () => {
+      const { db, nonAdminId } = setup();
+      expect(checkMediaAccess(ctx(db, nonAdminId), 'get')).toEqual({ allowed: true });
+      expect(checkMediaAccess(ctx(db, nonAdminId), 'list')).toEqual({ allowed: true });
+    });
+
+    it('allows SysAdmin to save regardless of group membership', () => {
+      const { db, adminId } = setup();
+      const result = checkMediaAccess(ctx(db, adminId), 'save', { groupId: 999 });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('denies non-member from saving media access', () => {
+      const { db, nonAdminId } = setup();
+      const group = db.insert(schema.userGroup).values({ name: 'TestGroup' }).returning().get();
+      const result = checkMediaAccess(ctx(db, nonAdminId), 'save', { groupId: group.id });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('not a member');
+    });
+
+    it('allows group member to save media access', () => {
+      const { db, nonAdminId } = setup();
+      const group = db.insert(schema.userGroup).values({ name: 'TestGroup' }).returning().get();
+      db.insert(schema.userGroupUser).values({
+        userGroupId: group.id,
+        userId: nonAdminId,
+        isAdmin: false,
+      }).run();
+      const result = checkMediaAccess(ctx(db, nonAdminId), 'save', { groupId: group.id });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('denies modification when readOnly is true', () => {
+      const { db, nonAdminId } = setup();
+      const group = db.insert(schema.userGroup).values({ name: 'TestGroup' }).returning().get();
+      db.insert(schema.userGroupUser).values({
+        userGroupId: group.id,
+        userId: nonAdminId,
+        isAdmin: false,
+      }).run();
+      const result = checkMediaAccess(ctx(db, nonAdminId), 'save', { groupId: group.id, readOnly: true });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('Read-only');
+    });
+
+    it('allows SysAdmin to delete regardless of group membership', () => {
+      const { db, adminId } = setup();
+      const result = checkMediaAccess(ctx(db, adminId), 'delete', { groupId: 999 });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('denies non-member from deleting media access', () => {
+      const { db, nonAdminId } = setup();
+      const group = db.insert(schema.userGroup).values({ name: 'TestGroup' }).returning().get();
+      const result = checkMediaAccess(ctx(db, nonAdminId), 'delete', { groupId: group.id });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('not a member');
     });
   });
 

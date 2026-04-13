@@ -641,4 +641,446 @@ describe('generic model CRUD routes', () => {
       expect(listRes.json().items.length).toBeGreaterThanOrEqual(1);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Datatype CRUD
+  // ---------------------------------------------------------------------------
+
+  describe('datatype CRUD', () => {
+    it('creates, reads, lists, and deletes a datatype (SysAdmin)', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const token = getAdminToken();
+
+      const createRes = await app.server.inject({
+        method: 'POST',
+        url: '/datatype',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { label: 'Document' },
+      });
+      expect(createRes.statusCode).toBe(200);
+      const created = createRes.json();
+      expect(created.label).toBe('Document');
+
+      const getRes = await app.server.inject({
+        method: 'GET',
+        url: `/datatype/${created.id}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(getRes.statusCode).toBe(200);
+      expect(getRes.json().label).toBe('Document');
+
+      const listRes = await app.server.inject({
+        method: 'GET',
+        url: '/datatype',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(listRes.statusCode).toBe(200);
+      expect(listRes.json().items.some((d: { label: string }) => d.label === 'Document')).toBe(true);
+
+      const deleteRes = await app.server.inject({
+        method: 'DELETE',
+        url: `/datatype/${created.id}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(deleteRes.statusCode).toBe(200);
+      expect(deleteRes.json().success).toBe(true);
+    });
+
+    it('denies non-admin from creating a datatype', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const nonAdminId = createNonAdminUser(client);
+      const token = app.server.jwt.sign({ userId: nonAdminId });
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: '/datatype',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { label: 'Forbidden' },
+      });
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Data CRUD (typed records, JSON payload, binary thumbnails)
+  // ---------------------------------------------------------------------------
+
+  describe('data CRUD', () => {
+    it('creates and retrieves a data record with JSON payload', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const token = getAdminToken();
+
+      const typeRes = await app.server.inject({
+        method: 'POST',
+        url: '/datatype',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { label: 'Report' },
+      });
+      const datatype = typeRes.json();
+
+      const createRes = await app.server.inject({
+        method: 'POST',
+        url: '/data',
+        headers: { authorization: `Bearer ${token}` },
+        payload: {
+          name: 'Q1 Report',
+          description: 'First quarter summary',
+          typeId: datatype.id,
+          data: { revenue: 42000, quarter: 'Q1' },
+          date: '2025-04-01T00:00:00Z',
+        },
+      });
+      expect(createRes.statusCode).toBe(200);
+      const created = createRes.json();
+      expect(created.name).toBe('Q1 Report');
+      expect(created.data).toEqual({ revenue: 42000, quarter: 'Q1' });
+      expect(created.typeId).toBe(datatype.id);
+
+      const getRes = await app.server.inject({
+        method: 'GET',
+        url: `/data/${created.id}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(getRes.statusCode).toBe(200);
+      expect(getRes.json().data).toEqual({ revenue: 42000, quarter: 'Q1' });
+    });
+
+    it('updates a data record', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const token = getAdminToken();
+
+      const typeRes = await app.server.inject({
+        method: 'POST',
+        url: '/datatype',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { label: 'Note' },
+      });
+      const datatype = typeRes.json();
+
+      const createRes = await app.server.inject({
+        method: 'POST',
+        url: '/data',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'Draft', typeId: datatype.id, data: { text: 'initial' } },
+      });
+      const created = createRes.json();
+
+      const updateRes = await app.server.inject({
+        method: 'POST',
+        url: '/data',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { id: created.id, name: 'Final', data: { text: 'updated' } },
+      });
+      expect(updateRes.statusCode).toBe(200);
+      expect(updateRes.json().name).toBe('Final');
+      expect(updateRes.json().data).toEqual({ text: 'updated' });
+    });
+
+    it('lists data records with pagination', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const token = getAdminToken();
+
+      const typeRes = await app.server.inject({
+        method: 'POST',
+        url: '/datatype',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { label: 'Memo' },
+      });
+      const datatype = typeRes.json();
+
+      for (let i = 0; i < 3; i++) {
+        await app.server.inject({
+          method: 'POST',
+          url: '/data',
+          headers: { authorization: `Bearer ${token}` },
+          payload: { name: `Memo ${i}`, typeId: datatype.id },
+        });
+      }
+
+      const listRes = await app.server.inject({
+        method: 'GET',
+        url: '/data?limit=2',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(listRes.statusCode).toBe(200);
+      const body = listRes.json();
+      expect(body.items.length).toBe(2);
+      expect(body.total).toBe(3);
+    });
+
+    it('deletes a data record', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const token = getAdminToken();
+
+      const typeRes = await app.server.inject({
+        method: 'POST',
+        url: '/datatype',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { label: 'Temp' },
+      });
+      const datatype = typeRes.json();
+
+      const createRes = await app.server.inject({
+        method: 'POST',
+        url: '/data',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'Disposable', typeId: datatype.id },
+      });
+      const created = createRes.json();
+
+      const deleteRes = await app.server.inject({
+        method: 'DELETE',
+        url: `/data/${created.id}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(deleteRes.statusCode).toBe(200);
+      expect(deleteRes.json().success).toBe(true);
+
+      const getRes = await app.server.inject({
+        method: 'GET',
+        url: `/data/${created.id}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(getRes.statusCode).toBe(404);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // DataAccess CRUD (group-based access control with read-only enforcement)
+  // ---------------------------------------------------------------------------
+
+  describe('dataAccess CRUD', () => {
+    it('SysAdmin creates and lists data access records', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const token = getAdminToken();
+      const db = drizzle(client.db, { schema });
+
+      const datatypeRow = db.insert(schema.datatype).values({ label: 'Doc' }).returning().get();
+      const dataset = db.insert(schema.data).values({ name: 'DS', typeId: datatypeRow.id }).returning().get();
+      const group = db.insert(schema.userGroup).values({ name: 'Viewers' }).returning().get();
+
+      const createRes = await app.server.inject({
+        method: 'POST',
+        url: '/dataAccess',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { datasetId: dataset.id, groupId: group.id, readOnly: true },
+      });
+      expect(createRes.statusCode).toBe(200);
+      const created = createRes.json();
+      expect(created.datasetId).toBe(dataset.id);
+      expect(created.groupId).toBe(group.id);
+
+      const listRes = await app.server.inject({
+        method: 'GET',
+        url: '/dataAccess',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(listRes.statusCode).toBe(200);
+      expect(listRes.json().items.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('denies non-member from creating data access', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const db = drizzle(client.db, { schema });
+
+      const nonAdminId = createNonAdminUser(client);
+      const token = app.server.jwt.sign({ userId: nonAdminId });
+
+      const datatypeRow = db.insert(schema.datatype).values({ label: 'Doc' }).returning().get();
+      const dataset = db.insert(schema.data).values({ name: 'DS', typeId: datatypeRow.id }).returning().get();
+      const group = db.insert(schema.userGroup).values({ name: 'Private' }).returning().get();
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: '/dataAccess',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { datasetId: dataset.id, groupId: group.id, readOnly: false },
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().error).toContain('not a member');
+    });
+
+    it('enforces read-only flag for group members', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const db = drizzle(client.db, { schema });
+
+      const nonAdminId = createNonAdminUser(client);
+      const token = app.server.jwt.sign({ userId: nonAdminId });
+
+      const datatypeRow = db.insert(schema.datatype).values({ label: 'Doc' }).returning().get();
+      const dataset = db.insert(schema.data).values({ name: 'DS', typeId: datatypeRow.id }).returning().get();
+      const group = db.insert(schema.userGroup).values({ name: 'ReadOnly' }).returning().get();
+      db.insert(schema.userGroupUser).values({
+        userGroupId: group.id,
+        userId: nonAdminId,
+        isAdmin: false,
+      }).run();
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: '/dataAccess',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { datasetId: dataset.id, groupId: group.id, readOnly: true },
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().error).toContain('Read-only');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // MediaAccess CRUD (group-based access control with read-only enforcement)
+  // ---------------------------------------------------------------------------
+
+  describe('mediaAccess CRUD', () => {
+    it('SysAdmin creates and lists media access records', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const token = getAdminToken();
+      const db = drizzle(client.db, { schema });
+
+      const mediaItemRow = db.insert(schema.mediaItem).values({ name: 'Photo', type: 'image' }).returning().get();
+      const group = db.insert(schema.userGroup).values({ name: 'Viewers' }).returning().get();
+
+      const createRes = await app.server.inject({
+        method: 'POST',
+        url: '/mediaAccess',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { itemId: mediaItemRow.id, groupId: group.id, readOnly: false },
+      });
+      expect(createRes.statusCode).toBe(200);
+      const created = createRes.json();
+      expect(created.itemId).toBe(mediaItemRow.id);
+      expect(created.groupId).toBe(group.id);
+
+      const listRes = await app.server.inject({
+        method: 'GET',
+        url: '/mediaAccess',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(listRes.statusCode).toBe(200);
+      expect(listRes.json().items.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('denies non-member from creating media access', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const db = drizzle(client.db, { schema });
+
+      const nonAdminId = createNonAdminUser(client);
+      const token = app.server.jwt.sign({ userId: nonAdminId });
+
+      const mediaItemRow = db.insert(schema.mediaItem).values({ name: 'Photo', type: 'image' }).returning().get();
+      const group = db.insert(schema.userGroup).values({ name: 'Private' }).returning().get();
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: '/mediaAccess',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { itemId: mediaItemRow.id, groupId: group.id, readOnly: false },
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().error).toContain('not a member');
+    });
+
+    it('enforces read-only flag for group members', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const db = drizzle(client.db, { schema });
+
+      const nonAdminId = createNonAdminUser(client);
+      const token = app.server.jwt.sign({ userId: nonAdminId });
+
+      const mediaItemRow = db.insert(schema.mediaItem).values({ name: 'Photo', type: 'image' }).returning().get();
+      const group = db.insert(schema.userGroup).values({ name: 'ReadOnly' }).returning().get();
+      db.insert(schema.userGroupUser).values({
+        userGroupId: group.id,
+        userId: nonAdminId,
+        isAdmin: false,
+      }).run();
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: '/mediaAccess',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { itemId: mediaItemRow.id, groupId: group.id, readOnly: true },
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().error).toContain('Read-only');
+    });
+
+    it('allows group member to create non-read-only media access', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const db = drizzle(client.db, { schema });
+
+      const nonAdminId = createNonAdminUser(client);
+      const token = app.server.jwt.sign({ userId: nonAdminId });
+
+      const mediaItemRow = db.insert(schema.mediaItem).values({ name: 'Photo', type: 'image' }).returning().get();
+      const group = db.insert(schema.userGroup).values({ name: 'Editors' }).returning().get();
+      db.insert(schema.userGroupUser).values({
+        userGroupId: group.id,
+        userId: nonAdminId,
+        isAdmin: false,
+      }).run();
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: '/mediaAccess',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { itemId: mediaItemRow.id, groupId: group.id, readOnly: false },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().itemId).toBe(mediaItemRow.id);
+    });
+
+    it('deletes a media access record', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      await setupApp(client);
+      const token = getAdminToken();
+      const db = drizzle(client.db, { schema });
+
+      const mediaItemRow = db.insert(schema.mediaItem).values({ name: 'Photo', type: 'image' }).returning().get();
+      const group = db.insert(schema.userGroup).values({ name: 'Temp' }).returning().get();
+
+      const createRes = await app.server.inject({
+        method: 'POST',
+        url: '/mediaAccess',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { itemId: mediaItemRow.id, groupId: group.id, readOnly: false },
+      });
+      const created = createRes.json();
+
+      const deleteRes = await app.server.inject({
+        method: 'DELETE',
+        url: `/mediaAccess/${created.id}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(deleteRes.statusCode).toBe(200);
+      expect(deleteRes.json().success).toBe(true);
+    });
+  });
 });
