@@ -138,6 +138,12 @@
 - Settings page with theme toggle
 - Breadcrumb navigation, sidebar with section links
 - Error boundary with friendly 404 page
+- Media item detail page with two-column layout:
+  - Metadata panel: camera, lens, exposure, ISO, GPS, dimensions, duration
+  - Keywords section: list, add, and remove keyword tags
+  - Star rating (1–5) with optional comment
+  - Detected faces section with person name resolution
+  - Duplicate/similar media matches with thumbnail grid
 
 ### WebSocket Support
 - Real-time event broadcasting to connected WebSocket clients

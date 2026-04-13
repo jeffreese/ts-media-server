@@ -1,7 +1,7 @@
+import { ChevronLeft, ChevronRight, Info, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, X, Info } from 'lucide-react'
-import { api, type MediaItemEntry } from '~/lib/api'
 import { IconButton } from '~/components/primitives'
+import { type MediaItemEntry, api } from '~/lib/api'
 
 interface LightboxProps {
   items: MediaItemEntry[]

@@ -1,0 +1,5 @@
+export { MetadataPanel } from './metadata-panel'
+export { KeywordsSection } from './keywords-section'
+export { RatingSection } from './rating-section'
+export { FacesSection } from './faces-section'
+export { DuplicatesSection } from './duplicates-section'

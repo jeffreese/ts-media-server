@@ -631,12 +631,103 @@ React SPA served by Fastify via `@fastify/static` with SPA fallback. Mirrors the
 - [x] Error boundary — friendly 404 / error page with "Go home" action
 
 ### Remaining
-- [ ] Login / auth UI (currently skipped — server auth disabled by default)
-- [ ] Search and keyword filtering
-- [ ] Frontend test suite (Vitest + Testing Library)
-- [ ] Batch people+names API to avoid N+1 fetches on People page
-- [ ] Infinite scroll / pagination on media grids
-- [ ] Mobile sidebar (hamburger menu toggle)
+- [ ] Login / auth UI → Phase 16 item 8
+- [ ] Search and keyword filtering → Phase 16 item 2
+- [ ] Frontend test suite → Phase 16 (added incrementally per feature)
+- [ ] Batch people+names API to avoid N+1 fetches → Phase 16 item 3
+- [ ] Infinite scroll / pagination on media grids → Phase 16 item 3
+- [ ] Mobile sidebar (hamburger menu toggle) → Phase 16 item 6
+
+---
+
+## Phase 16: Web Frontend V2
+
+Complete the web UI to expose all server capabilities. Builds on Phase 15's scaffold, design system, and core pages.
+
+### 1. Media Item Detail Enrichment
+- [x] Full metadata panel: camera make/model, lens, exposure settings, dimensions from `info` JSON
+- [x] GPS coordinates display (lat/lng) when present in metadata
+- [x] `endDate` display when different from `startDate`
+- [x] Keywords section: list tags, add new keyword, remove existing (`/mediaItem/:id/keywords`)
+- [x] Star rating (1–5) with optional comment, upsert/delete (`/mediaItem/:id/rating`)
+- [ ] Available thumbnail sizes display (`/thumbnails/:id`)
+- [x] Duplicate matches section: show perceptually similar media items via `/mediaItem/:id/matches`
+- [x] Detected faces section: list face crops from `feature` records via `/mediaItem/:id/features`
+- [ ] Per-face "matching faces" expansion using `/matchingFaces/:id` (show other media with same face)
+- [x] Server routes: `GET /mediaItem/:id/features` and `GET /mediaItem/:id/matches` (item-scoped queries)
+
+### 2. Search & Filtering
+- [ ] Search bar in topbar: filter media items by name (client-side on loaded items, or via API)
+- [ ] Keyword-based filtering: browse all media tagged with a specific keyword
+- [ ] Date range filter: filter media grid by start/end date
+- [ ] Media type filter: toggle image-only, video-only, or all
+- [ ] Keywords index page (`/keywords`) — browse all keywords, click to see tagged media
+
+### 3. Pagination & Performance
+- [ ] Infinite scroll / load-more on folder browse grid (replace hardcoded `limit: 200`)
+- [ ] Infinite scroll on People page
+- [ ] Batch people loading: server-side endpoint or client-side batch to eliminate N+1 fetches on People page
+- [ ] Paginated face features on Person detail page
+- [ ] Loading states for all paginated transitions
+
+### 4. Face Matching & Person Assignment
+- [ ] "Similar faces" panel on media item detail: show faces detected in the image with match links
+- [ ] Assign unlinked face to existing person (`POST /person/:id/features`)
+- [ ] Create new person from a face (create person → add name → link feature)
+- [ ] Unlink face from person (`DELETE /person/:id/features`)
+- [ ] Person merge workflow (reassign features from one person to another)
+
+### 5. Places & Map View
+- [ ] Places listing page (`/places`) — browse all places with names
+- [ ] Place detail page (`/places/:id`) — names, linked media grid, addresses
+- [ ] Map view page (`/map`) using Leaflet + OpenStreetMap (free, no API key)
+- [ ] Cluster GPS-tagged media items on the map (leaflet.markercluster)
+- [ ] Click map marker → show media thumbnail popup → navigate to media item
+- [ ] Link/unlink media to places (`POST/DELETE /place/:id/media`)
+- [ ] Manage place names and addresses
+
+### 6. Mobile & Polish
+- [ ] Working mobile sidebar: hamburger toggle opens/closes drawer overlay
+- [ ] Responsive lightbox: swipe gestures for prev/next on touch devices
+- [ ] Retry button on failed fetches (wire `useFetch.refetch` to error states)
+- [ ] Breadcrumb improvements: show folder/item names instead of raw path segments
+- [ ] Empty states with actionable guidance (e.g. "No media indexed — add a directory to get started")
+- [ ] Frontend test suite: Vitest + Testing Library for API client, hooks, key components
+
+### 7. Real-time Updates
+- [ ] WebSocket connection hook (`useWebSocket`) — connect to `/ws` on mount
+- [ ] Parse notification wire format (`action,model,id,userId`)
+- [ ] Auto-refresh active grid when relevant model changes (mediaItem, folder, feature, person)
+- [ ] Indexing progress indicator: show progress when media is being indexed
+- [ ] Connection status indicator in topbar (connected/disconnected)
+
+### 8. Admin Panel
+- [ ] Admin page (`/admin`) with server status overview (indexed paths, file counts, media item counts)
+- [ ] View/edit server settings (`GET/POST /setting/:key`) — model paths, auth status, etc.
+- [ ] Directory browser: browse server filesystem (`GET /dir?path=`)
+- [ ] Trigger indexing: select a directory and start indexing from the UI (`POST` via add directory)
+- [ ] File upload: multipart upload to a server directory (`POST /dir/upload`)
+- [ ] File download from server (`GET /dir/download?path=`)
+- [ ] Re-index existing paths
+- [ ] Indexing log / progress view (driven by WebSocket notifications from item 7)
+
+### 9. Authentication
+- [ ] Login page (`/login`) — username/password form → `POST /auth/login` → store JWT
+- [ ] Token storage in memory (not localStorage) with refresh via `POST /auth/refresh`
+- [ ] Auth context provider: expose current user, login/logout actions
+- [ ] Route guard: redirect to `/login` when token is missing/expired
+- [ ] Logout: clear token, redirect to login
+- [ ] Auth-aware API client: attach `Authorization: Bearer` header to all requests
+- [ ] Handle 401 responses: auto-redirect to login
+
+### 10. User Management (after auth)
+- [ ] Users page (`/admin/users`) — list users with names and last access
+- [ ] Create user form (name, gender, birthday, status)
+- [ ] Edit user profile
+- [ ] Delete user (with admin protection)
+- [ ] User groups page: list groups, manage members
+- [ ] User preferences UI (per-user key/value settings)
+- [ ] User activity view (request counts by hour)
 
 ---
 
@@ -659,3 +750,4 @@ React SPA served by Fastify via `@fastify/static` with SPA fallback. Mirrors the
 | 13 | File Operations | Media item move, directory merge, integrity verification |
 | 14 | Polish & Production Readiness | Error handling, performance, docs, cross-platform testing |
 | 15 | Web Frontend | React SPA with folder browsing, lightbox, people/faces, settings |
+| 16 | Web Frontend V2 | Full feature coverage: metadata, keywords, ratings, search, faces, map, admin, auth |

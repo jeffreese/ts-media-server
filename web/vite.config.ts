@@ -22,6 +22,9 @@ export default defineConfig({
       '/thumbnails': 'http://localhost:8080',
       '/person': 'http://localhost:8080',
       '/feature': 'http://localhost:8080',
+      '/mediaMatch': 'http://localhost:8080',
+      '/keyword': 'http://localhost:8080',
+      '/userRating': 'http://localhost:8080',
       '/auth': 'http://localhost:8080',
       '/setting': 'http://localhost:8080',
       '/ws': {

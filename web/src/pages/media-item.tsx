@@ -1,7 +1,15 @@
-import { useParams } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
+import { Link, useParams } from 'react-router-dom'
+import {
+  DuplicatesSection,
+  FacesSection,
+  KeywordsSection,
+  MetadataPanel,
+  RatingSection,
+} from '~/components/media-detail'
+import { Badge, Skeleton } from '~/components/primitives'
 import { useFetch } from '~/hooks/use-fetch'
 import { api } from '~/lib/api'
-import { Skeleton, Badge } from '~/components/primitives'
 
 export function MediaItemPage() {
   const { id } = useParams<{ id: string }>()
@@ -19,10 +27,7 @@ export function MediaItemPage() {
 }
 
 function MediaItemContent({ id }: { id: number }) {
-  const { data: item, isLoading, error } = useFetch(
-    () => api.mediaItem(id),
-    [id],
-  )
+  const { data: item, isLoading, error } = useFetch(() => api.mediaItem(id), [id])
 
   if (error) {
     return (
@@ -34,10 +39,19 @@ function MediaItemContent({ id }: { id: number }) {
 
   if (isLoading || !item) {
     return (
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <Skeleton className="h-6 w-32" />
         <Skeleton className="aspect-video w-full rounded-xl" />
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-4 w-48" />
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div className="space-y-6">
+            <Skeleton className="h-40 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-24 rounded-xl" />
+            <Skeleton className="h-24 rounded-xl" />
+          </div>
+        </div>
       </div>
     )
   }
@@ -45,15 +59,45 @@ function MediaItemContent({ id }: { id: number }) {
   const isVideo = item.type === 'video'
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <div className="overflow-hidden rounded-xl bg-surface border border-border">
+    <div className="mx-auto max-w-5xl space-y-6">
+      {/* Back link */}
+      <Link
+        to="/"
+        className="inline-flex items-center gap-1.5 text-sm text-foreground-muted transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Browse
+      </Link>
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-xl font-semibold">{item.name ?? `Media Item ${item.id}`}</h1>
+          {item.description && (
+            <p className="text-sm text-foreground-secondary">{item.description}</p>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {item.type && <Badge>{item.type}</Badge>}
+          {item.hash && (
+            <Badge variant="accent">
+              <span className="font-mono text-[10px]">{item.hash.slice(0, 8)}</span>
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Media preview */}
+      <div className="overflow-hidden rounded-xl border border-border bg-surface">
         {isVideo ? (
           <video
             src={api.videoUrl(item.id)}
             controls
             className="w-full"
             poster={api.imageUrl(item.id, 1920)}
-          />
+          >
+            <track kind="captions" />
+          </video>
         ) : (
           <img
             src={api.imageUrl(item.id, 1920)}
@@ -63,30 +107,20 @@ function MediaItemContent({ id }: { id: number }) {
         )}
       </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">{item.name ?? `Media Item ${item.id}`}</h1>
-          {item.type && <Badge>{item.type}</Badge>}
+      {/* Two-column detail layout */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        {/* Left: metadata, faces, duplicates */}
+        <div className="space-y-6">
+          <MetadataPanel info={item.info} startDate={item.startDate} endDate={item.endDate} />
+          <FacesSection mediaItemId={item.id} />
+          <DuplicatesSection mediaItemId={item.id} />
         </div>
 
-        {item.description && (
-          <p className="text-foreground-secondary">{item.description}</p>
-        )}
-
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
-          {item.startDate && (
-            <div>
-              <dt className="text-foreground-muted">Date</dt>
-              <dd>{item.startDate}</dd>
-            </div>
-          )}
-          {item.hash && (
-            <div>
-              <dt className="text-foreground-muted">Hash</dt>
-              <dd className="font-mono text-xs truncate">{item.hash}</dd>
-            </div>
-          )}
-        </dl>
+        {/* Right: keywords, rating */}
+        <div className="space-y-6">
+          <RatingSection mediaItemId={item.id} />
+          <KeywordsSection mediaItemId={item.id} />
+        </div>
       </div>
     </div>
   )

@@ -1,3 +1,6 @@
 export { Badge } from './badge'
 export { IconButton } from './icon-button'
+export { SectionCard } from './section-card'
 export { Skeleton } from './skeleton'
+export { StarRating } from './star-rating'
+export { TagInput } from './tag-input'

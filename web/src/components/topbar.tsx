@@ -1,5 +1,5 @@
-import { useLocation, useNavigate } from 'react-router-dom'
 import { ChevronRight, Menu, Moon, Sun } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '~/hooks/use-theme'
 
 export function Topbar() {

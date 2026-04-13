@@ -1,5 +1,5 @@
+import { Images, Settings, Users } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Images, Users, Settings } from 'lucide-react'
 
 const NAV_ITEMS = [
   { to: '/', icon: Images, label: 'Browse' },

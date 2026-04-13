@@ -1,5 +1,5 @@
-import { useRouteError, isRouteErrorResponse, useNavigate } from 'react-router-dom'
 import { AlertTriangle } from 'lucide-react'
+import { isRouteErrorResponse, useNavigate, useRouteError } from 'react-router-dom'
 
 export function ErrorBoundary() {
   const error = useRouteError()
