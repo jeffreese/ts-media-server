@@ -1,8 +1,8 @@
+import { Film } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Film } from 'lucide-react'
-import { api, type MediaItemEntry } from '~/lib/api'
 import { Lightbox } from '~/components/lightbox'
+import { type MediaItemEntry, api } from '~/lib/api'
 
 interface MediaGridProps {
   items: MediaItemEntry[]
@@ -27,20 +27,12 @@ export function MediaGrid({ items }: MediaGridProps) {
     <>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {items.map((item, i) => (
-          <MediaThumbnail
-            key={item.id}
-            item={item}
-            onClick={() => handleClick(item, i)}
-          />
+          <MediaThumbnail key={item.id} item={item} onClick={() => handleClick(item, i)} />
         ))}
       </div>
 
       {lightboxIndex !== null && (
-        <Lightbox
-          items={items}
-          startIndex={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
-        />
+        <Lightbox items={items} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
       )}
     </>
   )

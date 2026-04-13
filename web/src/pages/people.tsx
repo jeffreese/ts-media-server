@@ -1,9 +1,9 @@
-import { useNavigate } from 'react-router-dom'
 import { Users } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { PersonCard } from '~/components/person-card'
+import { Skeleton } from '~/components/primitives'
 import { useFetch } from '~/hooks/use-fetch'
 import { api } from '~/lib/api'
-import { Skeleton } from '~/components/primitives'
-import { PersonCard } from '~/components/person-card'
 
 export function PeoplePage() {
   const navigate = useNavigate()

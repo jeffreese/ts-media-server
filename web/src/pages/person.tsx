@@ -1,8 +1,8 @@
-import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { IconButton, Skeleton } from '~/components/primitives'
 import { useFetch } from '~/hooks/use-fetch'
 import { api } from '~/lib/api'
-import { Skeleton, IconButton } from '~/components/primitives'
 
 export function PersonPage() {
   const { id } = useParams<{ id: string }>()

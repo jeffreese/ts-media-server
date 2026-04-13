@@ -1,9 +1,9 @@
-import { useNavigate, useParams } from 'react-router-dom'
 import { Folder } from 'lucide-react'
-import { useFetch } from '~/hooks/use-fetch'
-import { api, type FolderEntry } from '~/lib/api'
-import { Skeleton } from '~/components/primitives'
+import { useNavigate, useParams } from 'react-router-dom'
 import { MediaGrid } from '~/components/media-grid'
+import { Skeleton } from '~/components/primitives'
+import { useFetch } from '~/hooks/use-fetch'
+import { type FolderEntry, api } from '~/lib/api'
 
 export function BrowsePage() {
   const params = useParams()

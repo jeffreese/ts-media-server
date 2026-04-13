@@ -36,6 +36,7 @@ alwaysApply: false
 - `src/pages/` — route-level components (one per route)
 - `src/components/` — shared components
 - `src/components/primitives/` — low-level UI building blocks
+- `src/components/media-detail/` — media item detail page sections
 - `src/hooks/` — custom React hooks
 - `src/lib/` — utilities, API client
 

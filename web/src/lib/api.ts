@@ -17,6 +17,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+function buildQuery(params: Record<string, string | number | boolean | undefined>): string {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value != null) search.set(key, String(value))
+  }
+  const str = search.toString()
+  return str ? `?${str}` : ''
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -76,6 +85,34 @@ export interface MediaItemDetail {
 }
 
 // ---------------------------------------------------------------------------
+// Keywords
+// ---------------------------------------------------------------------------
+
+export interface Keyword {
+  id: number
+  word: string
+}
+
+export interface TagResult {
+  id: number
+  word: string
+  alreadyTagged: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Ratings
+// ---------------------------------------------------------------------------
+
+export interface UserRating {
+  id: number
+  userId: number
+  itemId: number
+  rating: number
+  comment: string | null
+  date: string | null
+}
+
+// ---------------------------------------------------------------------------
 // People
 // ---------------------------------------------------------------------------
 
@@ -100,16 +137,29 @@ export interface PersonFeature {
   label: string | null
 }
 
-export interface PaginatedResponse<T> {
-  items: T[]
-  offset: number
-  limit: number
-  total: number
+// ---------------------------------------------------------------------------
+// Features (faces)
+// ---------------------------------------------------------------------------
+
+export interface Feature {
+  id: number
+  itemId: number
+  coordinates: string | null
+  label: string | null
+  info: unknown
 }
 
 // ---------------------------------------------------------------------------
-// Matching faces
+// Matches
 // ---------------------------------------------------------------------------
+
+export interface MediaMatch {
+  id: number
+  mediaItemId: number
+  matchingItemId: number
+  matchInfo: unknown
+  ignoreMatch: boolean | null
+}
 
 export interface MatchingFace {
   featureId: number
@@ -118,20 +168,42 @@ export interface MatchingFace {
 }
 
 // ---------------------------------------------------------------------------
+// Generic paginated response
+// ---------------------------------------------------------------------------
+
+export interface PaginatedResponse<T> {
+  items: T[]
+  offset: number
+  limit: number
+  total: number
+}
+
+// ---------------------------------------------------------------------------
+// Pagination options
+// ---------------------------------------------------------------------------
+
+interface PaginationOptions {
+  offset?: number
+  limit?: number
+}
+
+// ---------------------------------------------------------------------------
 // API methods
 // ---------------------------------------------------------------------------
 
 export const api = {
-  index(path = '', options?: { recursive?: boolean; offset?: number; limit?: number }) {
-    const params = new URLSearchParams()
-    if (options?.recursive) params.set('recursive', 'true')
-    if (options?.offset != null) params.set('offset', String(options.offset))
-    if (options?.limit != null) params.set('limit', String(options.limit))
-    const query = params.toString()
+  // -- Folder browsing --
+  index(path = '', options?: PaginationOptions & { recursive?: boolean }) {
+    const query = buildQuery({
+      recursive: options?.recursive,
+      offset: options?.offset,
+      limit: options?.limit,
+    })
     const url = path ? `/index/${path}` : '/index'
-    return request<IndexResponse>(`${url}${query ? `?${query}` : ''}`)
+    return request<IndexResponse>(`${url}${query}`)
   },
 
+  // -- Media item --
   mediaItem(id: number) {
     return request<MediaItemDetail>(`/mediaItem/${id}`)
   },
@@ -140,34 +212,85 @@ export const api = {
     return request<{ widths: number[] }>(`/thumbnails/${id}`)
   },
 
-  people(options?: { offset?: number; limit?: number }) {
-    const params = new URLSearchParams()
-    if (options?.offset != null) params.set('offset', String(options.offset))
-    if (options?.limit != null) params.set('limit', String(options.limit))
-    const query = params.toString()
-    return request<PaginatedResponse<Person>>(`/person${query ? `?${query}` : ''}`)
+  // -- Keywords --
+  mediaItemKeywords(mediaItemId: number, options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<Keyword>>(`/mediaItem/${mediaItemId}/keywords${query}`)
+  },
+
+  addKeyword(mediaItemId: number, word: string) {
+    return request<TagResult>(`/mediaItem/${mediaItemId}/keywords`, {
+      method: 'POST',
+      body: JSON.stringify({ word }),
+    })
+  },
+
+  removeKeyword(mediaItemId: number, keywordId: number) {
+    return request<{ success: boolean }>(`/mediaItem/${mediaItemId}/keywords`, {
+      method: 'DELETE',
+      body: JSON.stringify({ keywordId }),
+    })
+  },
+
+  // -- Ratings --
+  mediaItemRatings(mediaItemId: number, options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<UserRating>>(`/mediaItem/${mediaItemId}/ratings${query}`)
+  },
+
+  setRating(mediaItemId: number, rating: number, comment?: string) {
+    return request<UserRating>(`/mediaItem/${mediaItemId}/rating`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, comment }),
+    })
+  },
+
+  removeRating(mediaItemId: number) {
+    return request<{ success: boolean }>(`/mediaItem/${mediaItemId}/rating`, {
+      method: 'DELETE',
+    })
+  },
+
+  // -- People --
+  people(options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<Person>>(`/person${query}`)
   },
 
   personNames(personId: number) {
     return request<PaginatedResponse<PersonName>>(`/person/${personId}/names`)
   },
 
-  personFeatures(personId: number, options?: { offset?: number; limit?: number }) {
-    const params = new URLSearchParams()
-    if (options?.offset != null) params.set('offset', String(options.offset))
-    if (options?.limit != null) params.set('limit', String(options.limit))
-    const query = params.toString()
-    return request<PaginatedResponse<PersonFeature>>(`/person/${personId}/features${query ? `?${query}` : ''}`)
+  personFeatures(personId: number, options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<PersonFeature>>(`/person/${personId}/features${query}`)
   },
 
-  matchingFaces(featureId: number, options?: { offset?: number; limit?: number }) {
-    const params = new URLSearchParams()
-    if (options?.offset != null) params.set('offset', String(options.offset))
-    if (options?.limit != null) params.set('limit', String(options.limit))
-    const query = params.toString()
-    return request<PaginatedResponse<MatchingFace>>(`/matchingFaces/${featureId}${query ? `?${query}` : ''}`)
+  // -- Features (faces) for a media item --
+  mediaItemFeatures(mediaItemId: number, options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<Feature>>(`/mediaItem/${mediaItemId}/features${query}`)
   },
 
+  featurePerson(featureId: number) {
+    return request<{ person: Person; names: PersonName[]; link: unknown }>(
+      `/feature/${featureId}/person`,
+    )
+  },
+
+  // -- Face matching --
+  matchingFaces(featureId: number, options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<MatchingFace>>(`/matchingFaces/${featureId}${query}`)
+  },
+
+  // -- Duplicate matches for a media item --
+  mediaItemMatches(mediaItemId: number, options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<MediaMatch>>(`/mediaItem/${mediaItemId}/matches${query}`)
+  },
+
+  // -- Asset URLs --
   imageUrl(id: number, width?: number) {
     const params = width ? `?width=${width}` : ''
     return `${API_BASE}/image/${id}${params}`

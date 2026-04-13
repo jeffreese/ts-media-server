@@ -1,5 +1,5 @@
 import { useFetch } from '~/hooks/use-fetch'
-import { api, type Person } from '~/lib/api'
+import { type Person, api } from '~/lib/api'
 
 interface PersonCardProps {
   person: Person
