@@ -293,6 +293,43 @@ export function checkDataAccess(
 }
 
 /**
+ * MediaAccess: filter by user group membership, enforce read-only.
+ */
+export function checkMediaAccess(
+  ctx: SecurityContext,
+  action: SecurityAction,
+  record?: { groupId?: number; readOnly?: boolean },
+): SecurityResult {
+  if (action === 'get' || action === 'list') return ALLOWED;
+
+  const level = getAccessLevel(ctx.db, ctx.userId, SYSADMIN_KEY);
+  if (level >= ADMIN_ACCESS_LEVEL) return ALLOWED;
+
+  if (record?.groupId !== undefined) {
+    const membership = ctx.db
+      .select()
+      .from(schema.userGroupUser)
+      .where(
+        and(
+          eq(schema.userGroupUser.userId, ctx.userId),
+          eq(schema.userGroupUser.userGroupId, record.groupId),
+        ),
+      )
+      .get();
+
+    if (!membership) {
+      return denied('User is not a member of the specified group');
+    }
+
+    if (record.readOnly) {
+      return denied('Read-only access — modifications are not allowed');
+    }
+  }
+
+  return ALLOWED;
+}
+
+/**
  * UserRating: users can only access their own ratings.
  */
 export function checkUserRating(
@@ -343,6 +380,7 @@ const SYNC_CHECKERS: Record<string, SyncChecker> = {
   component: checkComponent as SyncChecker,
   datatype: checkDatatype as SyncChecker,
   dataAccess: checkDataAccess as SyncChecker,
+  mediaAccess: checkMediaAccess as SyncChecker,
   setting: checkSetting as SyncChecker,
 };
 
