@@ -6,6 +6,7 @@ import {
   KeywordsSection,
   MetadataPanel,
   RatingSection,
+  ThumbnailsSection,
 } from '~/components/media-detail'
 import { Badge, Skeleton } from '~/components/primitives'
 import { useFetch } from '~/hooks/use-fetch'
@@ -116,10 +117,11 @@ function MediaItemContent({ id }: { id: number }) {
           <DuplicatesSection mediaItemId={item.id} />
         </div>
 
-        {/* Right: keywords, rating */}
+        {/* Right: keywords, rating, thumbnails */}
         <div className="space-y-6">
           <RatingSection mediaItemId={item.id} />
           <KeywordsSection mediaItemId={item.id} />
+          <ThumbnailsSection mediaItemId={item.id} />
         </div>
       </div>
     </div>
