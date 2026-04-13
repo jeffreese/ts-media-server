@@ -29,6 +29,7 @@ import { HashMatcher } from './hash-matcher.js';
 import { FaceMatcher } from './face-matcher.js';
 import { type NotificationService } from './notification.js';
 import { type MediaLogService } from './media-log.js';
+import { PipelineProfiler, NoopProfiler } from '../utils/profiler.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,6 +43,7 @@ export interface FileIndexDeps {
   detectionSession?: InferenceSession;
   recognitionSession?: InferenceSession;
   mediaLog?: MediaLogService;
+  profiler?: PipelineProfiler;
 }
 
 export interface AddDirectoryOptions {
@@ -95,6 +97,7 @@ export class FileIndex {
   private readonly hashMatcher: HashMatcher;
   private readonly faceMatcher: FaceMatcher;
   private readonly mediaLog?: MediaLogService;
+  readonly profiler: PipelineProfiler;
 
   constructor(deps: FileIndexDeps) {
     this.db = deps.db;
@@ -106,6 +109,7 @@ export class FileIndex {
     this.hashMatcher = new HashMatcher(deps.db);
     this.faceMatcher = new FaceMatcher(deps.db);
     this.mediaLog = deps.mediaLog;
+    this.profiler = deps.profiler ?? new NoopProfiler();
   }
 
   // -------------------------------------------------------------------------
@@ -251,6 +255,7 @@ export class FileIndex {
     let metadata: MediaMetadata;
 
     try {
+      const endMetadata = this.profiler.start('metadata');
       if (isVideoExtension(ext)) {
         metadata = await extractMetadata(primary.path, this.ffmpeg);
 
@@ -265,6 +270,7 @@ export class FileIndex {
         image = loadImage(primary.path);
         metadata = await extractMetadata(primary.path, this.ffmpeg);
       }
+      endMetadata();
     } catch (err) {
       this.logger.error({ file: primary.path, err }, 'Failed to extract metadata');
       return undefined;
@@ -274,7 +280,9 @@ export class FileIndex {
     let pHash: string | undefined;
     if (image) {
       try {
+        const endHash = this.profiler.start('phash');
         pHash = await computeHash(image);
+        endHash();
       } catch (err) {
         this.logger.warn({ file: primary.path, err }, 'Failed to compute perceptual hash');
       }
@@ -283,7 +291,9 @@ export class FileIndex {
     // Generate thumbnails
     if (image) {
       try {
+        const endThumbs = this.profiler.start('thumbnails');
         await createThumbnails(image, primary.path);
+        endThumbs();
       } catch (err) {
         this.logger.warn({ file: primary.path, err }, 'Failed to generate thumbnails');
       }
@@ -293,13 +303,16 @@ export class FileIndex {
     if (isVideoExtension(ext) && ext !== 'mp4') {
       const mp4Path = primary.path.replace(extname(primary.path), '.mp4');
       try {
+        const endMp4 = this.profiler.start('video-transcode');
         await this.ffmpeg.createMP4(primary.path, mp4Path);
+        endMp4();
       } catch (err) {
         this.logger.warn({ file: primary.path, err }, 'Failed to create MP4');
       }
     }
 
     // Build media item info
+    const endDbWrite = this.profiler.start('db-write');
     const info: Record<string, unknown> = {};
     if (metadata.camera.make || metadata.camera.model) {
       info.camera = metadata.camera;
@@ -383,13 +396,16 @@ export class FileIndex {
       .values({ folderId, itemId: mediaItemId, index: folderIndex })
       .onConflictDoNothing()
       .run();
+    endDbWrite();
 
     // Face detection
     const faceMatchPromises: Promise<void>[] = [];
 
     if (image && this.detectionSession) {
       try {
+        const endFaceDetect = this.profiler.start('face-detection');
         const faces = await detectFaces(this.detectionSession, image);
+        endFaceDetect();
         for (const face of faces) {
           const featureInfo: Record<string, unknown> = {
             ...serializeDetection(face.detection),
@@ -398,11 +414,13 @@ export class FileIndex {
           // Face recognition embedding
           if (this.recognitionSession) {
             try {
+              const endRecognition = this.profiler.start('face-recognition');
               const embedding = await recognizeFace(
                 this.recognitionSession,
                 image,
                 face.detection.landmarks,
               );
+              endRecognition();
               featureInfo.embedding = Array.from(embedding);
             } catch (err) {
               this.logger.warn({ file: primary.path, err }, 'Failed to extract face embedding');
@@ -423,12 +441,15 @@ export class FileIndex {
           // Queue face matching
           if (featureInfo.embedding) {
             const embedding = new Float32Array(featureInfo.embedding as number[]);
-            const promise = this.faceMatcher
-              .matchFace(featureId, embedding)
-              .catch((err: unknown) => {
-                this.logger.warn({ featureId, err }, 'Face matching failed');
-              })
-              .then(() => {});
+            const promise = (async () => {
+              const endFaceMatch = this.profiler.start('face-matching');
+              await this.faceMatcher
+                .matchFace(featureId, embedding)
+                .catch((err: unknown) => {
+                  this.logger.warn({ featureId, err }, 'Face matching failed');
+                });
+              endFaceMatch();
+            })();
             faceMatchPromises.push(promise);
           }
         }
@@ -529,18 +550,25 @@ export class FileIndex {
     const hostId = providedHostId ?? getOrCreateHost(this.db);
 
     this.logger.info({ directory, concurrency }, 'Starting directory indexing');
+    this.profiler.begin();
 
     // Delete orphans before indexing
+    const endOrphans = this.profiler.start('orphan-cleanup');
     await this.deleteOrphans();
+    endOrphans();
 
     // Scan paths
     this.notifications.notify('progress', 'fileIndex', { phase: 'scanning', directory });
+    const endScanPaths = this.profiler.start('scan-paths');
     const pathRecords = await this.addPaths(directory, hostId, fileFilter);
+    endScanPaths();
     this.logger.info({ pathCount: pathRecords.length }, 'Paths registered');
 
     // Scan files
     this.notifications.notify('progress', 'fileIndex', { phase: 'registering_files' });
+    const endScanFiles = this.profiler.start('scan-files');
     const fileGroups = await this.addFiles(pathRecords, fileFilter);
+    endScanFiles();
     this.logger.info({ groupCount: fileGroups.length }, 'File groups registered');
 
     // Create root folder
@@ -576,12 +604,16 @@ export class FileIndex {
             .get();
 
           if (item?.hash) {
-            const promise = this.hashMatcher
-              .matchHash(result.mediaItemId, item.hash)
-              .catch((err: unknown) => {
-                this.logger.warn({ mediaItemId: result.mediaItemId, err }, 'Hash matching failed');
-              })
-              .then(() => {});
+            const hash = item.hash;
+            const promise = (async () => {
+              const endMatch = this.profiler.start('hash-matching');
+              await this.hashMatcher
+                .matchHash(result.mediaItemId, hash)
+                .catch((err: unknown) => {
+                  this.logger.warn({ mediaItemId: result.mediaItemId, err }, 'Hash matching failed');
+                });
+              endMatch();
+            })();
             matchPromises.push(promise);
           }
         }
@@ -603,6 +635,7 @@ export class FileIndex {
 
     this.hashMatcher.clearCache();
     this.faceMatcher.clearCache();
+    this.profiler.end();
 
     this.logger.info({ directory, processed: total }, 'Directory indexing complete');
     this.notifications.notify('progress', 'fileIndex', {

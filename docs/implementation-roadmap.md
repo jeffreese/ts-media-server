@@ -571,7 +571,7 @@ Wire the CLI subcommands to the services built in previous phases.
 - [x] Add graceful shutdown handler (close database, stop indexing, close WebSocket connections)
 
 ### Performance
-- [ ] Profile indexing pipeline with a large directory (1000+ files)
+- [x] Profile indexing pipeline with a large directory (1000+ files)
 - [ ] Tune p-limit concurrency defaults based on profiling
 - [ ] Tune sharp thread pool size if needed (`sharp.concurrency()`)
 - [ ] Verify SQLite WAL mode and busy_timeout are effective under concurrent load
