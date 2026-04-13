@@ -57,6 +57,20 @@ Do **not** use `FastifyRequest<{ Params: ... }>` generics on route handlers — 
 - CRUD routes return JSON
 - Use Fastify's `reply.send()` for JSON, `reply.type().send()` for other content types
 
+## Error Responses
+
+A global error handler (`src/server/error-handler.ts`) catches all thrown errors and returns a consistent JSON shape:
+
+```typescript
+{ statusCode: number, error: string, message: string, details?: unknown }
+```
+
+- **Zod validation errors** → 400 with field-level `details` array (path, message, code per field)
+- **Fastify built-in errors** (bad JSON, content-type mismatch) → preserve original status code
+- **Unhandled errors** → 500 with generic message; internals logged server-side, never leaked
+
+Prefer throwing errors over manually formatting error responses — the global handler will produce the right shape. For cases where you must reply inline (e.g., early-return auth checks), the existing `reply.code(4xx).send({ error: '...' })` pattern is acceptable but does not match the `ErrorResponse` shape. New code should prefer throwing or using the structured shape.
+
 ## WebSocket
 
 - `@fastify/websocket` for real-time event broadcasting

@@ -28,6 +28,7 @@ import { peoplePlugin } from './routes/people.js';
 import { placesPlugin } from './routes/places.js';
 import type { NotificationService } from '../services/notification.js';
 import { websocketPlugin } from './websocket.js';
+import { errorHandlerPlugin } from './error-handler.js';
 
 const FILE_WATCH_DEBOUNCE_MS = 500;
 
@@ -61,6 +62,7 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
   });
 
   await server.register(fastifyCors);
+  await server.register(errorHandlerPlugin);
 
   let jwtSecret = config.jwt?.secret;
   if (!jwtSecret) {
