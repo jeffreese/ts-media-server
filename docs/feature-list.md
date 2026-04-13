@@ -126,6 +126,18 @@
 - Static file serving from configurable web directory
 - Web request logging to configurable log directory
 - File change watching on the web directory with debounced notifications
+- SPA fallback: serves `index.html` for non-file routes when web directory is configured
+
+### Web Frontend (React SPA)
+- React 19 + Vite 6 + TypeScript SPA served by Fastify via `@fastify/static`
+- Tailwind CSS 4 with semantic design tokens, dark-first theme with light mode toggle
+- Folder browsing with folder cards and responsive thumbnail grid
+- Full-screen image lightbox with keyboard navigation (arrows, Escape) and info panel
+- Video playback with poster thumbnail
+- People page with face avatar grid, person detail with linked photos
+- Settings page with theme toggle
+- Breadcrumb navigation, sidebar with section links
+- Error boundary with friendly 404 page
 
 ### WebSocket Support
 - Real-time event broadcasting to connected WebSocket clients

@@ -603,6 +603,43 @@ Wire the CLI subcommands to the services built in previous phases.
 
 ---
 
+## Phase 15: Web Frontend
+
+React SPA served by Fastify via `@fastify/static` with SPA fallback. Mirrors the purecontext.dev tech choices: React 19, Vite 6, Tailwind CSS 4, react-router-dom 7, Biome, Vitest. Lives in `web/` as a pnpm workspace member.
+
+### Scaffold & Infrastructure
+- [x] Convert to pnpm workspace (`pnpm-workspace.yaml` with `web/` member)
+- [x] Scaffold `web/` package (Vite, TypeScript, Tailwind 4, Biome, Vitest)
+- [x] Vite dev proxy (per-route proxy to Fastify on :8080)
+- [x] SPA fallback in Fastify (serve `index.html` for non-file, non-API paths)
+- [x] Root `pnpm dev` starts both server and Vite dev server in parallel
+- [x] Production build: `pnpm build` compiles SPA to `web/dist/`, served via `webDir`
+
+### Design System
+- [x] Dark-first semantic color tokens via CSS custom properties + Tailwind `@theme`
+- [x] Light mode via `.dark` class toggle with localStorage persistence
+- [x] Custom primitive components (Badge, IconButton, Skeleton)
+- [x] Skeleton loading shimmer, media thumbnail hover transitions, lightbox backdrop
+
+### Pages & Features
+- [x] Folder browsing (`/`, `/browse/*`) — folder cards + responsive media thumbnail grid
+- [x] Image lightbox — full-screen viewer with keyboard nav, multi-resolution, info panel
+- [x] Media item detail (`/media/:id`) — image/video display with metadata
+- [x] People listing (`/people`) — grid of detected people with face avatars
+- [x] Person detail (`/people/:id`) — face crops + linked photo grid
+- [x] Settings (`/settings`) — theme toggle
+- [x] Error boundary — friendly 404 / error page with "Go home" action
+
+### Remaining
+- [ ] Login / auth UI (currently skipped — server auth disabled by default)
+- [ ] Search and keyword filtering
+- [ ] Frontend test suite (Vitest + Testing Library)
+- [ ] Batch people+names API to avoid N+1 fetches on People page
+- [ ] Infinite scroll / pagination on media grids
+- [ ] Mobile sidebar (hamburger menu toggle)
+
+---
+
 ## Phase Summary
 
 | Phase | Description | Key Deliverable |
@@ -621,3 +658,4 @@ Wire the CLI subcommands to the services built in previous phases.
 | 12 | Data Management | Keywords, ratings, people, places, generic data store |
 | 13 | File Operations | Media item move, directory merge, integrity verification |
 | 14 | Polish & Production Readiness | Error handling, performance, docs, cross-platform testing |
+| 15 | Web Frontend | React SPA with folder browsing, lightbox, people/faces, settings |

@@ -8,9 +8,13 @@
     "media-server": "dist/index.js"
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsup",
+    "dev": "pnpm run /^dev:/",
+    "dev:server": "tsx watch src/index.ts serve",
+    "dev:web": "pnpm --filter @ts-media-server/web dev",
+    "build": "pnpm run build:web && tsup",
+    "build:web": "pnpm --filter @ts-media-server/web build",
     "test": "vitest run",
+    "test:web": "pnpm --filter @ts-media-server/web test",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
