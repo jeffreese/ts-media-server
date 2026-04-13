@@ -546,19 +546,19 @@ Wire the CLI subcommands to the services built in previous phases.
 ## Phase 13: File Operations
 
 ### Media Item File Management
-- [ ] Implement `moveMediaItem(mediaItem, outputPath)`:
-  - [ ] Copy all associated files to output directory
-  - [ ] Verify integrity with SHA1 checksums
-  - [ ] Delete originals only after all copies verified
-  - [ ] Rollback (delete copies) on any failure
-  - [ ] Update file records in database with new paths
-  - [ ] Move thumbnails to new `.thumbnails` directory
-- [ ] Implement `mergeDirectories(inputPaths, outputPath)`:
-  - [ ] Combine media items from multiple directories
-  - [ ] Rename files using date-based naming (`IMG_{timestamp}`)
-  - [ ] Handle duplicate filenames with suffix (`(2)`, `(3)`, etc.)
-  - [ ] Skip media items without dates
-- [ ] Write tests for move, merge, integrity verification, rollback
+- [x] Implement `moveMediaItem(mediaItem, outputPath)`:
+  - [x] Copy all associated files to output directory
+  - [x] Verify integrity with SHA1 checksums
+  - [x] Delete originals only after all copies verified
+  - [x] Rollback (delete copies) on any failure
+  - [x] Update file records in database with new paths
+  - [x] Move thumbnails to new `.thumbnails` directory
+- [x] Implement `mergeDirectories(inputPaths, outputPath)`:
+  - [x] Combine media items from multiple directories
+  - [x] Rename files using date-based naming (`IMG_{timestamp}`)
+  - [x] Handle duplicate filenames with suffix (`(2)`, `(3)`, etc.)
+  - [x] Skip media items without dates
+- [x] Write tests for move, merge, integrity verification, rollback
 
 ---
 
