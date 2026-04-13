@@ -36,6 +36,10 @@ import { PipelineProfiler, NoopProfiler } from '../utils/profiler.js';
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Constructor dependencies for {@link FileIndex}: database, FFmpeg, logging, notifications,
+ * and optional ONNX sessions / profiler hooks that enable the face pipeline and timing.
+ */
 export interface FileIndexDeps {
   db: BetterSQLite3Database<typeof schema>;
   ffmpeg: FFmpeg;
@@ -47,6 +51,10 @@ export interface FileIndexDeps {
   profiler?: PipelineProfiler;
 }
 
+/**
+ * Arguments for a full directory index run: root path to scan, optional filename filter,
+ * worker concurrency, and optional `hostId` (otherwise resolved/created as `localhost`).
+ */
 export interface AddDirectoryOptions {
   directory: string;
   fileFilter?: FileFilter;
@@ -88,6 +96,11 @@ function getOrCreateHost(
 // FileIndex service
 // ---------------------------------------------------------------------------
 
+/**
+ * Orchestrates filesystem discovery and SQLite catalog updates: registering paths/files,
+ * building media items (metadata, thumbnails, optional face features), duplicate matching,
+ * orphan cleanup, and progress notifications.
+ */
 export class FileIndex {
   private readonly db: BetterSQLite3Database<typeof schema>;
   private readonly ffmpeg: FFmpeg;

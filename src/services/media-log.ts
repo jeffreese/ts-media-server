@@ -1,6 +1,7 @@
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from '../db/schema.js';
 
+/** Values written to `media_log.action` for media create/update/delete operations. */
 export type MediaLogAction = 'create' | 'update' | 'delete';
 
 const DEFAULT_SYSTEM_USER_ID = 1;
@@ -18,6 +19,11 @@ export class MediaLogService {
     private readonly defaultUserId: number = DEFAULT_SYSTEM_USER_ID,
   ) {}
 
+  /**
+   * Insert one `media_log` row for the given item.
+   *
+   * @param userId - Actor id; falls back to `defaultUserId` when omitted (see class JSDoc).
+   */
   log(action: MediaLogAction, itemId: number, userId?: number): void {
     const entry: typeof schema.mediaLog.$inferInsert = {
       itemId,

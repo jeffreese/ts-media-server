@@ -6,6 +6,7 @@ import {
   type NotificationEvent,
 } from '../services/notification.js';
 
+/** Supplies notification events that the plugin forwards to connected `/ws` clients. */
 export interface WebSocketPluginOptions {
   notificationService: NotificationService;
 }

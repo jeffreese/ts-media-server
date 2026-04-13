@@ -10,11 +10,16 @@ import { isVideoExtension, isImageExtension } from '../utils/file.js';
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Capture time derived from EXIF date tags (`DateTimeOriginal`, `CreateDate`, or `ModifyDate`).
+ * `offset` is present when `OffsetTime*` tags exist on the file.
+ */
 export interface DateInfo {
   date: string;
   offset: string | undefined;
 }
 
+/** Camera body and lens strings from EXIF `Make` / `Model` / `LensMake` / `LensModel`. */
 export interface CameraInfo {
   make: string | undefined;
   model: string | undefined;
@@ -22,6 +27,10 @@ export interface CameraInfo {
   lensModel: string | undefined;
 }
 
+/**
+ * Exposure-related numeric tags from EXIF.
+ * `aperture` is `ApertureValue` (APEX); `fStop` is `FNumber` (photographic f/-stop).
+ */
 export interface ExposureInfo {
   focalLength: number | undefined;
   aperture: number | undefined;
@@ -31,6 +40,7 @@ export interface ExposureInfo {
   iso: number | undefined;
 }
 
+/** Decimal-degrees coordinates with optional map datum and `GPSImgDirection` when available. */
 export interface GpsInfo {
   latitude: number;
   longitude: number;
@@ -38,6 +48,7 @@ export interface GpsInfo {
   azimuth: number | undefined;
 }
 
+/** IPTC editorial fields merged from headline/object name, caption, keywords, and copyright tags. */
 export interface IptcInfo {
   headline: string | undefined;
   caption: string | undefined;
@@ -45,6 +56,7 @@ export interface IptcInfo {
   copyright: string | undefined;
 }
 
+/** Normalized still-image metadata from embedded EXIF/IPTC/GPS (and sidecar JPEG when used). */
 export interface ImageMetadata {
   date: DateInfo | undefined;
   camera: CameraInfo;
@@ -55,6 +67,10 @@ export interface ImageMetadata {
   height: number | undefined;
 }
 
+/**
+ * Metadata shared by images and videos after extraction.
+ * Video rows fill `duration` / `frameRate` from FFmpeg; images with GPS also set `wkt` for spatial storage.
+ */
 export interface MediaMetadata {
   date: DateInfo | undefined;
   camera: CameraInfo;
@@ -183,6 +199,12 @@ function asNumber(value: unknown): number | undefined {
   return undefined;
 }
 
+/**
+ * Turn EXIF `ExposureTime` (seconds) into a display string (`"2s"` or `"1/250s"`).
+ *
+ * @param exposureTime - Exposure duration in seconds, or `undefined` when absent.
+ * @returns A human-readable shutter label, or `undefined` when `exposureTime` is absent.
+ */
 export function formatShutterSpeed(exposureTime: number | undefined): string | undefined {
   if (exposureTime == null) return undefined;
   if (exposureTime >= 1) return `${exposureTime}s`;

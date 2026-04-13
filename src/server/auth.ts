@@ -22,6 +22,7 @@ interface JwtPayload {
   exp?: number;
 }
 
+/** SQLite database handle used for credential lookup and `auth_status`. */
 export interface AuthPluginOptions {
   db: Database.Database;
 }

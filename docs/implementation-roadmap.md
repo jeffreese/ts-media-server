@@ -585,7 +585,7 @@ Wire the CLI subcommands to the services built in previous phases.
   - [x] Configuration reference
   - [x] CLI usage guide
   - [x] API endpoint reference
-- [ ] Add inline JSDoc for public APIs
+- [x] Add inline JSDoc for public APIs
 - [x] Document ONNX model setup (where to download, how to configure)
 
 ### Build & Distribution

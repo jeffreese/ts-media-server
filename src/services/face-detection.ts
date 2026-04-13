@@ -26,6 +26,10 @@ const OUTPUT_NAMES = [
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Five facial landmark points in **original image pixel space** (not model input space),
+ * aligned with YuNet's keypoint order.
+ */
 export interface FaceLandmarks {
   rightEye: { x: number; y: number };
   leftEye: { x: number; y: number };
@@ -34,6 +38,10 @@ export interface FaceLandmarks {
   leftMouthCorner: { x: number; y: number };
 }
 
+/**
+ * One detected face: axis-aligned bounding box, model confidence, and landmark geometry,
+ * all in **original image coordinates** after post-processing scales padded input back.
+ */
 export interface FaceDetection {
   x: number;
   y: number;
@@ -43,11 +51,15 @@ export interface FaceDetection {
   landmarks: FaceLandmarks;
 }
 
+/** A {@link FaceDetection} together with a JPEG face crop suitable for storage or UI previews. */
 export interface FaceDetectionResult {
   detection: FaceDetection;
   thumbnail: Buffer;
 }
 
+/**
+ * Tunables for YuNet decode/NMS. Omitted fields use the module defaults tuned for general photos.
+ */
 export interface FaceDetectionOptions {
   scoreThreshold?: number;
   nmsThreshold?: number;

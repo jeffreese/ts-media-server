@@ -7,7 +7,9 @@ import { basename, resolve } from 'node:path';
 // Constants
 // ---------------------------------------------------------------------------
 
+/** Expected on-disk filename for the YuNet face detection weights (OpenCV Zoo). */
 export const FACE_DETECTION_MODEL = 'face_detection_yunet_2023mar.onnx';
+/** Expected on-disk filename for the SFace embedding weights (OpenCV Zoo). */
 export const FACE_RECOGNITION_MODEL = 'face_recognition_sface_2021dec.onnx';
 
 const MODEL_DOWNLOAD_URLS: Record<string, string> = {
@@ -21,11 +23,13 @@ const MODEL_DOWNLOAD_URLS: Record<string, string> = {
 // Types
 // ---------------------------------------------------------------------------
 
+/** Filesystem locations of the `.onnx` weights passed to validation and session loading. */
 export interface ModelPaths {
   detection: string;
   recognition: string;
 }
 
+/** Pair of loaded ONNX Runtime sessions and a `dispose()` helper that releases native resources. */
 export interface OnnxModels {
   detection: ort.InferenceSession;
   recognition: ort.InferenceSession;
