@@ -11,6 +11,7 @@ import {
   getAdminCount,
   checkUser,
   checkUserPreference,
+  checkUserRating,
   checkUserAuthentication,
   checkUserAccess,
   checkComponent,
@@ -423,6 +424,31 @@ describe('security service', () => {
       const result = checkSetting(ctx(db, nonAdminId), 'delete');
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('cannot be deleted');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // checkUserRating
+  // -------------------------------------------------------------------------
+
+  describe('checkUserRating', () => {
+    it('allows access to own ratings', () => {
+      const { db, nonAdminId } = setup();
+      const result = checkUserRating(ctx(db, nonAdminId), 'save', { userId: nonAdminId });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('denies access to another user\'s ratings', () => {
+      const { db, adminId, nonAdminId } = setup();
+      const result = checkUserRating(ctx(db, nonAdminId), 'get', { userId: adminId });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('own ratings');
+    });
+
+    it('allows access when no userId is specified on the record', () => {
+      const { db, nonAdminId } = setup();
+      const result = checkUserRating(ctx(db, nonAdminId), 'list');
+      expect(result.allowed).toBe(true);
     });
   });
 

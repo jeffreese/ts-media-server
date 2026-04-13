@@ -520,9 +520,9 @@ Wire the CLI subcommands to the services built in previous phases.
 - [x] Include user ID and timestamp
 
 ### User Ratings
-- [ ] Implement rating routes
-- [ ] Per-user, per-media-item ratings with upsert behavior
-- [ ] Optional comment and timestamp
+- [x] Implement rating routes
+- [x] Per-user, per-media-item ratings with upsert behavior
+- [x] Optional comment and timestamp
 
 ### People & Places
 - [ ] Person CRUD with linked names, addresses, contacts
