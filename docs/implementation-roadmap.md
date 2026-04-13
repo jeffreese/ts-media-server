@@ -509,10 +509,10 @@ Wire the CLI subcommands to the services built in previous phases.
 ## Phase 12: Data Management & Remaining Models
 
 ### Keywords
-- [ ] Implement keyword tagging for media items
-- [ ] Keyword CRUD via generic model routes
-- [ ] Many-to-many linking via `media_item_keyword` junction table
-- [ ] Unique keyword enforcement
+- [x] Implement keyword tagging for media items
+- [x] Keyword CRUD via generic model routes
+- [x] Many-to-many linking via `media_item_keyword` junction table
+- [x] Unique keyword enforcement
 
 ### Media Logging
 - [ ] Implement media audit log
