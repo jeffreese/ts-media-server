@@ -19,6 +19,7 @@ import { indexPlugin } from './routes/index.js';
 import { thumbnailsPlugin } from './routes/thumbnails.js';
 import { mediaItemPlugin } from './routes/media-item.js';
 import { dirPlugin } from './routes/dir.js';
+import { keywordPlugin } from './routes/keywords.js';
 import type { NotificationService } from '../services/notification.js';
 import { websocketPlugin } from './websocket.js';
 
@@ -81,6 +82,7 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
     await server.register(thumbnailsPlugin, { db });
     await server.register(mediaItemPlugin, { db });
     await server.register(dirPlugin, { db });
+    await server.register(keywordPlugin, { db, notificationService });
   }
 
   if (notificationService) {
