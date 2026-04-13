@@ -1,14 +1,14 @@
-import { createReadStream } from 'node:fs';
-import { readdir, stat, mkdir, writeFile } from 'node:fs/promises';
-import { join, resolve, basename, extname } from 'node:path';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { readdir, stat, mkdir } from 'node:fs/promises';
+import { join, basename, extname } from 'node:path';
+import { pipeline } from 'node:stream/promises';
 import type { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
-import { eq, and } from 'drizzle-orm';
-import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 import type Database from 'better-sqlite3';
 import { z } from 'zod/v4';
 import * as schema from '../../db/schema.js';
-import { SYSADMIN_KEY, ADMIN_ACCESS_LEVEL } from '../../db/constants.js';
+import { hasAdminAccess, assertSafePath } from './shared.js';
 
 const dirQuerySchema = z.object({
   path: z.string().min(1),
@@ -20,34 +20,6 @@ const downloadQuerySchema = z.object({
 
 export interface DirPluginOptions {
   db: Database.Database;
-}
-
-function hasAdminAccess(
-  db: BetterSQLite3Database<typeof schema>,
-  userId: number,
-): boolean {
-  const row = db
-    .select({ level: schema.userAccess.level })
-    .from(schema.userAccess)
-    .innerJoin(schema.component, eq(schema.component.id, schema.userAccess.componentId))
-    .where(
-      and(
-        eq(schema.userAccess.userId, userId),
-        eq(schema.component.key, SYSADMIN_KEY),
-      ),
-    )
-    .get();
-
-  return (row?.level ?? 0) >= ADMIN_ACCESS_LEVEL;
-}
-
-function assertSafePath(path: string): void {
-  if (!resolve(path).startsWith('/')) {
-    throw new Error(`Path must be absolute: "${path}"`);
-  }
-  if (path.includes('..')) {
-    throw new Error(`Path must not contain traversal segments: "${path}"`);
-  }
 }
 
 interface DirEntry {
@@ -188,13 +160,8 @@ export const dirPlugin = fp<DirPluginOptions>(
 
           await mkdir(targetDir, { recursive: true });
 
-          const chunks: Buffer[] = [];
-          for await (const chunk of part.file) {
-            chunks.push(chunk);
-          }
-
           const destPath = join(targetDir, filename);
-          await writeFile(destPath, Buffer.concat(chunks));
+          await pipeline(part.file, createWriteStream(destPath));
           savedFiles.push(destPath);
         }
       }
@@ -237,9 +204,10 @@ export const dirPlugin = fp<DirPluginOptions>(
       }
 
       const filename = basename(filePath);
+      const encoded = encodeURIComponent(filename);
       return reply
         .type('application/octet-stream')
-        .header('Content-Disposition', `attachment; filename="${filename}"`)
+        .header('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '\\"')}"; filename*=UTF-8''${encoded}`)
         .header('Content-Length', fileStat.size)
         .send(createReadStream(filePath));
     });

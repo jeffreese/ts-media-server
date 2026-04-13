@@ -1,14 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type Database from 'better-sqlite3';
 import { execFile } from 'node:child_process';
 import { access, constants } from 'node:fs/promises';
-import { basename, extname, resolve, isAbsolute } from 'node:path';
+import { basename, extname } from 'node:path';
 import { z } from 'zod/v4';
 import * as schema from '../../db/schema.js';
-import { SYSADMIN_KEY, ADMIN_ACCESS_LEVEL } from '../../db/constants.js';
+import { hasAdminAccess, assertSafePath } from './shared.js';
 
 const paramsSchema = z.object({
   key: z.string().min(1),
@@ -24,25 +24,6 @@ export interface SettingsPluginOptions {
   db: Database.Database;
 }
 
-function hasAdminAccess(
-  db: BetterSQLite3Database<typeof schema>,
-  userId: number,
-): boolean {
-  const row = db
-    .select({ level: schema.userAccess.level })
-    .from(schema.userAccess)
-    .innerJoin(schema.component, eq(schema.component.id, schema.userAccess.componentId))
-    .where(
-      and(
-        eq(schema.userAccess.userId, userId),
-        eq(schema.component.key, SYSADMIN_KEY),
-      ),
-    )
-    .get();
-
-  return (row?.level ?? 0) >= ADMIN_ACCESS_LEVEL;
-}
-
 function execFileAsync(
   command: string,
   args: string[],
@@ -56,16 +37,6 @@ function execFileAsync(
       resolve({ stdout, stderr });
     });
   });
-}
-
-function assertSafePath(path: string): void {
-  const resolved = resolve(path);
-  if (resolved !== path && !isAbsolute(path)) {
-    throw new Error(`Path must be absolute: "${path}"`);
-  }
-  if (path.includes('..')) {
-    throw new Error(`Path must not contain traversal segments: "${path}"`);
-  }
 }
 
 async function validateFfmpegPath(path: string): Promise<void> {

@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdirSync } from 'node:fs';
+import { mkdtemp, writeFile, rm, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
@@ -106,7 +107,6 @@ describe('dir routes', () => {
     it('lists files and directories at a given path', async () => {
       await writeFile(join(tempDir, 'photo.jpg'), 'fake jpeg');
       await writeFile(join(tempDir, 'notes.txt'), 'hello');
-      const { mkdirSync } = await import('node:fs');
       mkdirSync(join(tempDir, 'subdir'));
 
       const client = setupDb();
@@ -136,7 +136,6 @@ describe('dir routes', () => {
 
     it('sorts directories before files', async () => {
       await writeFile(join(tempDir, 'zebra.txt'), 'data');
-      const { mkdirSync } = await import('node:fs');
       mkdirSync(join(tempDir, 'alpha'));
 
       const client = setupDb();
@@ -288,7 +287,6 @@ describe('dir routes', () => {
       expect(result.uploaded).toHaveLength(1);
       expect(result.uploaded[0]).toBe(join(uploadDir, 'test.txt'));
 
-      const { readFile } = await import('node:fs/promises');
       const written = await readFile(join(uploadDir, 'test.txt'), 'utf8');
       expect(written).toBe('test file content');
     });
