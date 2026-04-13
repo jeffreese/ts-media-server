@@ -93,6 +93,8 @@ export function createDatabaseClient(options: DatabaseClientOptions): DatabaseCl
   db.pragma('journal_mode = WAL');
   db.pragma(`busy_timeout = ${BUSY_TIMEOUT_MS}`);
   db.pragma('foreign_keys = ON');
+  db.pragma('synchronous = NORMAL');
+  db.pragma('cache_size = -64000');
 
   let spatialiteLoaded = false;
 

@@ -1,5 +1,13 @@
 import sharp from 'sharp';
 
+/**
+ * Set sharp's internal libvips thread pool size. Call once at startup
+ * before any image operations.
+ */
+export function configureSharp(threads: number): void {
+  sharp.concurrency(threads);
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------

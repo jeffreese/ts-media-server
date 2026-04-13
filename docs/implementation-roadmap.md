@@ -572,10 +572,10 @@ Wire the CLI subcommands to the services built in previous phases.
 
 ### Performance
 - [x] Profile indexing pipeline with a large directory (1000+ files)
-- [ ] Tune p-limit concurrency defaults based on profiling
-- [ ] Tune sharp thread pool size if needed (`sharp.concurrency()`)
-- [ ] Verify SQLite WAL mode and busy_timeout are effective under concurrent load
-- [ ] Add database indexes review — ensure all query patterns are indexed
+- [x] Tune p-limit concurrency defaults based on profiling
+- [x] Tune sharp thread pool size if needed (`sharp.concurrency()`)
+- [x] Verify SQLite WAL mode and busy_timeout are effective under concurrent load
+- [x] Add database indexes review — ensure all query patterns are indexed
 
 ### Documentation
 - [x] Write README.md with:

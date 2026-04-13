@@ -35,6 +35,7 @@ const ENV_MAP: Record<string, (value: string, config: Record<string, unknown>) =
   },
   LOG_LEVEL: (v, c) => { c.logLevel = v; },
   CONCURRENCY: (v, c) => { c.concurrency = Number(v); },
+  SHARP_CONCURRENCY: (v, c) => { c.sharpConcurrency = Number(v); },
   JWT_SECRET: (v, c) => {
     const jwt = (c.jwt ?? {}) as Record<string, unknown>;
     jwt.secret = v;
