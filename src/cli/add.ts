@@ -16,11 +16,13 @@ import { loadModels, type OnnxModels } from '../services/onnx-models.js';
 import { NotificationService, type NotificationEvent } from '../services/notification.js';
 import { MediaLogService } from '../services/media-log.js';
 import { FileIndex } from '../services/file-index.js';
+import { PipelineProfiler, formatProfileSummary } from '../utils/profiler.js';
 
 interface AddDirectoryOptions {
   path: string;
   concurrency?: string;
   config?: string;
+  profile?: boolean;
 }
 
 function getSetting(
@@ -43,6 +45,7 @@ addCommand
   .description('Index a directory of media files')
   .requiredOption('--path <path>', 'directory to index')
   .option('--concurrency <number>', 'number of files to process in parallel')
+  .option('--profile', 'print per-phase timing breakdown after indexing')
   .option('-c, --config <path>', 'path to config file')
   .action(async (options: AddDirectoryOptions) => {
     let client: DatabaseClient | undefined;
@@ -100,6 +103,7 @@ addCommand
 
       const notificationService = new NotificationService();
       const mediaLog = new MediaLogService(db);
+      const profiler = options.profile ? new PipelineProfiler() : undefined;
 
       let filesIndexed = 0;
       let totalFiles = 0;
@@ -142,6 +146,7 @@ addCommand
         detectionSession: models?.detection,
         recognitionSession: models?.recognition,
         mediaLog,
+        profiler,
       });
 
       const fileFilter = createMediaFilter();
@@ -169,6 +174,12 @@ addCommand
       console.log(`  Media items:    ${mediaItemCount}`);
       console.log(`  Faces detected: ${featureCount}`);
       console.log(`  Hash matches:   ${matchCount}`);
+
+      if (profiler) {
+        const summary = profiler.summarize();
+        console.log('');
+        console.log(formatProfileSummary(summary));
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`fatal: ${message}`);
