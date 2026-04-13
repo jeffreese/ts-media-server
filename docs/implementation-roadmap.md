@@ -525,12 +525,12 @@ Wire the CLI subcommands to the services built in previous phases.
 - [x] Optional comment and timestamp
 
 ### People & Places
-- [ ] Person CRUD with linked names, addresses, contacts
-- [ ] Person-feature linking (assign faces to people)
-- [ ] Place CRUD with SpatiaLite geometry
-- [ ] Place-media linking
-- [ ] Place name management with preferred flag
-- [ ] Address CRUD linked to places
+- [x] Person CRUD with linked names, addresses, contacts
+- [x] Person-feature linking (assign faces to people)
+- [x] Place CRUD with SpatiaLite geometry
+- [x] Place-media linking
+- [x] Place name management with preferred flag
+- [x] Address CRUD linked to places
 
 ### Generic Data Store
 - [ ] Datatype CRUD
