@@ -7,8 +7,7 @@ import { getDimensions, resize, sharpen, crop, toJpegBuffer, toRawPixelBuffer } 
 // ---------------------------------------------------------------------------
 
 const STRIDES = [8, 16, 32] as const;
-const DIVISOR = 32;
-const MAX_DETECTION_WIDTH = 600;
+const MODEL_INPUT_SIZE = 640;
 const FACE_THUMBNAIL_MAX_PX = 300;
 const MAX_DETECTIONS = 20;
 
@@ -60,46 +59,32 @@ export interface FaceDetectionOptions {
 // ---------------------------------------------------------------------------
 
 /**
- * Pad a dimension to the next multiple of DIVISOR.
- */
-export function padToDivisor(value: number): number {
-  return (Math.floor((value - 1) / DIVISOR) + 1) * DIVISOR;
-}
-
-/**
- * Compute the scale factor and target dimensions for detection input.
- * Resizes the image so the width is at most MAX_DETECTION_WIDTH,
- * preserving aspect ratio.
+ * Compute the scale factor for fitting an image into the model's fixed
+ * input size while preserving aspect ratio.
  */
 export function computeDetectionSize(
   width: number,
   height: number,
 ): { width: number; height: number; scale: number } {
-  let scale = 1;
-  let targetWidth = width;
-  let targetHeight = height;
-
-  if (width > MAX_DETECTION_WIDTH) {
-    scale = MAX_DETECTION_WIDTH / width;
-    targetWidth = MAX_DETECTION_WIDTH;
-    targetHeight = Math.round(height * scale);
-  }
+  const scale = Math.min(MODEL_INPUT_SIZE / width, MODEL_INPUT_SIZE / height, 1);
+  const targetWidth = Math.round(width * scale);
+  const targetHeight = Math.round(height * scale);
 
   return { width: targetWidth, height: targetHeight, scale };
 }
 
 /**
  * Prepare the input tensor for YuNet from a sharp image.
- * Resizes to detection dimensions, pads to DIVISOR multiples,
- * and converts to NCHW float32 tensor.
+ * Resizes to fit within MODEL_INPUT_SIZE, then zero-pads to exactly
+ * MODEL_INPUT_SIZE x MODEL_INPUT_SIZE and converts to NCHW float32.
  */
 export async function preprocessImage(
   image: sharp.Sharp,
   targetWidth: number,
   targetHeight: number,
 ): Promise<{ tensor: ort.Tensor; padW: number; padH: number }> {
-  const padW = padToDivisor(targetWidth);
-  const padH = padToDivisor(targetHeight);
+  const padW = MODEL_INPUT_SIZE;
+  const padH = MODEL_INPUT_SIZE;
 
   const resized = resize(image, { width: targetWidth, height: targetHeight });
   const { buffer, width: actualW, height: actualH, channels } = await toRawPixelBuffer(resized);

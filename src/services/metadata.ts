@@ -1,4 +1,5 @@
-import { parse as exifrParse, gps as exifrGps } from 'exifr';
+import exifr from 'exifr';
+const { parse: exifrParse, gps: exifrGps } = exifr;
 import { extname, dirname, join, parse as parsePath } from 'node:path';
 import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
