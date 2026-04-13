@@ -3,7 +3,6 @@ import * as ort from 'onnxruntime-node';
 import sharp from 'sharp';
 
 import {
-  padToDivisor,
   computeDetectionSize,
   preprocessImage,
   decodeDetections,
@@ -76,34 +75,11 @@ function createOutputTensors(
 
 describe('face-detection service', () => {
   // -------------------------------------------------------------------------
-  // padToDivisor
-  // -------------------------------------------------------------------------
-
-  describe('padToDivisor', () => {
-    it('returns the value when already a multiple of 32', () => {
-      expect(padToDivisor(32)).toBe(32);
-      expect(padToDivisor(64)).toBe(64);
-      expect(padToDivisor(640)).toBe(640);
-    });
-
-    it('rounds up to next multiple of 32', () => {
-      expect(padToDivisor(1)).toBe(32);
-      expect(padToDivisor(33)).toBe(64);
-      expect(padToDivisor(100)).toBe(128);
-      expect(padToDivisor(320)).toBe(320);
-    });
-
-    it('handles edge case of 31', () => {
-      expect(padToDivisor(31)).toBe(32);
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // computeDetectionSize
   // -------------------------------------------------------------------------
 
   describe('computeDetectionSize', () => {
-    it('does not resize images ≤600px wide', () => {
+    it('does not resize images that fit within 640x640', () => {
       const result = computeDetectionSize(600, 400);
       expect(result).toEqual({ width: 600, height: 400, scale: 1 });
     });
@@ -113,25 +89,30 @@ describe('face-detection service', () => {
       expect(result).toEqual({ width: 320, height: 240, scale: 1 });
     });
 
-    it('scales down images wider than 600px', () => {
-      const result = computeDetectionSize(1200, 800);
-      expect(result.width).toBe(600);
-      expect(result.height).toBe(400);
+    it('scales down images larger than 640 on the long side', () => {
+      const result = computeDetectionSize(1280, 960);
+      expect(result.width).toBe(640);
+      expect(result.height).toBe(480);
       expect(result.scale).toBe(0.5);
     });
 
     it('preserves aspect ratio when scaling', () => {
-      const result = computeDetectionSize(1800, 1200);
-      expect(result.width).toBe(600);
-      expect(result.height).toBe(400);
-      expect(result.scale).toBeCloseTo(1 / 3);
+      const result = computeDetectionSize(1920, 1080);
+      expect(result.scale).toBeCloseTo(640 / 1920);
+      expect(result.width).toBe(Math.round(1920 * result.scale));
+      expect(result.height).toBe(Math.round(1080 * result.scale));
     });
 
     it('handles portrait orientation', () => {
       const result = computeDetectionSize(900, 1600);
-      expect(result.width).toBe(600);
-      expect(result.scale).toBeCloseTo(2 / 3);
-      expect(result.height).toBe(Math.round(1600 * (2 / 3)));
+      expect(result.scale).toBe(640 / 1600);
+      expect(result.height).toBe(640);
+      expect(result.width).toBe(Math.round(900 * (640 / 1600)));
+    });
+
+    it('handles exact 640x640', () => {
+      const result = computeDetectionSize(640, 640);
+      expect(result).toEqual({ width: 640, height: 640, scale: 1 });
     });
   });
 
@@ -140,22 +121,22 @@ describe('face-detection service', () => {
   // -------------------------------------------------------------------------
 
   describe('preprocessImage', () => {
-    it('produces a tensor with correct NCHW shape', async () => {
+    it('produces a tensor with fixed 640x640 NCHW shape', async () => {
       const image = createTestImage(320, 240);
       const { tensor, padW, padH } = await preprocessImage(image, 320, 240);
 
-      expect(padW).toBe(320);
-      expect(padH).toBe(256);
-      expect(tensor.dims).toEqual([1, 3, 256, 320]);
+      expect(padW).toBe(640);
+      expect(padH).toBe(640);
+      expect(tensor.dims).toEqual([1, 3, 640, 640]);
     });
 
-    it('pads dimensions to multiples of 32', async () => {
+    it('zero-pads smaller images to 640x640', async () => {
       const image = createTestImage(300, 200);
       const { tensor, padW, padH } = await preprocessImage(image, 300, 200);
 
-      expect(padW).toBe(320);
-      expect(padH).toBe(224);
-      expect(tensor.dims).toEqual([1, 3, 224, 320]);
+      expect(padW).toBe(640);
+      expect(padH).toBe(640);
+      expect(tensor.dims).toEqual([1, 3, 640, 640]);
     });
 
     it('returns float32 data', async () => {
@@ -172,13 +153,13 @@ describe('face-detection service', () => {
 
   describe('decodeDetections', () => {
     it('returns empty array when no scores exceed threshold', () => {
-      const outputs = createOutputTensors(320, 256, []);
-      const detections = decodeDetections(outputs, 320, 256, 0.6);
+      const outputs = createOutputTensors(640, 640, []);
+      const detections = decodeDetections(outputs, 640, 640, 0.6);
       expect(detections).toEqual([]);
     });
 
     it('decodes a single face at stride 8', () => {
-      const outputs = createOutputTensors(320, 256, [{
+      const outputs = createOutputTensors(640, 640, [{
         stride: 8,
         row: 10,
         col: 20,
@@ -188,7 +169,7 @@ describe('face-detection service', () => {
         kpsOffsets: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
       }]);
 
-      const detections = decodeDetections(outputs, 320, 256, 0.6);
+      const detections = decodeDetections(outputs, 640, 640, 0.6);
       expect(detections).toHaveLength(1);
 
       const d = detections[0];
@@ -205,7 +186,7 @@ describe('face-detection service', () => {
     });
 
     it('filters detections below score threshold', () => {
-      const outputs = createOutputTensors(320, 256, [{
+      const outputs = createOutputTensors(640, 640, [{
         stride: 8,
         row: 5,
         col: 5,
@@ -215,12 +196,12 @@ describe('face-detection service', () => {
         kpsOffsets: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       }]);
 
-      const detections = decodeDetections(outputs, 320, 256, 0.6);
+      const detections = decodeDetections(outputs, 640, 640, 0.6);
       expect(detections).toHaveLength(0);
     });
 
     it('decodes landmarks relative to anchor position', () => {
-      const outputs = createOutputTensors(320, 256, [{
+      const outputs = createOutputTensors(640, 640, [{
         stride: 16,
         row: 5,
         col: 10,
@@ -230,7 +211,7 @@ describe('face-detection service', () => {
         kpsOffsets: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
       }]);
 
-      const detections = decodeDetections(outputs, 320, 256, 0.6);
+      const detections = decodeDetections(outputs, 640, 640, 0.6);
       expect(detections).toHaveLength(1);
 
       const lm = detections[0].landmarks;
@@ -241,7 +222,7 @@ describe('face-detection service', () => {
     });
 
     it('clamps cls and obj scores to [0, 1]', () => {
-      const outputs = createOutputTensors(320, 256, [{
+      const outputs = createOutputTensors(640, 640, [{
         stride: 8,
         row: 0,
         col: 0,
@@ -251,13 +232,13 @@ describe('face-detection service', () => {
         kpsOffsets: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       }]);
 
-      const detections = decodeDetections(outputs, 320, 256, 0.5);
+      const detections = decodeDetections(outputs, 640, 640, 0.5);
       expect(detections).toHaveLength(1);
       expect(detections[0].score).toBe(1.0);
     });
 
     it('handles negative scores by clamping to 0', () => {
-      const outputs = createOutputTensors(320, 256, [{
+      const outputs = createOutputTensors(640, 640, [{
         stride: 8,
         row: 0,
         col: 0,
@@ -268,7 +249,7 @@ describe('face-detection service', () => {
       }]);
 
       // Negative cls clamped to 0 → score = sqrt(0 * 0.9) = 0, filtered at threshold 0.1
-      const detections = decodeDetections(outputs, 320, 256, 0.1);
+      const detections = decodeDetections(outputs, 640, 640, 0.1);
       const atOrigin = detections.filter((d) => d.x <= 0 && d.y <= 0);
       expect(atOrigin).toHaveLength(0);
     });
@@ -511,8 +492,6 @@ describe('face-detection service', () => {
 
     it('returns empty array when >20 faces detected (false positive filter)', async () => {
       const image = createTestImage(320, 240);
-      const padW = padToDivisor(320);
-      const padH = padToDivisor(240);
 
       const faces = Array.from({ length: 25 }, (_, i) => ({
         stride: 8 as const,
@@ -524,7 +503,7 @@ describe('face-detection service', () => {
         kpsOffsets: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       }));
 
-      const outputs = createOutputTensors(padW, padH, faces);
+      const outputs = createOutputTensors(640, 640, faces);
       const outputObj: Record<string, ort.Tensor> = {};
       for (const [key, val] of outputs) outputObj[key] = val;
 
@@ -536,10 +515,8 @@ describe('face-detection service', () => {
 
     it('returns detections with thumbnails for valid faces', async () => {
       const image = createTestImage(320, 240);
-      const padW = padToDivisor(320);
-      const padH = padToDivisor(240);
 
-      const outputs = createOutputTensors(padW, padH, [{
+      const outputs = createOutputTensors(640, 640, [{
         stride: 8,
         row: 15,
         col: 20,
@@ -562,10 +539,8 @@ describe('face-detection service', () => {
 
     it('returns empty array when no faces detected', async () => {
       const image = createTestImage(320, 240);
-      const padW = padToDivisor(320);
-      const padH = padToDivisor(240);
 
-      const outputs = createOutputTensors(padW, padH, []);
+      const outputs = createOutputTensors(640, 640, []);
       const outputObj: Record<string, ort.Tensor> = {};
       for (const [key, val] of outputs) outputObj[key] = val;
 
@@ -577,10 +552,8 @@ describe('face-detection service', () => {
 
     it('passes custom thresholds to the pipeline', async () => {
       const image = createTestImage(320, 240);
-      const padW = padToDivisor(320);
-      const padH = padToDivisor(240);
 
-      const outputs = createOutputTensors(padW, padH, [{
+      const outputs = createOutputTensors(640, 640, [{
         stride: 8,
         row: 10,
         col: 10,

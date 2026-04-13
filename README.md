@@ -28,23 +28,71 @@ A self-hosted media server for photo and video libraries. Indexes directories of
 
 ## Quick Start
 
+### 1. Install and build
+
 ```bash
-# Install dependencies
 pnpm install
-
-# Start the development server (with hot reload)
-pnpm dev
-
-# Or build and run
 pnpm build
+
+# First time only — make the `media-server` command available globally
+pnpm setup
+source ~/.zshrc          # or restart your terminal
+pnpm link --global
+```
+
+### 2. Start the server
+
+```bash
 media-server serve
 ```
 
-The server starts on port **8080** by default. Without a config file, it uses sensible defaults and an ephemeral JWT secret (tokens won't survive restarts).
+The server starts on port **8080** by default. Auth is disabled initially, so no token is needed for API calls.
+
+### 3. (Optional) Set up face detection
+
+In a separate terminal, download the ONNX models and configure their paths:
+
+```bash
+mkdir -p models
+curl -L -o models/face_detection_yunet_2023mar.onnx \
+  https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx
+curl -L -o models/face_recognition_sface_2021dec.onnx \
+  https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx
+
+# Register the model paths (must be absolute)
+curl -X POST http://localhost:8080/setting/faceDetectionModelPath \
+  -H "Content-Type: application/json" \
+  -d "{\"value\": \"$(pwd)/models/face_detection_yunet_2023mar.onnx\"}"
+curl -X POST http://localhost:8080/setting/faceRecognitionModelPath \
+  -H "Content-Type: application/json" \
+  -d "{\"value\": \"$(pwd)/models/face_recognition_sface_2021dec.onnx\"}"
+```
+
+Skip this step if you don't need face detection — the indexer will work without it.
+
+### 4. Index a media directory
+
+```bash
+media-server add directory --path /path/to/your/photos
+```
+
+This scans the directory, extracts metadata, generates thumbnails, detects faces (if models are configured), and finds near-duplicate images. Progress is printed as it runs.
+
+### 5. Browse your library
+
+With the server running, browse the indexed media:
+
+```bash
+# List root folders
+curl http://localhost:8080/index
+
+# Get a thumbnail
+curl http://localhost:8080/image/1?width=300 --output thumb.jpg
+```
 
 ## Configuration
 
-Configuration is loaded from a JSON file (default: `config.json` in the working directory), with environment variable overrides.
+Configuration is loaded from a JSON file (default: `config.json` in the working directory), with environment variable overrides. If no config file exists, the server uses sensible defaults: port 8080, an in-memory JWT secret (tokens won't survive restarts), and a SQLite database at `data/database.sqlite`.
 
 ### Config file
 
@@ -186,41 +234,29 @@ Connect to `/ws` for real-time notifications. Messages arrive as comma-delimited
 ## Development
 
 ```bash
-pnpm dev          # Start with hot reload (tsx watch)
+pnpm dev          # Start with hot reload (tsx watch) — no build/link needed
 pnpm build        # Production build (tsup)
 pnpm test         # Run tests once
 pnpm test:watch   # Run tests in watch mode
 pnpm typecheck    # Type-check without emitting
 ```
 
+After `pnpm build`, re-run `pnpm link --global` to update the global `media-server` command with the latest build.
+
 ## ONNX Model Setup
 
 Face detection and recognition require two ONNX model files from the [OpenCV Zoo](https://github.com/opencv/opencv_zoo). These are optional — the server and indexing pipeline work without them, but face features will be skipped.
 
-Download both models (e.g., into a `models/` directory):
+See [Quick Start step 3](#3-optional-set-up-face-detection) for the short version. The details below cover what happens under the hood.
 
-```bash
-mkdir -p models
-curl -L -o models/face_detection_yunet_2023mar.onnx \
-  https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx
+The model paths are stored in the database `setting` table and read by the CLI at indexing time. Paths **must be absolute** — relative paths are rejected. You can update them at any time; the new paths take effect on the next `add directory` run.
 
-curl -L -o models/face_recognition_sface_2021dec.onnx \
-  https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx
-```
+| Setting key | Model | File |
+|---|---|---|
+| `faceDetectionModelPath` | YuNet (face detection) | `face_detection_yunet_2023mar.onnx` |
+| `faceRecognitionModelPath` | SFace (face recognition) | `face_recognition_sface_2021dec.onnx` |
 
-Then configure the paths via the Settings API once the server is running:
-
-```bash
-curl -X POST http://localhost:8080/setting/faceDetectionModelPath \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"value": "models/face_detection_yunet_2023mar.onnx"}'
-
-curl -X POST http://localhost:8080/setting/faceRecognitionModelPath \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"value": "models/face_recognition_sface_2021dec.onnx"}'
-```
+When auth is enabled, the `POST /setting/:key` endpoint requires a valid JWT token with SysAdmin access. When auth is disabled (the default), no token is needed.
 
 For more details on model inputs, outputs, and licensing, see [docs/onnx-models.md](docs/onnx-models.md).
 
