@@ -6,6 +6,8 @@ import { seedDatabase } from '../db/seed.js';
 import { NotificationService } from '../services/notification.js';
 import { createApp } from '../server/app.js';
 
+const SHUTDOWN_TIMEOUT_MS = 10_000;
+
 interface ServeOptions {
   port?: string;
   config?: string;
@@ -38,20 +40,35 @@ export const serveCommand = new Command('serve')
         loggerOptions: { level: config.logLevel, name: 'media-server' },
       });
 
-      const shutdown = async () => {
+      let shuttingDown = false;
+
+      const shutdown = async (signal: string) => {
+        if (shuttingDown) return;
+        shuttingDown = true;
+
+        server.log.info({ signal }, 'shutdown signal received');
+
+        const forceExit = setTimeout(() => {
+          server.log.error('graceful shutdown timed out — forcing exit');
+          process.exit(1);
+        }, SHUTDOWN_TIMEOUT_MS);
+        forceExit.unref();
+
         try {
-          server.log.info('shutting down');
           await close();
+          notificationService.removeAllListeners();
           client.db.close();
+          server.log.info('shutdown complete');
         } catch (err) {
           server.log.error({ err }, 'error during shutdown');
           process.exit(1);
         }
+
         process.exit(0);
       };
 
-      process.on('SIGINT', shutdown);
-      process.on('SIGTERM', shutdown);
+      process.on('SIGINT', () => shutdown('SIGINT'));
+      process.on('SIGTERM', () => shutdown('SIGTERM'));
 
       await server.listen({ port: config.port, host: '0.0.0.0' });
       server.log.info({ port: config.port }, `media server listening on http://localhost:${config.port}`);

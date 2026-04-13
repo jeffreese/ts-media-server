@@ -565,10 +565,10 @@ Wire the CLI subcommands to the services built in previous phases.
 ## Phase 14: Polish & Production Readiness
 
 ### Error Handling
-- [ ] Add global Fastify error handler with structured error responses
-- [ ] Add request validation error formatting
-- [ ] Ensure all async operations have proper error handling
-- [ ] Add graceful shutdown handler (close database, stop indexing, close WebSocket connections)
+- [x] Add global Fastify error handler with structured error responses
+- [x] Add request validation error formatting
+- [x] Ensure all async operations have proper error handling
+- [x] Add graceful shutdown handler (close database, stop indexing, close WebSocket connections)
 
 ### Performance
 - [ ] Profile indexing pipeline with a large directory (1000+ files)
