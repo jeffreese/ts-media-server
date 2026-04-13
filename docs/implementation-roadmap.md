@@ -493,10 +493,10 @@ Wire the CLI subcommands to the services built in previous phases.
   - [x] Print summary on completion (files indexed, faces detected, matches found)
 
 ### Delete Commands
-- [ ] Implement `src/cli/delete.ts`:
-  - [ ] `delete thumbnails --path` — call `thumbnail.deleteThumbnails(directory)`
-  - [ ] `delete orphans` — call `fileIndex.deleteOrphans()`
-  - [ ] Print summary of deleted items
+- [x] Implement `src/cli/delete.ts`:
+  - [x] `delete thumbnails --path` — call `thumbnail.deleteThumbnails(directory)`
+  - [x] `delete orphans` — call `fileIndex.deleteOrphans()`
+  - [x] Print summary of deleted items
 
 ### Test Commands
 - [ ] Implement `src/cli/test.ts`:
