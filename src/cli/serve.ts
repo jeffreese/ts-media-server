@@ -5,6 +5,7 @@ import { runMigrations } from '../db/migrate.js';
 import { seedDatabase } from '../db/seed.js';
 import { NotificationService } from '../services/notification.js';
 import { createApp } from '../server/app.js';
+import { configureSharp } from '../utils/image.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -26,6 +27,7 @@ export const serveCommand = new Command('serve')
       if (options.web) overrides.webDir = options.web;
 
       const config = await loadConfig({ configPath: options.config, overrides });
+      configureSharp(config.sharpConcurrency);
 
       const client = createDatabaseClient({ path: config.database.path });
       runMigrations(client);

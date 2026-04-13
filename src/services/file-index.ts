@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
 import { basename, dirname, extname, join } from 'node:path';
 import pLimit from 'p-limit';
 import { eq, and, inArray } from 'drizzle-orm';
@@ -543,7 +544,7 @@ export class FileIndex {
     const {
       directory,
       fileFilter,
-      concurrency = 4,
+      concurrency = Math.max(Math.floor(availableParallelism() / 2), 2),
       hostId: providedHostId,
     } = options;
 

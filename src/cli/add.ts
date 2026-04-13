@@ -11,6 +11,7 @@ import { seedDatabase } from '../db/seed.js';
 import * as schema from '../db/schema.js';
 import { FFmpeg } from '../utils/ffmpeg.js';
 import { createMediaFilter } from '../utils/file.js';
+import { configureSharp } from '../utils/image.js';
 import { createLoggerFromConfig } from '../utils/logger.js';
 import { loadModels, type OnnxModels } from '../services/onnx-models.js';
 import { NotificationService, type NotificationEvent } from '../services/notification.js';
@@ -68,6 +69,7 @@ addCommand
 
       const config = await loadConfig({ configPath: options.config, overrides });
       const logger = createLoggerFromConfig(config, 'add-directory');
+      configureSharp(config.sharpConcurrency);
 
       client = createDatabaseClient({ path: config.database.path });
       runMigrations(client);

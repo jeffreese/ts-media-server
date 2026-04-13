@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { availableParallelism } from 'node:os';
 import { configSchema } from '../../src/config/schema.js';
 
 describe('configSchema', () => {
@@ -13,7 +14,9 @@ describe('configSchema', () => {
       '300x300',
       '150x100',
     ]);
-    expect(config.concurrency).toBeGreaterThan(0);
+    expect(config.concurrency).toBeGreaterThanOrEqual(2);
+    expect(config.sharpConcurrency).toBeGreaterThan(0);
+    expect(config.sharpConcurrency).toBeLessThanOrEqual(availableParallelism());
     expect(config.logLevel).toBe('info');
     expect(config.jwt).toBeUndefined();
     expect(config.webDir).toBeUndefined();
@@ -30,6 +33,7 @@ describe('configSchema', () => {
       database: { path: '/data/media.db' },
       thumbnails: { sizes: ['640x480', '300x300'] },
       concurrency: 4,
+      sharpConcurrency: 2,
       jwt: { secret: 'test-secret', expiresIn: '1h' },
     });
 
@@ -40,6 +44,7 @@ describe('configSchema', () => {
     expect(config.database.path).toBe('/data/media.db');
     expect(config.thumbnails.sizes).toEqual(['640x480', '300x300']);
     expect(config.concurrency).toBe(4);
+    expect(config.sharpConcurrency).toBe(2);
     expect(config.jwt).toEqual({ secret: 'test-secret', expiresIn: '1h' });
   });
 
@@ -70,6 +75,11 @@ describe('configSchema', () => {
   it('rejects non-positive concurrency', () => {
     expect(() => configSchema.parse({ concurrency: 0 })).toThrow();
     expect(() => configSchema.parse({ concurrency: -2 })).toThrow();
+  });
+
+  it('rejects non-positive sharpConcurrency', () => {
+    expect(() => configSchema.parse({ sharpConcurrency: 0 })).toThrow();
+    expect(() => configSchema.parse({ sharpConcurrency: -1 })).toThrow();
   });
 
   it('rejects empty jwt secret', () => {

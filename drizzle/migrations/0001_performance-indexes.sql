@@ -1,0 +1,19 @@
+CREATE INDEX `feature_item_id_idx` ON `feature` (`item_id`);--> statement-breakpoint
+CREATE INDEX `feature_match_feature_id_idx` ON `feature_match` (`feature_id`);--> statement-breakpoint
+CREATE INDEX `feature_match_matching_feature_id_idx` ON `feature_match` (`matching_feature_id`);--> statement-breakpoint
+CREATE INDEX `folder_entry_item_id_idx` ON `folder_entry` (`item_id`);--> statement-breakpoint
+CREATE INDEX `media_access_item_id_idx` ON `media_access` (`item_id`);--> statement-breakpoint
+CREATE INDEX `media_log_item_id_idx` ON `media_log` (`item_id`);--> statement-breakpoint
+CREATE INDEX `media_match_media_item_id_idx` ON `media_match` (`media_item_id`);--> statement-breakpoint
+CREATE INDEX `media_match_matching_item_id_idx` ON `media_match` (`matching_item_id`);--> statement-breakpoint
+CREATE INDEX `person_address_person_id_idx` ON `person_address` (`person_id`);--> statement-breakpoint
+CREATE INDEX `person_contact_person_id_idx` ON `person_contact` (`person_id`);--> statement-breakpoint
+CREATE INDEX `person_feature_person_id_idx` ON `person_feature` (`person_id`);--> statement-breakpoint
+CREATE INDEX `person_feature_feature_id_idx` ON `person_feature` (`feature_id`);--> statement-breakpoint
+CREATE INDEX `person_name_person_id_idx` ON `person_name` (`person_id`);--> statement-breakpoint
+CREATE INDEX `place_media_place_id_idx` ON `place_media` (`place_id`);--> statement-breakpoint
+CREATE INDEX `place_media_media_id_idx` ON `place_media` (`media_id`);--> statement-breakpoint
+CREATE INDEX `place_name_place_id_idx` ON `place_name` (`place_id`);--> statement-breakpoint
+CREATE INDEX `user_access_user_id_idx` ON `user_access` (`user_id`);--> statement-breakpoint
+CREATE INDEX `user_rating_item_id_idx` ON `user_rating` (`item_id`);--> statement-breakpoint
+CREATE INDEX `user_rating_user_item_idx` ON `user_rating` (`user_id`,`item_id`);

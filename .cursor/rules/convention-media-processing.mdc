@@ -48,6 +48,7 @@ globs: ["src/services/**/*.ts", "src/utils/image.ts", "src/utils/ffmpeg.ts"]
 
 ## Concurrency
 
-- `p-limit` controls concurrent file processing (default: CPU core count)
+- `p-limit` controls concurrent file processing (default: half CPU core count, min 2)
+- `sharp.concurrency()` configured at startup via `sharpConcurrency` config (default: min(cores, 4))
 - sharp and onnxruntime manage their own native thread pools
 - Never use unbounded `Promise.all` on large file lists

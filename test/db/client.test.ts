@@ -59,6 +59,22 @@ describe('createDatabaseClient', () => {
     expect(result[0].foreign_keys).toBe(1);
   });
 
+  it('sets synchronous to NORMAL', () => {
+    const { db } = tracked(
+      createDatabaseClient({ path: ':memory:', enableSpatialite: false }),
+    );
+    const result = db.pragma('synchronous') as { synchronous: number }[];
+    expect(result[0].synchronous).toBe(1);
+  });
+
+  it('increases cache_size to 64MB', () => {
+    const { db } = tracked(
+      createDatabaseClient({ path: ':memory:', enableSpatialite: false }),
+    );
+    const result = db.pragma('cache_size') as { cache_size: number }[];
+    expect(result[0].cache_size).toBe(-64000);
+  });
+
   it('creates parent directories for file-based databases', () => {
     const dbPath = join(TEST_DIR, 'nested', 'dir', 'test.db');
     const { db } = tracked(

@@ -27,7 +27,8 @@ export const configSchema = z.object({
         .default(['1920x1080', '1280x720', '640x480', '300x300', '150x100']),
     })
     .default({ sizes: ['1920x1080', '1280x720', '640x480', '300x300', '150x100'] }),
-  concurrency: z.number().int().min(1).default(availableParallelism()),
+  concurrency: z.number().int().min(1).default(Math.max(Math.floor(availableParallelism() / 2), 2)),
+  sharpConcurrency: z.number().int().min(1).default(Math.min(availableParallelism(), 4)),
   jwt: z
     .object({
       secret: z.string().min(1),

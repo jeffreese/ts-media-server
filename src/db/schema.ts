@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, blob, uniqueIndex, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, blob, uniqueIndex, index, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -71,14 +71,19 @@ export const mediaMatch = sqliteTable('media_match', {
   matchingItemId: integer('matching_item_id').notNull().references(() => mediaItem.id, { onDelete: 'cascade' }),
   matchInfo: text('match_info', { mode: 'json' }),
   ignoreMatch: integer('ignore_match', { mode: 'boolean' }).notNull().default(false),
-});
+}, (table) => [
+  index('media_match_media_item_id_idx').on(table.mediaItemId),
+  index('media_match_matching_item_id_idx').on(table.matchingItemId),
+]);
 
 export const mediaAccess = sqliteTable('media_access', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   itemId: integer('item_id').notNull().references(() => mediaItem.id, { onDelete: 'cascade' }),
   groupId: integer('group_id').notNull().references(() => userGroup.id, { onDelete: 'cascade' }),
   readOnly: integer('read_only', { mode: 'boolean' }).notNull().default(false),
-});
+}, (table) => [
+  index('media_access_item_id_idx').on(table.itemId),
+]);
 
 export const mediaLog = sqliteTable('media_log', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -86,7 +91,9 @@ export const mediaLog = sqliteTable('media_log', {
   userId: integer('user_id').notNull().references(() => user.id),
   date: text('date').notNull(),
   action: text('action').notNull(),
-});
+}, (table) => [
+  index('media_log_item_id_idx').on(table.itemId),
+]);
 
 export const folder = sqliteTable('folder', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -106,6 +113,7 @@ export const folderEntry = sqliteTable('folder_entry', {
   info: text('info', { mode: 'json' }),
 }, (table) => [
   uniqueIndex('folder_entry_folder_item_idx').on(table.folderId, table.itemId),
+  index('folder_entry_item_id_idx').on(table.itemId),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -119,7 +127,9 @@ export const feature = sqliteTable('feature', {
   thumbnail: blob('thumbnail'),
   label: text('label'),
   info: text('info', { mode: 'json' }),
-});
+}, (table) => [
+  index('feature_item_id_idx').on(table.itemId),
+]);
 
 export const featureMatch = sqliteTable('feature_match', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -127,7 +137,10 @@ export const featureMatch = sqliteTable('feature_match', {
   matchingFeatureId: integer('matching_feature_id').notNull().references(() => feature.id, { onDelete: 'cascade' }),
   matchInfo: text('match_info', { mode: 'json' }),
   ignoreMatch: integer('ignore_match', { mode: 'boolean' }).notNull().default(false),
-});
+}, (table) => [
+  index('feature_match_feature_id_idx').on(table.featureId),
+  index('feature_match_matching_feature_id_idx').on(table.matchingFeatureId),
+]);
 
 // ---------------------------------------------------------------------------
 // People / Places Tables
@@ -146,7 +159,9 @@ export const personName = sqliteTable('person_name', {
   name: text('name').notNull(),
   preferred: integer('preferred', { mode: 'boolean' }).notNull().default(false),
   info: text('info', { mode: 'json' }),
-});
+}, (table) => [
+  index('person_name_person_id_idx').on(table.personId),
+]);
 
 export const personAddress = sqliteTable('person_address', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -155,7 +170,9 @@ export const personAddress = sqliteTable('person_address', {
   type: text('type'),
   preferred: integer('preferred', { mode: 'boolean' }).notNull().default(false),
   info: text('info', { mode: 'json' }),
-});
+}, (table) => [
+  index('person_address_person_id_idx').on(table.personId),
+]);
 
 export const personContact = sqliteTable('person_contact', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -163,14 +180,19 @@ export const personContact = sqliteTable('person_contact', {
   contact: text('contact').notNull(),
   type: text('type'),
   info: text('info', { mode: 'json' }),
-});
+}, (table) => [
+  index('person_contact_person_id_idx').on(table.personId),
+]);
 
 export const personFeature = sqliteTable('person_feature', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   featureId: integer('feature_id').notNull().references(() => feature.id, { onDelete: 'cascade' }),
   personId: integer('person_id').notNull().references(() => person.id, { onDelete: 'cascade' }),
   info: text('info', { mode: 'json' }),
-});
+}, (table) => [
+  index('person_feature_person_id_idx').on(table.personId),
+  index('person_feature_feature_id_idx').on(table.featureId),
+]);
 
 export const place = sqliteTable('place', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -183,14 +205,19 @@ export const placeName = sqliteTable('place_name', {
   name: text('name').notNull(),
   preferred: integer('preferred', { mode: 'boolean' }).notNull().default(false),
   info: text('info', { mode: 'json' }),
-});
+}, (table) => [
+  index('place_name_place_id_idx').on(table.placeId),
+]);
 
 export const placeMedia = sqliteTable('place_media', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   mediaId: integer('media_id').notNull().references(() => mediaItem.id, { onDelete: 'cascade' }),
   placeId: integer('place_id').notNull().references(() => place.id, { onDelete: 'cascade' }),
   info: text('info', { mode: 'json' }),
-});
+}, (table) => [
+  index('place_media_place_id_idx').on(table.placeId),
+  index('place_media_media_id_idx').on(table.mediaId),
+]);
 
 export const address = sqliteTable('address', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -218,7 +245,9 @@ export const userAccess = sqliteTable('user_access', {
   componentId: integer('component_id').notNull().references(() => component.id),
   level: integer('level').notNull().default(0),
   info: text('info', { mode: 'json' }),
-});
+}, (table) => [
+  index('user_access_user_id_idx').on(table.userId),
+]);
 
 export const userAuthentication = sqliteTable('user_authentication', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -251,7 +280,10 @@ export const userRating = sqliteTable('user_rating', {
   date: text('date'),
   rating: integer('rating'),
   comment: text('comment'),
-});
+}, (table) => [
+  index('user_rating_item_id_idx').on(table.itemId),
+  index('user_rating_user_item_idx').on(table.userId, table.itemId),
+]);
 
 export const userGroup = sqliteTable('user_group', {
   id: integer('id').primaryKey({ autoIncrement: true }),
