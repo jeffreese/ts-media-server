@@ -20,6 +20,7 @@ import { thumbnailsPlugin } from './routes/thumbnails.js';
 import { mediaItemPlugin } from './routes/media-item.js';
 import { dirPlugin } from './routes/dir.js';
 import type { NotificationService } from '../services/notification.js';
+import { websocketPlugin } from './websocket.js';
 
 const FILE_WATCH_DEBOUNCE_MS = 500;
 
@@ -80,6 +81,10 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
     await server.register(thumbnailsPlugin, { db });
     await server.register(mediaItemPlugin, { db });
     await server.register(dirPlugin, { db });
+  }
+
+  if (notificationService) {
+    await server.register(websocketPlugin, { notificationService });
   }
 
   let watcher: FSWatcher | undefined;
