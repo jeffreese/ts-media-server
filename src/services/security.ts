@@ -293,6 +293,20 @@ export function checkDataAccess(
 }
 
 /**
+ * UserRating: users can only access their own ratings.
+ */
+export function checkUserRating(
+  ctx: SecurityContext,
+  _action: SecurityAction,
+  record?: { userId?: number },
+): SecurityResult {
+  if (record?.userId !== undefined && record.userId !== ctx.userId) {
+    return denied('Users can only access their own ratings');
+  }
+  return ALLOWED;
+}
+
+/**
  * Setting: prevent deletion (save/get/list are handled by the settings route).
  */
 export function checkSetting(
@@ -324,6 +338,7 @@ type AsyncChecker = (
 const SYNC_CHECKERS: Record<string, SyncChecker> = {
   user: checkUser as SyncChecker,
   userPreference: checkUserPreference as SyncChecker,
+  userRating: checkUserRating as SyncChecker,
   userAccess: checkUserAccess as SyncChecker,
   component: checkComponent as SyncChecker,
   datatype: checkDatatype as SyncChecker,
