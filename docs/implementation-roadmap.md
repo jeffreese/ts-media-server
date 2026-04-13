@@ -546,19 +546,19 @@ Wire the CLI subcommands to the services built in previous phases.
 ## Phase 13: File Operations
 
 ### Media Item File Management
-- [ ] Implement `moveMediaItem(mediaItem, outputPath)`:
-  - [ ] Copy all associated files to output directory
-  - [ ] Verify integrity with SHA1 checksums
-  - [ ] Delete originals only after all copies verified
-  - [ ] Rollback (delete copies) on any failure
-  - [ ] Update file records in database with new paths
-  - [ ] Move thumbnails to new `.thumbnails` directory
-- [ ] Implement `mergeDirectories(inputPaths, outputPath)`:
-  - [ ] Combine media items from multiple directories
-  - [ ] Rename files using date-based naming (`IMG_{timestamp}`)
-  - [ ] Handle duplicate filenames with suffix (`(2)`, `(3)`, etc.)
-  - [ ] Skip media items without dates
-- [ ] Write tests for move, merge, integrity verification, rollback
+- [x] Implement `moveMediaItem(mediaItem, outputPath)`:
+  - [x] Copy all associated files to output directory
+  - [x] Verify integrity with SHA1 checksums
+  - [x] Delete originals only after all copies verified
+  - [x] Rollback (delete copies) on any failure
+  - [x] Update file records in database with new paths
+  - [x] Move thumbnails to new `.thumbnails` directory
+- [x] Implement `mergeDirectories(inputPaths, outputPath)`:
+  - [x] Combine media items from multiple directories
+  - [x] Rename files using date-based naming (`IMG_{timestamp}`)
+  - [x] Handle duplicate filenames with suffix (`(2)`, `(3)`, etc.)
+  - [x] Skip media items without dates
+- [x] Write tests for move, merge, integrity verification, rollback
 
 ---
 
@@ -578,15 +578,15 @@ Wire the CLI subcommands to the services built in previous phases.
 - [ ] Add database indexes review — ensure all query patterns are indexed
 
 ### Documentation
-- [ ] Write README.md with:
-  - [ ] Project description
-  - [ ] System requirements (Node.js, FFmpeg, SpatiaLite)
-  - [ ] Installation instructions
-  - [ ] Configuration reference
-  - [ ] CLI usage guide
-  - [ ] API endpoint reference
+- [x] Write README.md with:
+  - [x] Project description
+  - [x] System requirements (Node.js, FFmpeg, SpatiaLite)
+  - [x] Installation instructions
+  - [x] Configuration reference
+  - [x] CLI usage guide
+  - [x] API endpoint reference
 - [ ] Add inline JSDoc for public APIs
-- [ ] Document ONNX model setup (where to download, how to configure)
+- [x] Document ONNX model setup (where to download, how to configure)
 
 ### Build & Distribution
 - [ ] Verify `tsup` production build works end-to-end

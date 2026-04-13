@@ -23,7 +23,8 @@ A self-hosted media server for photo and video libraries. Indexes directories of
 - **Node.js** >= 22
 - **pnpm** (v10+)
 - **FFmpeg** / **FFprobe** — required for video metadata extraction, frame capture, and MP4 conversion
-- **ONNX models** (optional) — for face detection and recognition
+- **SpatiaLite** (`mod_spatialite`) — required for geospatial features (GPS coordinate storage, spatial indexing). Install via `brew install libspatialite` (macOS) or `apt install libsqlite3-mod-spatialite` (Debian/Ubuntu). The extension is auto-detected from common install paths; set `spatialitePath` in the database client options to override.
+- **ONNX models** (optional) — for face detection and recognition (see [ONNX Model Setup](#onnx-model-setup) below)
 
 ## Quick Start
 
@@ -191,6 +192,37 @@ pnpm test         # Run tests once
 pnpm test:watch   # Run tests in watch mode
 pnpm typecheck    # Type-check without emitting
 ```
+
+## ONNX Model Setup
+
+Face detection and recognition require two ONNX model files from the [OpenCV Zoo](https://github.com/opencv/opencv_zoo). These are optional — the server and indexing pipeline work without them, but face features will be skipped.
+
+Download both models (e.g., into a `models/` directory):
+
+```bash
+mkdir -p models
+curl -L -o models/face_detection_yunet_2023mar.onnx \
+  https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx
+
+curl -L -o models/face_recognition_sface_2021dec.onnx \
+  https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx
+```
+
+Then configure the paths via the Settings API once the server is running:
+
+```bash
+curl -X POST http://localhost:8080/setting/faceDetectionModelPath \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"value": "models/face_detection_yunet_2023mar.onnx"}'
+
+curl -X POST http://localhost:8080/setting/faceRecognitionModelPath \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"value": "models/face_recognition_sface_2021dec.onnx"}'
+```
+
+For more details on model inputs, outputs, and licensing, see [docs/onnx-models.md](docs/onnx-models.md).
 
 ## Project Structure
 
