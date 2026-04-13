@@ -515,9 +515,9 @@ Wire the CLI subcommands to the services built in previous phases.
 - [x] Unique keyword enforcement
 
 ### Media Logging
-- [ ] Implement media audit log
-- [ ] Create `media_log` entries on media item create/update/delete
-- [ ] Include user ID and timestamp
+- [x] Implement media audit log
+- [x] Create `media_log` entries on media item create/update/delete
+- [x] Include user ID and timestamp
 
 ### User Ratings
 - [ ] Implement rating routes

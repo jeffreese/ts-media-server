@@ -28,6 +28,7 @@ import { recognizeFace } from './face-recognition.js';
 import { HashMatcher } from './hash-matcher.js';
 import { FaceMatcher } from './face-matcher.js';
 import { type NotificationService } from './notification.js';
+import { type MediaLogService } from './media-log.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,6 +41,7 @@ export interface FileIndexDeps {
   logger: Logger;
   detectionSession?: InferenceSession;
   recognitionSession?: InferenceSession;
+  mediaLog?: MediaLogService;
 }
 
 export interface AddDirectoryOptions {
@@ -92,6 +94,7 @@ export class FileIndex {
   private readonly recognitionSession?: InferenceSession;
   private readonly hashMatcher: HashMatcher;
   private readonly faceMatcher: FaceMatcher;
+  private readonly mediaLog?: MediaLogService;
 
   constructor(deps: FileIndexDeps) {
     this.db = deps.db;
@@ -102,6 +105,7 @@ export class FileIndex {
     this.recognitionSession = deps.recognitionSession;
     this.hashMatcher = new HashMatcher(deps.db);
     this.faceMatcher = new FaceMatcher(deps.db);
+    this.mediaLog = deps.mediaLog;
   }
 
   // -------------------------------------------------------------------------
@@ -342,6 +346,7 @@ export class FileIndex {
         })
         .where(eq(schema.mediaItem.id, mediaItemId))
         .run();
+      this.mediaLog?.log('update', mediaItemId);
     } else {
       mediaItemId = this.db
         .insert(schema.mediaItem)
@@ -355,6 +360,7 @@ export class FileIndex {
         })
         .returning({ id: schema.mediaItem.id })
         .get().id;
+      this.mediaLog?.log('create', mediaItemId);
     }
 
     // Create media_item_file junction records
@@ -713,6 +719,7 @@ export class FileIndex {
         .get();
 
       if (!hasFiles) {
+        this.mediaLog?.log('delete', item.id);
         this.db
           .delete(schema.mediaItem)
           .where(eq(schema.mediaItem.id, item.id))

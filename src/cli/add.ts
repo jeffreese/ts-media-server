@@ -14,6 +14,7 @@ import { createMediaFilter } from '../utils/file.js';
 import { createLoggerFromConfig } from '../utils/logger.js';
 import { loadModels, type OnnxModels } from '../services/onnx-models.js';
 import { NotificationService, type NotificationEvent } from '../services/notification.js';
+import { MediaLogService } from '../services/media-log.js';
 import { FileIndex } from '../services/file-index.js';
 
 interface AddDirectoryOptions {
@@ -98,6 +99,7 @@ addCommand
       }
 
       const notificationService = new NotificationService();
+      const mediaLog = new MediaLogService(db);
 
       let filesIndexed = 0;
       let totalFiles = 0;
@@ -139,6 +141,7 @@ addCommand
         logger,
         detectionSession: models?.detection,
         recognitionSession: models?.recognition,
+        mediaLog,
       });
 
       const fileFilter = createMediaFilter();
