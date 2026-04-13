@@ -1,5 +1,6 @@
-import { ChevronLeft, ChevronRight, Info, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ExternalLink, Info, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { IconButton } from '~/components/primitives'
 import { type MediaItemEntry, api } from '~/lib/api'
 
@@ -12,6 +13,7 @@ interface LightboxProps {
 export function Lightbox({ items, startIndex, onClose }: LightboxProps) {
   const [index, setIndex] = useState(startIndex)
   const [showInfo, setShowInfo] = useState(false)
+  const navigate = useNavigate()
   const item = items[index]
 
   const goPrev = useCallback(() => {
@@ -113,6 +115,17 @@ export function Lightbox({ items, startIndex, onClose }: LightboxProps) {
             <InfoRow label="Date" value={item.startDate} />
             {item.description && <InfoRow label="Description" value={item.description} />}
           </dl>
+          <button
+            type="button"
+            onClick={() => {
+              onClose()
+              navigate(`/media/${item.id}`)
+            }}
+            className="mt-6 inline-flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            View full details
+          </button>
         </div>
       )}
     </div>
