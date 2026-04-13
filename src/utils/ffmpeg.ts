@@ -120,6 +120,16 @@ export class FFmpeg {
   }
 
   /**
+   * Return the first line of `ffmpeg -version` output (e.g. "ffmpeg version 7.1 …").
+   * Throws if the binary is unreachable.
+   */
+  async getVersion(): Promise<string> {
+    const { stdout } = await execFileAsync(this.ffmpegPath, ['-version']);
+    const firstLine = stdout.split('\n')[0]?.trim();
+    return firstLine ?? stdout.trim();
+  }
+
+  /**
    * Validate that ffmpeg and ffprobe are reachable by running `-version`.
    * Throws if either binary is missing or fails.
    */
