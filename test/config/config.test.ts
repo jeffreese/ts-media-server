@@ -123,6 +123,14 @@ describe('loadConfig', () => {
       expect(config.concurrency).toBe(2);
     });
 
+    it('overrides sharpConcurrency from SHARP_CONCURRENCY env var', async () => {
+      vi.stubEnv('SHARP_CONCURRENCY', '8');
+      const config = await loadConfig({
+        configPath: join(TEST_DIR, 'nonexistent.json'),
+      });
+      expect(config.sharpConcurrency).toBe(8);
+    });
+
     it('sets jwt.secret from JWT_SECRET env var', async () => {
       vi.stubEnv('JWT_SECRET', 'env-secret');
       const config = await loadConfig({

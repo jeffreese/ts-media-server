@@ -27,7 +27,7 @@ Worker threads would add:
 - Memory overhead (each worker loads its own copy of modules)
 - Marginal performance benefit since the bottleneck is native code that's already multi-threaded
 
-p-limit controls how many files are processed concurrently (default: CPU count), preventing memory exhaustion from loading too many images simultaneously while letting sharp and onnxruntime saturate CPU cores internally.
+p-limit controls how many files are processed concurrently (default: half CPU count, min 2), preventing memory exhaustion from loading too many images simultaneously while letting sharp and onnxruntime saturate CPU cores internally. The sharp thread pool size is separately configurable via the `sharpConcurrency` config option.
 
 ## Tradeoffs
 - If profiling reveals the JS glue code is a bottleneck (unlikely), worker threads can be introduced later without restructuring the application

@@ -40,13 +40,16 @@ const configSchema = z.object({
   thumbnails: z.object({
     sizes: z.array(z.string()).default(["1920x1080", "1280x720", "640x480", "300x300", "150x100"]),
   }),
-  concurrency: z.number().default(os.cpus().length),
+  concurrency: z.number().default(Math.max(Math.floor(availableParallelism() / 2), 2)),
+  sharpConcurrency: z.number().default(Math.min(availableParallelism(), 4)),
   jwt: z.object({
     secret: z.string(),
     expiresIn: z.string().default("24h"),
   }),
 });
 ```
+
+The `concurrency` value controls how many files are processed in parallel via `p-limit` (see ADR-010). The default halves the CPU count to leave headroom for native thread pools in sharp and onnxruntime. `sharpConcurrency` controls the sharp/libvips thread pool size and is applied at startup via `sharp.concurrency()`.
 
 ## Database-Persisted Settings
 Runtime-configurable values stored in the `setting` table (matching Java behavior):
