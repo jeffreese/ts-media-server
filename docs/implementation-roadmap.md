@@ -578,15 +578,15 @@ Wire the CLI subcommands to the services built in previous phases.
 - [ ] Add database indexes review — ensure all query patterns are indexed
 
 ### Documentation
-- [ ] Write README.md with:
-  - [ ] Project description
-  - [ ] System requirements (Node.js, FFmpeg, SpatiaLite)
-  - [ ] Installation instructions
-  - [ ] Configuration reference
-  - [ ] CLI usage guide
-  - [ ] API endpoint reference
+- [x] Write README.md with:
+  - [x] Project description
+  - [x] System requirements (Node.js, FFmpeg, SpatiaLite)
+  - [x] Installation instructions
+  - [x] Configuration reference
+  - [x] CLI usage guide
+  - [x] API endpoint reference
 - [ ] Add inline JSDoc for public APIs
-- [ ] Document ONNX model setup (where to download, how to configure)
+- [x] Document ONNX model setup (where to download, how to configure)
 
 ### Build & Distribution
 - [ ] Verify `tsup` production build works end-to-end
