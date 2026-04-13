@@ -478,10 +478,10 @@ This is the core indexing engine that ties together all the services from Phases
 Wire the CLI subcommands to the services built in previous phases.
 
 ### Serve Command
-- [ ] Implement `src/cli/serve.ts`:
-  - [ ] Initialize config, database, and migrations
-  - [ ] Start Fastify server on configured port
-  - [ ] Log startup message with URL
+- [x] Implement `src/cli/serve.ts`:
+  - [x] Initialize config, database, and migrations
+  - [x] Start Fastify server on configured port
+  - [x] Log startup message with URL
 
 ### Add Directory Command
 - [ ] Implement `src/cli/add.ts`:
