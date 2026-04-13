@@ -484,13 +484,13 @@ Wire the CLI subcommands to the services built in previous phases.
   - [x] Log startup message with URL
 
 ### Add Directory Command
-- [ ] Implement `src/cli/add.ts`:
-  - [ ] Initialize config, database, and services
-  - [ ] Validate `--path` argument (directory exists)
-  - [ ] Build file filter from supported extensions
-  - [ ] Run `fileIndex.addDirectory()` with configured concurrency
-  - [ ] Display progress bar/counter using NotificationService events
-  - [ ] Print summary on completion (files indexed, faces detected, matches found)
+- [x] Implement `src/cli/add.ts`:
+  - [x] Initialize config, database, and services
+  - [x] Validate `--path` argument (directory exists)
+  - [x] Build file filter from supported extensions
+  - [x] Run `fileIndex.addDirectory()` with configured concurrency
+  - [x] Display progress bar/counter using NotificationService events
+  - [x] Print summary on completion (files indexed, faces detected, matches found)
 
 ### Delete Commands
 - [ ] Implement `src/cli/delete.ts`:
