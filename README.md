@@ -78,17 +78,74 @@ media-server add directory --path /path/to/your/photos
 
 This scans the directory, extracts metadata, generates thumbnails, detects faces (if models are configured), and finds near-duplicate images. Progress is printed as it runs.
 
-### 5. Browse your library
+### 5. Explore your library
 
-With the server running, browse the indexed media:
+With the server running, you can browse, view, and search your indexed media through the REST API.
+
+**Browse folders** — the indexer mirrors your directory structure as a virtual folder tree:
 
 ```bash
-# List root folders
-curl http://localhost:8080/index
+# List top-level folders
+curl http://localhost:8080/index | jq
 
-# Get a thumbnail
-curl http://localhost:8080/image/1?width=300 --output thumb.jpg
+# Browse into a subfolder
+curl 'http://localhost:8080/index/vacation/2024' | jq
+
+# List everything recursively (paginated)
+curl 'http://localhost:8080/index?recursive=true&limit=20' | jq
 ```
+
+Each response includes `folders` (subfolders) and `items` (media items with IDs you can use below).
+
+**View images and video** — serve originals or pick a thumbnail size:
+
+```bash
+# Download a 300px thumbnail
+curl http://localhost:8080/image/1?width=300 --output thumb.jpg
+
+# Download the full-resolution original
+curl http://localhost:8080/image/1 --output full.jpg
+
+# Stream a video
+curl http://localhost:8080/video/2 --output clip.mp4
+```
+
+**Get media item details** — metadata, dates, camera info, dimensions:
+
+```bash
+curl http://localhost:8080/mediaItem/1 | jq
+```
+
+**Browse detected faces** — view face crops and find photos of the same person:
+
+```bash
+# Get a face thumbnail (by feature ID)
+curl http://localhost:8080/face/1 --output face.jpg
+
+# Find other media items with the same face
+curl http://localhost:8080/matchingFaces/1 | jq
+```
+
+**Tag media with keywords:**
+
+```bash
+# Add a keyword
+curl -X POST http://localhost:8080/mediaItem/1/keywords \
+  -H "Content-Type: application/json" \
+  -d '{"word": "beach"}'
+
+# List keywords for an item
+curl http://localhost:8080/mediaItem/1/keywords | jq
+```
+
+**Check available thumbnail sizes** for a media item:
+
+```bash
+curl http://localhost:8080/thumbnails/1 | jq
+# → { "widths": [150, 300, 640, 1280, 1920] }
+```
+
+**Real-time updates** — connect a WebSocket client to `/ws` for live notifications as media is indexed, updated, or deleted.
 
 ## Configuration
 
