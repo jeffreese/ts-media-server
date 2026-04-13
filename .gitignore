@@ -14,5 +14,7 @@ logs/
 .DS_Store
 Thumbs.db
 
+data/
+
 # Cursor plans (local workspace, not shared)
 .cursor/plans/
