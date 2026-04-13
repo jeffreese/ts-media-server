@@ -650,10 +650,10 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 - [x] `endDate` display when different from `startDate`
 - [x] Keywords section: list tags, add new keyword, remove existing (`/mediaItem/:id/keywords`)
 - [x] Star rating (1–5) with optional comment, upsert/delete (`/mediaItem/:id/rating`)
-- [ ] Available thumbnail sizes display (`/thumbnails/:id`)
+- [x] Available thumbnail sizes display (`/thumbnails/:id`)
 - [x] Duplicate matches section: show perceptually similar media items via `/mediaItem/:id/matches`
 - [x] Detected faces section: list face crops from `feature` records via `/mediaItem/:id/features`
-- [ ] Per-face "matching faces" expansion using `/matchingFaces/:id` (show other media with same face)
+- [x] Per-face "matching faces" expansion using `/matchingFaces/:id` (show other media with same face)
 - [x] Server routes: `GET /mediaItem/:id/features` and `GET /mediaItem/:id/matches` (item-scoped queries)
 
 ### 2. Search & Filtering
