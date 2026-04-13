@@ -38,6 +38,7 @@ function getSetting(
   return row?.value ?? undefined;
 }
 
+/** Commander command group: ingest and index media (e.g. `add directory`). */
 export const addCommand = new Command('add')
   .description('Add media to the library');
 

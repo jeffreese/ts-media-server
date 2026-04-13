@@ -10,13 +10,18 @@ import { hashPassword } from '../server/auth.js';
 
 type Db = BetterSQLite3Database<typeof schema>;
 
+/**
+ * Verb routed to per-model security checkers (`get`/`list` are often open; `save`/`delete` gated).
+ */
 export type SecurityAction = 'get' | 'list' | 'save' | 'delete';
 
+/** Caller identity plus DB access for resolving component access levels during authorization. */
 export interface SecurityContext {
   userId: number;
   db: Db;
 }
 
+/** Outcome of a security check; `reason` is set when `allowed` is false for logging or API errors. */
 export interface SecurityResult {
   allowed: boolean;
   reason?: string;

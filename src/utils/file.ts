@@ -7,6 +7,10 @@ import { join, parse, normalize, sep, dirname } from 'node:path';
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * One regular file discovered on disk: absolute path, basename without
+ * extension, extension without leading dot, and byte size.
+ */
 export interface FileEntry {
   path: string;
   name: string;
@@ -14,6 +18,10 @@ export interface FileEntry {
   size: number;
 }
 
+/**
+ * Related files that share the same logical basename within one directory,
+ * plus the entry chosen as {@link FileGroup.primary} for processing.
+ */
 export interface FileGroup {
   baseName: string;
   directory: string;
@@ -21,6 +29,10 @@ export interface FileGroup {
   primary: FileEntry;
 }
 
+/**
+ * Predicate used when walking or grouping files. Return `true` to keep the
+ * entry; return `false` to omit it.
+ */
 export type FileFilter = (entry: FileEntry) => boolean;
 
 // ---------------------------------------------------------------------------
@@ -49,18 +61,31 @@ const HEIC_EXTENSIONS = new Set(['heic', 'heif']);
  */
 const SIDECAR_EXTENSIONS = new Set(['aae']);
 
+/**
+ * Whether `ext` (without a leading dot, any casing) is treated as an image
+ * format by this package.
+ */
 export function isImageExtension(ext: string): boolean {
   return IMAGE_EXTENSIONS.has(ext.toLowerCase());
 }
 
+/**
+ * Whether `ext` (without a leading dot, any casing) is treated as a video
+ * format by this package.
+ */
 export function isVideoExtension(ext: string): boolean {
   return VIDEO_EXTENSIONS.has(ext.toLowerCase());
 }
 
+/** True if the extension is classified as either image or video. */
 export function isMediaExtension(ext: string): boolean {
   return isImageExtension(ext) || isVideoExtension(ext);
 }
 
+/**
+ * Companion files (e.g. iPhone AAE) that belong with a primary asset but must
+ * not be chosen as the primary file.
+ */
 export function isSidecarExtension(ext: string): boolean {
   return SIDECAR_EXTENSIONS.has(ext.toLowerCase());
 }
@@ -69,6 +94,9 @@ export function isSidecarExtension(ext: string): boolean {
 // Hidden directory detection
 // ---------------------------------------------------------------------------
 
+/**
+ * Directory names the recursive walker skips entirely (e.g. `.git`, `_tmp`).
+ */
 export function isHiddenDirectory(name: string): boolean {
   return name.startsWith('.') || name.startsWith('_');
 }
@@ -94,6 +122,16 @@ export function normalizePath(filePath: string): string {
 // Async recursive directory walker
 // ---------------------------------------------------------------------------
 
+/**
+ * Depth-first async walk of `directory` and non-hidden subdirectories. Yields
+ * only regular files as {@link FileEntry}; symlinks and other node types are
+ * ignored. When `filter` is provided, only entries for which it returns `true`
+ * are included.
+ *
+ * @param directory - Root directory to walk (not included in results).
+ * @param filter - Optional predicate; omit to include every regular file.
+ * @returns All matching files in arbitrary traversal order (not sorted).
+ */
 export async function walkDirectory(
   directory: string,
   filter?: FileFilter,
@@ -241,10 +279,16 @@ export function buildFileGroups(files: FileEntry[]): FileGroup[] {
 // Hash computation
 // ---------------------------------------------------------------------------
 
+/**
+ * Stream `filePath` and return a lowercase hex MD5 digest (Node `crypto`).
+ */
 export async function computeMd5(filePath: string): Promise<string> {
   return computeFileHash(filePath, 'md5');
 }
 
+/**
+ * Stream `filePath` and return a lowercase hex SHA-1 digest (Node `crypto`).
+ */
 export async function computeSha1(filePath: string): Promise<string> {
   return computeFileHash(filePath, 'sha1');
 }
@@ -289,6 +333,11 @@ export async function atomicWrite(
 // Default media file filter
 // ---------------------------------------------------------------------------
 
+/**
+ * Filter that accepts image and video extensions plus known sidecars (see
+ * {@link isMediaExtension} / {@link isSidecarExtension}), for use with
+ * {@link walkDirectory}.
+ */
 export function createMediaFilter(): FileFilter {
   return (entry) =>
     isMediaExtension(entry.extension) || isSidecarExtension(entry.extension);

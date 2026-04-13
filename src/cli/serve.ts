@@ -15,6 +15,7 @@ interface ServeOptions {
   web?: string;
 }
 
+/** Commander command: run the HTTP API, optional static web root, and WebSocket notifications. */
 export const serveCommand = new Command('serve')
   .description('Start the media server')
   .option('-p, --port <number>', 'port to listen on')

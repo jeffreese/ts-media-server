@@ -22,6 +22,7 @@ interface DeleteOrphansOptions {
   config?: string;
 }
 
+/** Commander command group: remove generated files or orphaned DB rows. */
 export const deleteCommand = new Command('delete')
   .description('Delete generated data');
 

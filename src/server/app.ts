@@ -32,6 +32,12 @@ import { errorHandlerPlugin } from './error-handler.js';
 
 const FILE_WATCH_DEBOUNCE_MS = 500;
 
+/**
+ * Options for {@link createApp}. When `db` is omitted, database-backed routes
+ * and auth are not registered (useful for static-only or test doubles).
+ * `notificationService` enables the `/ws` bridge; without it, no WebSocket
+ * plugin is registered.
+ */
 export interface CreateAppOptions {
   config: Config;
   db?: Database.Database;
@@ -39,6 +45,7 @@ export interface CreateAppOptions {
   notificationService?: NotificationService;
 }
 
+/** Running application: the Fastify server plus {@link App.close} for teardown. */
 export interface App {
   server: FastifyInstance;
   close: () => Promise<void>;

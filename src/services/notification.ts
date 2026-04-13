@@ -4,8 +4,13 @@ import { EventEmitter } from 'node:events';
 // Types
 // ---------------------------------------------------------------------------
 
+/** Lifecycle or progress signal carried on the in-process notification bus. */
 export type NotificationAction = 'create' | 'update' | 'delete' | 'progress';
 
+/**
+ * Payload emitted to listeners; `source` names the emitting area (for example a model or subsystem).
+ * `data` is action-specific and may be omitted.
+ */
 export interface NotificationEvent {
   action: NotificationAction;
   source: string;
@@ -13,6 +18,7 @@ export interface NotificationEvent {
   timestamp: string;
 }
 
+/** Handler registered with `NotificationService.addListener`. */
 export type NotificationListener = (event: NotificationEvent) => void;
 
 // ---------------------------------------------------------------------------

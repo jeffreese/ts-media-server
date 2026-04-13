@@ -8,11 +8,15 @@ import { atomicWrite } from '../utils/file.js';
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Bounding box (width × height) thumbnails are fit into; aspect ratio is preserved inside the box.
+ */
 export interface ThumbnailTier {
   width: number;
   height: number;
 }
 
+/** Dimensions of the written JPEG and its absolute path under `.thumbnails`. */
 export interface ThumbnailResult {
   width: number;
   height: number;

@@ -62,6 +62,7 @@ function buildAnnotationSvg(
 // Subcommands
 // ---------------------------------------------------------------------------
 
+/** Commander command group: smoke-test FFmpeg, metadata extraction, and face detection. */
 export const testCommand = new Command('test')
   .description('Test external dependencies and services');
 

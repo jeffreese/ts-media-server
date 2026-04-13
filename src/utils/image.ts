@@ -12,11 +12,13 @@ export function configureSharp(threads: number): void {
 // Types
 // ---------------------------------------------------------------------------
 
+/** Width and height in pixels (typically display-oriented after EXIF rotation). */
 export interface ImageDimensions {
   width: number;
   height: number;
 }
 
+/** Top-left anchored rectangle in pixel coordinates for {@link crop}. */
 export interface CropRegion {
   left: number;
   top: number;
@@ -24,11 +26,16 @@ export interface CropRegion {
   height: number;
 }
 
+/**
+ * Target bounding box for {@link resize}. Sharp fits inside without upscaling;
+ * omit one dimension to scale by the other while preserving aspect ratio.
+ */
 export interface ResizeOptions {
   width?: number;
   height?: number;
 }
 
+/** JPEG encoder settings passed to sharp's `jpeg()` (quality 1–100). */
 export interface JpegOptions {
   quality?: number;
 }

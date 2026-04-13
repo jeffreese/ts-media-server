@@ -5,11 +5,19 @@ import { extname } from 'node:path';
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Override paths to the `ffmpeg` / `ffprobe` binaries. Defaults assume both
+ * are on `PATH`.
+ */
 export interface FFmpegOptions {
   ffmpegPath?: string;
   ffprobePath?: string;
 }
 
+/**
+ * Subset of video properties read from ffprobe JSON. Fields are `undefined`
+ * when missing from the container or stream (e.g. no creation tag).
+ */
 export interface VideoMetadata {
   date: string | undefined;
   width: number | undefined;
@@ -110,6 +118,10 @@ function extractDate(probe: FFprobeOutput): string | undefined {
 // FFmpeg wrapper
 // ---------------------------------------------------------------------------
 
+/**
+ * Thin async wrapper around installed `ffmpeg` / `ffprobe` CLIs for
+ * thumbnails, transcoding, and metadata.
+ */
 export class FFmpeg {
   readonly ffmpegPath: string;
   readonly ffprobePath: string;

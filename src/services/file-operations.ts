@@ -13,17 +13,23 @@ import { getThumbnailDirectory } from './thumbnail.js';
 // Types
 // ---------------------------------------------------------------------------
 
+/** Dependencies for {@link FileOperations}: SQLite handle and structured logger. */
 export interface FileOperationsDeps {
   db: BetterSQLite3Database<typeof schema>;
   logger: Logger;
 }
 
+/** Summary of a successful {@link FileOperations.moveMediaItem} (primary files + thumbnail sidecars). */
 export interface MoveResult {
   mediaItemId: number;
   filesMoved: number;
   thumbnailsMoved: number;
 }
 
+/**
+ * Roll-up from {@link FileOperations.mergeDirectories}: how many items landed in the output,
+ * how many were skipped (e.g. missing dates), and per-item failures after rollback attempts.
+ */
 export interface MergeResult {
   moved: number;
   skipped: number;
@@ -46,6 +52,10 @@ interface CopiedFile {
 // FileOperations service
 // ---------------------------------------------------------------------------
 
+/**
+ * Safe filesystem moves for catalog-backed media: copy-with-verification, thumbnail relocation,
+ * and DB `path`/`file` updates, plus directory merge flows that rename into a single output tree.
+ */
 export class FileOperations {
   private readonly db: BetterSQLite3Database<typeof schema>;
   private readonly logger: Logger;

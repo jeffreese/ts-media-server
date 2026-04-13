@@ -4,6 +4,10 @@ import type { Config } from '../config/schema.js';
 
 export type { Logger } from 'pino';
 
+/**
+ * Options for {@link createLogger}. When `logDir` is set, logs are mirrored to
+ * a daily `YYYY-MM-DD.log` file under that directory in addition to stdout.
+ */
 export interface CreateLoggerOptions {
   level?: Config['logLevel'];
   logDir?: string;
@@ -28,6 +32,10 @@ function buildTransportTargets(logDir?: string): pino.TransportMultiOptions | un
   };
 }
 
+/**
+ * Instantiate a root pino logger. Uses multistream transport when `logDir` is
+ * provided so trace-through levels go to stdout and to `YYYY-MM-DD.log`.
+ */
 export function createLogger(options: CreateLoggerOptions = {}): Logger {
   const { level = 'info', logDir, name } = options;
 

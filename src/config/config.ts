@@ -3,7 +3,12 @@ import { isAbsolute, resolve } from 'node:path';
 import { configSchema, type Config } from './schema.js';
 
 export interface LoadConfigOptions {
+  /** Path to the JSON config file. Defaults to `config.json` in the process cwd. */
   configPath?: string;
+  /**
+   * Shallow merge into the parsed file config after env overrides, before path
+   * resolution and schema validation. Useful in tests.
+   */
   overrides?: Record<string, unknown>;
 }
 
@@ -77,6 +82,14 @@ function resolvePaths(config: Record<string, unknown>, baseDir: string): void {
   }
 }
 
+/**
+ * Loads application config: reads JSON from disk (missing file → `{}`),
+ * applies `process.env` overrides, merges `options.overrides`, resolves relative
+ * paths against the config file directory, then validates with `configSchema`.
+ *
+ * @param options - Optional config path and test overrides.
+ * @returns Parsed, defaulted config.
+ */
 export async function loadConfig(options: LoadConfigOptions = {}): Promise<Config> {
   const configPath = resolve(options.configPath ?? 'config.json');
   const fileConfig = await readConfigFile(configPath);

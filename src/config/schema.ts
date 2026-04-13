@@ -6,9 +6,15 @@ const thumbnailSizeSchema = z.string().regex(
   'Thumbnail size must be in WIDTHxHEIGHT format (e.g. "1920x1080")',
 );
 
+/** Allowed values for `logLevel` in config and `LOG_LEVEL` env overrides. */
 export const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
 
+/**
+ * Zod schema for the application JSON config file (e.g. `config.json`): server
+ * port, static paths, logging, SQLite path, thumbnail sizes, worker limits, and
+ * optional JWT settings.
+ */
 export const configSchema = z.object({
   port: z.number().int().min(1).max(65535).default(8080),
   webDir: z.string().optional(),
@@ -37,4 +43,5 @@ export const configSchema = z.object({
     .optional(),
 });
 
+/** Runtime shape of a config object after `configSchema` parsing (defaults applied). */
 export type Config = z.infer<typeof configSchema>;

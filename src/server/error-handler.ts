@@ -2,6 +2,12 @@ import type { FastifyInstance, FastifyError, FastifyRequest, FastifyReply } from
 import fp from 'fastify-plugin';
 import { z } from 'zod/v4';
 
+/**
+ * JSON body sent on failed requests after the global error handler runs.
+ * `error` is a short HTTP-style label (e.g. `"Bad Request"`), `message` is
+ * the specific reason, and `details` is present only when extra structure is
+ * safe to expose (notably Zod validation issue lists).
+ */
 export interface ErrorResponse {
   statusCode: number;
   error: string;
