@@ -1,4 +1,6 @@
 import { watch, type FSWatcher } from 'node:fs';
+import { join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyCors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
@@ -100,29 +102,22 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
   if (config.webDir) {
     await server.register(fastifyStatic, {
       root: config.webDir,
-      wildcard: true,
-      index: false,
-      list: {
-        format: 'html',
-        names: ['/', '*'],
-        render(dirs, files) {
-          const items = [
-            ...dirs.map((d) => `<li><a href="${d.href}">${d.name}/</a></li>`),
-            ...files.map((f) => `<li><a href="${f.href}">${f.name}</a></li>`),
-          ].join('\n');
-          return `<!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Index</title>
-<style>
-  body { font-family: system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
-  a { color: #2563eb; text-decoration: none; } a:hover { text-decoration: underline; }
-  ul { list-style: none; padding: 0; } li { padding: .35rem 0; border-bottom: 1px solid #e5e7eb; }
-  li:last-child { border-bottom: none; }
-</style>
-</head><body><ul>\n${items}\n</ul></body></html>`;
-        },
-      },
+      wildcard: false,
+    });
+
+    const indexPath = join(config.webDir, 'index.html');
+    server.setNotFoundHandler(async (request, reply) => {
+      const hasExtension = /\.\w+$/.test(request.url.split('?')[0] ?? '');
+      if (hasExtension) {
+        return reply.code(404).send({ error: 'Not found' });
+      }
+
+      try {
+        const html = await readFile(indexPath, 'utf-8');
+        return reply.type('text/html').send(html);
+      } catch {
+        return reply.code(404).send({ error: 'Not found' });
+      }
     });
 
     watcher = watchWebDirectory(config.webDir, server);

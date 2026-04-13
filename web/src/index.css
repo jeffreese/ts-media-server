@@ -1,0 +1,160 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-foreground: var(--foreground);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-faint: var(--foreground-faint);
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-control: var(--control);
+  --color-control-hover: var(--control-hover);
+
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-surface: var(--accent-surface);
+  --color-accent-muted: var(--accent-muted);
+
+  --color-error: var(--error);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+}
+
+html {
+  font-size: 16px;
+  background-color: var(--background);
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ═══════════════════════════════════════════
+   Design Tokens — Media-focused dark-first
+   ═══════════════════════════════════════════ */
+
+:root {
+  --foreground: #0f172a;
+  --foreground-secondary: #475569;
+  --foreground-muted: #64748b;
+  --foreground-faint: #94a3b8;
+
+  --background: #f1f5f9;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-overlay: rgba(255, 255, 255, 0.95);
+  --control: #e2e8f0;
+  --control-hover: #cbd5e1;
+
+  --border: #e2e8f0;
+  --border-subtle: #f1f5f9;
+
+  --accent: #3b82f6;
+  --accent-foreground: #2563eb;
+  --accent-surface: #eff6ff;
+  --accent-muted: #dbeafe;
+
+  --error: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
+
+  --sidebar-width: 240px;
+}
+
+.dark {
+  --foreground: #f1f5f9;
+  --foreground-secondary: #94a3b8;
+  --foreground-muted: #64748b;
+  --foreground-faint: #475569;
+
+  --background: #09090b;
+  --surface: #18181b;
+  --surface-raised: #27272a;
+  --surface-overlay: rgba(24, 24, 27, 0.95);
+  --control: #27272a;
+  --control-hover: #3f3f46;
+
+  --border: #27272a;
+  --border-subtle: #1e1e22;
+
+  --accent: #60a5fa;
+  --accent-foreground: #93c5fd;
+  --accent-surface: rgba(59, 130, 246, 0.1);
+  --accent-muted: rgba(59, 130, 246, 0.15);
+
+  --error: #f87171;
+  --success: #4ade80;
+  --warning: #fbbf24;
+}
+
+/* ═══════════════════════════════════════════
+   Scrollbar — minimal for media browsing
+   ═══════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--control-hover);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground-faint);
+}
+
+/* ═══════════════════════════════════════════
+   Media grid thumbnail transitions
+   ═══════════════════════════════════════════ */
+
+.media-thumb {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.media-thumb:hover {
+  transform: scale(1.02);
+}
+
+.dark .media-thumb:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ═══════════════════════════════════════════
+   Lightbox backdrop
+   ═══════════════════════════════════════════ */
+
+.lightbox-backdrop {
+  backdrop-filter: blur(24px);
+  background: rgba(0, 0, 0, 0.85);
+}
+
+/* ═══════════════════════════════════════════
+   Skeleton loading shimmer
+   ═══════════════════════════════════════════ */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--control) 25%, var(--control-hover) 50%, var(--control) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}

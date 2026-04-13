@@ -19,7 +19,7 @@ We need to choose a package manager, development runner, and production build to
 - **Faster installs** than npm due to content-addressable storage and hard links
 - **Disk efficient** — shared dependency store across projects
 - **Strict dependency resolution** — prevents phantom dependencies (accessing packages not declared in `package.json`)
-- **pnpm workspaces** available if we ever split into a monorepo (not planned, but no lock-in)
+- **pnpm workspaces** — used to manage the monorepo: server code at the root, web frontend in `web/`. `pnpm dev` runs both in parallel via the `run /^dev:/` pattern.
 
 ### tsx (development)
 - **Zero config** — runs TypeScript files directly without a compile step

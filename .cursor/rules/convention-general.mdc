@@ -9,11 +9,14 @@ A TypeScript/Node.js media server converted from the JavaXT Media Server. Manage
 
 ## Commands
 
-- `pnpm dev` — Start dev server (tsx watch mode)
-- `pnpm build` — Production build (tsup → dist/)
-- `pnpm test` — Run tests (vitest)
-- `pnpm test:watch` — Run tests in watch mode
-- `pnpm typecheck` — Run tsc --noEmit
+- `pnpm dev` — Start both server and web frontend (parallel)
+- `pnpm dev:server` — Start API server only (tsx watch mode)
+- `pnpm dev:web` — Start Vite dev server only
+- `pnpm build` — Build web frontend then production server bundle
+- `pnpm build:web` — Build web frontend only
+- `pnpm test` — Run server tests (vitest)
+- `pnpm test:web` — Run web tests
+- `pnpm typecheck` — Run tsc --noEmit on server
 
 Prefer running a single test file when iterating: `pnpm vitest run src/path/to/test.ts`
 
@@ -39,7 +42,7 @@ Prefer running a single test file when iterating: `pnpm vitest run src/path/to/t
 
 ## Project Structure
 
-Single package, pure ESM. See `docs/tech-spec.md` for the full directory layout.
+pnpm workspace monorepo. Server code at the root, web frontend in `web/`.
 
 - `src/config/` — Zod config schema and loader
 - `src/db/` — Drizzle schema, client, migrations
@@ -48,6 +51,7 @@ Single package, pure ESM. See `docs/tech-spec.md` for the full directory layout.
 - `src/utils/` — Low-level helpers (FFmpeg, sharp, file system)
 - `src/cli/` — Commander.js subcommands
 - `test/` — Vitest test files mirroring src/ structure
+- `web/` — React SPA frontend (Vite, Tailwind, react-router-dom)
 - `docs/` — Tech spec, feature list, ADRs, implementation roadmap
 
 ## Key Conventions

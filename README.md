@@ -4,6 +4,7 @@ A self-hosted media server for photo and video libraries. Indexes directories of
 
 ## Features
 
+- **Web UI** — browse folders, view images in a lightbox, play video, explore detected faces and people — all from a responsive dark-first interface
 - **Directory indexing** — recursively scans directories, registers files, and mirrors the folder hierarchy in a virtual folder tree
 - **Metadata extraction** — pulls EXIF, IPTC, GPS, and video metadata from images and videos (via [exifr](https://github.com/nickaknudson/exifr) and FFmpeg)
 - **Thumbnail generation** — creates JPEG thumbnails at configurable sizes (default: 1920×1080 down to 150×100) using [sharp](https://sharp.pixelplumbing.com/)
@@ -80,7 +81,9 @@ This scans the directory, extracts metadata, generates thumbnails, detects faces
 
 ### 5. Explore your library
 
-With the server running, you can browse, view, and search your indexed media through the REST API.
+With the server running, open **http://localhost:8080** in your browser to use the web UI. You can browse folders, view images in a full-screen lightbox, play videos, and explore detected faces grouped by person.
+
+You can also interact with the library through the REST API.
 
 **Browse folders** — the indexer mirrors your directory structure as a virtual folder tree:
 
@@ -156,7 +159,7 @@ Configuration is loaded from a JSON file (default: `config.json` in the working 
 ```json
 {
   "port": 8080,
-  "webDir": "./web",
+  "webDir": "./web/dist",
   "logDir": "./logs",
   "logLevel": "info",
   "temp": "./tmp",
@@ -287,16 +290,24 @@ Connect to `/ws` for real-time notifications. Messages arrive as comma-delimited
 | Logging | [Pino](https://getpino.io) |
 | Build | [tsup](https://tsup.egoist.dev) |
 | Test | [Vitest](https://vitest.dev) |
+| Frontend | React 19, Vite 6, Tailwind CSS 4, react-router-dom 7 |
+| Linting (frontend) | [Biome](https://biomejs.dev) |
 
 ## Development
 
 ```bash
-pnpm dev          # Start with hot reload (tsx watch) — no build/link needed
-pnpm build        # Production build (tsup)
-pnpm test         # Run tests once
-pnpm test:watch   # Run tests in watch mode
-pnpm typecheck    # Type-check without emitting
+pnpm dev            # Start server + web frontend with hot reload
+pnpm dev:server     # Start API server only (tsx watch)
+pnpm dev:web        # Start Vite dev server only (port 5173, proxies API to :8080)
+pnpm build          # Build frontend then production server bundle
+pnpm build:web      # Build frontend only (output: web/dist/)
+pnpm test           # Run server tests
+pnpm test:web       # Run frontend tests
+pnpm test:watch     # Run server tests in watch mode
+pnpm typecheck      # Type-check server code
 ```
+
+The project is a pnpm workspace monorepo with the server at the root and the web frontend in `web/`. During development, `pnpm dev` starts both in parallel — the Vite dev server on port 5173 proxies API requests to the Fastify server on port 8080. For production, `pnpm build` compiles the SPA into `web/dist/`, and the server serves it when `webDir` is set (e.g. `"webDir": "./web/dist"` in `config.json` or `media-server serve --web ./web/dist`).
 
 After `pnpm build`, re-run `pnpm link --global` to update the global `media-server` command with the latest build.
 
@@ -332,6 +343,14 @@ src/
 ├── services/         Core logic (file indexing, thumbnails, faces, hashing, …)
 └── utils/            Shared utilities (image, ffmpeg, file, logger)
 test/                 Mirrors src/ structure with *.test.ts files
+web/
+├── src/
+│   ├── components/   Sidebar, topbar, media grid, lightbox, primitives
+│   ├── hooks/        useFetch, useTheme
+│   ├── lib/          Typed API client
+│   └── pages/        Route-level components (browse, media-item, people, settings)
+├── index.html        SPA entry point
+└── vite.config.ts    Vite + Tailwind + API proxy
 ```
 
 ## License

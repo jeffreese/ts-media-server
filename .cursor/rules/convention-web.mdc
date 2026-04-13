@@ -1,0 +1,46 @@
+---
+description: Frontend (React/Vite) conventions for the web/ workspace package
+globs: web/**/*.{ts,tsx,css}
+alwaysApply: false
+---
+
+# Web Frontend Conventions
+
+## Tech Stack
+
+- **Framework:** React 19 + Vite 6 (SPA)
+- **Routing:** react-router-dom v7 (createBrowserRouter)
+- **Styling:** Tailwind CSS v4 with semantic design tokens
+- **Icons:** lucide-react
+- **Linting:** Biome (single quotes, no semicolons, 2-space indent)
+- **Testing:** Vitest + Testing Library
+
+## Commands
+
+- `pnpm dev` (from root) — starts both server and Vite dev server
+- `pnpm --filter @ts-media-server/web dev` — Vite dev server only
+- `pnpm --filter @ts-media-server/web build` — production build
+- `pnpm --filter @ts-media-server/web typecheck` — tsc --noEmit
+
+## Key Patterns
+
+- Path alias: `~/` maps to `web/src/`
+- API calls go through `~/lib/api.ts` — never use raw `fetch` in components
+- Use `useFetch` hook for data loading (auto-cancels stale requests)
+- Custom primitives in `~/components/primitives/` — no UI library
+- Semantic color tokens via CSS custom properties (see `index.css`)
+- Dark-first: default theme is dark, light mode via class toggle
+
+## File Organization
+
+- `src/pages/` — route-level components (one per route)
+- `src/components/` — shared components
+- `src/components/primitives/` — low-level UI building blocks
+- `src/hooks/` — custom React hooks
+- `src/lib/` — utilities, API client
+
+## Style Rules
+
+- Use semantic token classes (`text-foreground`, `bg-surface`) not raw palette (`text-slate-900`)
+- Prefer Tailwind utility classes over custom CSS
+- Component files: `kebab-case.tsx`
