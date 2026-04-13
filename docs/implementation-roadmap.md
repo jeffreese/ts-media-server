@@ -499,10 +499,10 @@ Wire the CLI subcommands to the services built in previous phases.
   - [x] Print summary of deleted items
 
 ### Test Commands
-- [ ] Implement `src/cli/test.ts`:
-  - [ ] `test ffmpeg` — validate FFmpeg installation, print version
-  - [ ] `test metadata --file` — extract and pretty-print metadata from a file
-  - [ ] `test faces --file` — detect faces, print count and bounding boxes, save annotated image
+- [x] Implement `src/cli/test.ts`:
+  - [x] `test ffmpeg` — validate FFmpeg installation, print version
+  - [x] `test metadata --file` — extract and pretty-print metadata from a file
+  - [x] `test faces --file` — detect faces, print count and bounding boxes, save annotated image
 
 ---
 
