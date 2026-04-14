@@ -4,8 +4,9 @@ import 'leaflet.markercluster'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import { Loader2, MapPin } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { FetchError } from '~/components/fetch-error'
 import { type MapMediaItem, api } from '~/lib/api'
 
 const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
@@ -20,8 +21,11 @@ export function MapPage() {
   const [items, setItems] = useState<MapMediaItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [fetchVersion, setFetchVersion] = useState(0)
 
   navigateRef.current = useNavigate()
+
+  const retryFetch = useCallback(() => setFetchVersion((v) => v + 1), [])
 
   useEffect(() => {
     let cancelled = false
@@ -45,7 +49,7 @@ export function MapPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [fetchVersion])
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return
@@ -142,11 +146,7 @@ export function MapPage() {
   }, [items])
 
   if (error) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-foreground-muted">Failed to load map: {error}</p>
-      </div>
-    )
+    return <FetchError message={`Failed to load map: ${error}`} onRetry={retryFetch} />
   }
 
   return (
@@ -170,6 +170,9 @@ export function MapPage() {
           <div className="absolute inset-0 z-[1000] flex flex-col items-center justify-center gap-3 bg-surface/80">
             <MapPin className="h-12 w-12 text-foreground-faint" />
             <p className="text-foreground-muted">No GPS-tagged media found</p>
+            <p className="max-w-xs text-center text-sm text-foreground-faint">
+              Photos with GPS coordinates in their metadata will appear here automatically.
+            </p>
           </div>
         )}
         <div ref={mapContainerRef} className="h-full w-full" />

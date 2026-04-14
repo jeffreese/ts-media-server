@@ -1,9 +1,12 @@
 import { ArrowLeft, Tag } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { EmptyState } from '~/components/empty-state'
+import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { MediaGrid } from '~/components/media-grid'
 import { Skeleton } from '~/components/primitives'
+import { useBreadcrumb } from '~/hooks/use-breadcrumb'
 import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
 import { type KeywordItemsResponse, type MediaItemEntry, api } from '~/lib/api'
 
@@ -27,6 +30,8 @@ export function KeywordDetailPage() {
 function KeywordDetailContent({ id }: { id: number }) {
   const [keywordWord, setKeywordWord] = useState<string | undefined>(undefined)
 
+  useBreadcrumb(String(id), keywordWord)
+
   const fetcher = useCallback(
     async (offset: number, limit: number) => {
       const res: KeywordItemsResponse = await api.keywordItems(id, { offset, limit })
@@ -38,7 +43,7 @@ function KeywordDetailContent({ id }: { id: number }) {
     [id],
   )
 
-  const { items: rawItems, total, isLoading, isLoadingMore, error, hasMore, sentinelRef } =
+  const { items: rawItems, total, isLoading, isLoadingMore, error, hasMore, sentinelRef, refetch } =
     useInfiniteScroll({
       fetcher,
       pageSize: PAGE_SIZE,
@@ -51,11 +56,7 @@ function KeywordDetailContent({ id }: { id: number }) {
   )
 
   if (error) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-foreground-muted">Failed to load: {error.message}</p>
-      </div>
-    )
+    return <FetchError message={`Failed to load: ${error.message}`} onRetry={refetch} />
   }
 
   if (isLoading) {
@@ -91,9 +92,10 @@ function KeywordDetailContent({ id }: { id: number }) {
       </div>
 
       {items.length === 0 ? (
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-foreground-muted">No media items tagged with this keyword</p>
-        </div>
+        <EmptyState
+          icon={<Tag className="h-10 w-10" />}
+          title="No media items tagged with this keyword"
+        />
       ) : (
         <>
           <MediaGrid items={items} />

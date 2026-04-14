@@ -1,19 +1,17 @@
 import { Tag } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { EmptyState } from '~/components/empty-state'
+import { FetchError } from '~/components/fetch-error'
 import { Badge, Skeleton } from '~/components/primitives'
 import { useFetch } from '~/hooks/use-fetch'
 import { type KeywordWithCount, api } from '~/lib/api'
 
 export function KeywordsPage() {
-  const { data, isLoading, error } = useFetch(() => api.keywords({ limit: 500 }), [])
+  const { data, isLoading, error, refetch } = useFetch(() => api.keywords({ limit: 500 }), [])
   const navigate = useNavigate()
 
   if (error) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-foreground-muted">Failed to load keywords: {error.message}</p>
-      </div>
-    )
+    return <FetchError message={`Failed to load keywords: ${error.message}`} onRetry={refetch} />
   }
 
   if (isLoading || !data) {
@@ -22,13 +20,11 @@ export function KeywordsPage() {
 
   if (data.items.length === 0) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-3">
-        <Tag className="h-10 w-10 text-foreground-faint" />
-        <p className="text-foreground-muted">No keywords yet</p>
-        <p className="text-sm text-foreground-faint">
-          Tag media items with keywords from the media detail page
-        </p>
-      </div>
+      <EmptyState
+        icon={<Tag className="h-10 w-10" />}
+        title="No keywords yet"
+        description="Tag media items with keywords from the media detail page to organize your library."
+      />
     )
   }
 

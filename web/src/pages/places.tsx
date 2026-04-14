@@ -1,6 +1,8 @@
 import { MapPin } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { EmptyState } from '~/components/empty-state'
+import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { Skeleton } from '~/components/primitives'
 import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
@@ -13,7 +15,7 @@ export function PlacesPage() {
 
   const fetcher = useCallback((offset: number, limit: number) => api.places({ offset, limit }), [])
 
-  const { items, total, isLoading, isLoadingMore, error, hasMore, sentinelRef } =
+  const { items, total, isLoading, isLoadingMore, error, hasMore, sentinelRef, refetch } =
     useInfiniteScroll<Place>({ fetcher, pageSize: PAGE_SIZE })
 
   const [batchData, setBatchData] = useState<Map<number, PlaceBatchItem>>(new Map())
@@ -46,11 +48,7 @@ export function PlacesPage() {
   }, [items, batchData])
 
   if (error) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-foreground-muted">Failed to load places: {error.message}</p>
-      </div>
-    )
+    return <FetchError message={`Failed to load places: ${error.message}`} onRetry={refetch} />
   }
 
   if (isLoading) {
@@ -69,10 +67,11 @@ export function PlacesPage() {
 
   if (items.length === 0) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-3">
-        <MapPin className="h-12 w-12 text-foreground-faint" />
-        <p className="text-foreground-muted">No places found</p>
-      </div>
+      <EmptyState
+        icon={<MapPin className="h-12 w-12" />}
+        title="No places found"
+        description="Link media items to places from the media detail page, or browse the map to see GPS-tagged photos."
+      />
     )
   }
 

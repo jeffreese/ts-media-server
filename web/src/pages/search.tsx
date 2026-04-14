@@ -1,6 +1,8 @@
-import { Filter, Image, Film, X } from 'lucide-react'
+import { Filter, Image, Film, Search, X } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { EmptyState } from '~/components/empty-state'
+import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { MediaGrid } from '~/components/media-grid'
 import { Badge, Skeleton } from '~/components/primitives'
@@ -46,7 +48,7 @@ export function SearchPage() {
     [],
   )
 
-  const { items: rawItems, total, isLoading, isLoadingMore, error, hasMore, sentinelRef } =
+  const { items: rawItems, total, isLoading, isLoadingMore, error, hasMore, sentinelRef, refetch } =
     useInfiniteScroll({
       fetcher: hasAnyFilter ? fetcher : noopFetcher,
       pageSize: PAGE_SIZE,
@@ -181,25 +183,25 @@ export function SearchPage() {
       )}
 
       {!hasAnyFilter && (
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-foreground-muted">
-            Enter a search term or apply filters to find media
-          </p>
-        </div>
+        <EmptyState
+          icon={<Search className="h-10 w-10" />}
+          title="Search your media library"
+          description="Enter a search term or apply filters to find media items by name, keyword, date, or type."
+        />
       )}
 
       {hasAnyFilter && error && (
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-foreground-muted">Failed to search: {error.message}</p>
-        </div>
+        <FetchError message={`Failed to search: ${error.message}`} onRetry={refetch} />
       )}
 
       {hasAnyFilter && isLoading && <SearchSkeleton />}
 
       {hasAnyFilter && !isLoading && items.length === 0 && (
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-foreground-muted">No results found</p>
-        </div>
+        <EmptyState
+          icon={<Search className="h-10 w-10" />}
+          title="No results found"
+          description="Try adjusting your search term or filters."
+        />
       )}
 
       {items.length > 0 && (

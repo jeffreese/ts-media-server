@@ -1,8 +1,10 @@
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { IconButton, SectionCard, Skeleton } from '~/components/primitives'
+import { useBreadcrumb } from '~/hooks/use-breadcrumb'
 import { useFetch } from '~/hooks/use-fetch'
 import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
 import { type Address, type PlaceMediaItem, api } from '~/lib/api'
@@ -35,12 +37,14 @@ function PlaceContent({
   const {
     data: names,
     isLoading: namesLoading,
+    error: namesError,
     refetch: refetchNames,
   } = useFetch(() => api.placeNames(placeId), [placeId])
 
   const {
     data: addresses,
     isLoading: addressesLoading,
+    error: addressesError,
     refetch: refetchAddresses,
   } = useFetch(() => api.placeAddresses(placeId), [placeId])
 
@@ -56,15 +60,25 @@ function PlaceContent({
     isLoadingMore,
     hasMore,
     sentinelRef,
+    error: mediaError,
+    refetch: refetchMedia,
   } = useInfiniteScroll<PlaceMediaItem>({
     fetcher: mediaFetcher,
     pageSize: PAGE_SIZE,
     deps: [placeId],
   })
 
+  const error = namesError || addressesError || mediaError
+  if (error) {
+    const refetch = namesError ? refetchNames : addressesError ? refetchAddresses : refetchMedia
+    return <FetchError message={`Failed to load place: ${error.message}`} onRetry={refetch} />
+  }
+
   const isLoading = namesLoading || mediaLoading
   const displayName =
     names?.items.find((n) => n.preferred)?.name ?? names?.items[0]?.name ?? `Place ${placeId}`
+
+  useBreadcrumb(String(placeId), namesLoading ? undefined : displayName)
 
   return (
     <div className="space-y-6">

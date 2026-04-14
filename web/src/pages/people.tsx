@@ -1,6 +1,8 @@
 import { Users } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { EmptyState } from '~/components/empty-state'
+import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { Skeleton } from '~/components/primitives'
 import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
@@ -16,7 +18,7 @@ export function PeoplePage() {
     [],
   )
 
-  const { items, total, isLoading, isLoadingMore, error, hasMore, sentinelRef } =
+  const { items, total, isLoading, isLoadingMore, error, hasMore, sentinelRef, refetch } =
     useInfiniteScroll<Person>({ fetcher, pageSize: PAGE_SIZE })
 
   const [batchData, setBatchData] = useState<Map<number, PersonBatchItem>>(new Map())
@@ -46,11 +48,7 @@ export function PeoplePage() {
   }, [items, batchData])
 
   if (error) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-foreground-muted">Failed to load people: {error.message}</p>
-      </div>
-    )
+    return <FetchError message={`Failed to load people: ${error.message}`} onRetry={refetch} />
   }
 
   if (isLoading) {
@@ -71,10 +69,11 @@ export function PeoplePage() {
 
   if (items.length === 0) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-3">
-        <Users className="h-12 w-12 text-foreground-faint" />
-        <p className="text-foreground-muted">No people found</p>
-      </div>
+      <EmptyState
+        icon={<Users className="h-12 w-12" />}
+        title="No people found"
+        description="People are detected automatically when media is indexed. Add a directory with photos to get started."
+      />
     )
   }
 

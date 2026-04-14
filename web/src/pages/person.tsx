@@ -1,8 +1,10 @@
 import { ArrowLeft } from 'lucide-react'
 import { useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { IconButton, Skeleton } from '~/components/primitives'
+import { useBreadcrumb } from '~/hooks/use-breadcrumb'
 import { useFetch } from '~/hooks/use-fetch'
 import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
 import { api } from '~/lib/api'
@@ -32,7 +34,7 @@ function PersonContent({
   personId: number
   navigate: ReturnType<typeof useNavigate>
 }) {
-  const { data: names, isLoading: namesLoading } = useFetch(
+  const { data: names, isLoading: namesLoading, error: namesError, refetch: refetchNames } = useFetch(
     () => api.personNames(personId),
     [personId],
   )
@@ -49,15 +51,29 @@ function PersonContent({
     isLoadingMore,
     hasMore,
     sentinelRef,
+    error: featuresError,
+    refetch: refetchFeatures,
   } = useInfiniteScroll({
     fetcher: featureFetcher,
     pageSize: PAGE_SIZE,
     deps: [personId],
   })
 
+  const error = namesError || featuresError
+  if (error) {
+    return (
+      <FetchError
+        message={`Failed to load person: ${error.message}`}
+        onRetry={namesError ? refetchNames : refetchFeatures}
+      />
+    )
+  }
+
   const isLoading = namesLoading || featuresLoading
   const displayName =
     names?.items.find((n) => n.preferred)?.name ?? names?.items[0]?.name ?? `Person ${personId}`
+
+  useBreadcrumb(String(personId), namesLoading ? undefined : displayName)
 
   return (
     <div className="space-y-6">

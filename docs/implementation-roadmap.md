@@ -633,10 +633,9 @@ React SPA served by Fastify via `@fastify/static` with SPA fallback. Mirrors the
 ### Remaining
 - [ ] Login / auth UI → Phase 16 item 8
 - [x] Search and keyword filtering → Phase 16 item 2
-- [ ] Frontend test suite → Phase 16 (added incrementally per feature)
+- [x] Frontend test suite → Phase 16 (added incrementally per feature)
 - [x] Batch people+names API to avoid N+1 fetches → Phase 16 item 3
 - [x] Infinite scroll / pagination on media grids → Phase 16 item 3
-- [ ] Mobile sidebar (hamburger menu toggle) → Phase 16 item 6
 
 ---
 
@@ -686,13 +685,11 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 - [x] Link/unlink media to places (`POST/DELETE /place/:id/media`)
 - [x] Manage place names and addresses
 
-### 6. Mobile & Polish
-- [ ] Working mobile sidebar: hamburger toggle opens/closes drawer overlay
-- [ ] Responsive lightbox: swipe gestures for prev/next on touch devices
-- [ ] Retry button on failed fetches (wire `useFetch.refetch` to error states)
-- [ ] Breadcrumb improvements: show folder/item names instead of raw path segments
-- [ ] Empty states with actionable guidance (e.g. "No media indexed — add a directory to get started")
-- [ ] Frontend test suite: Vitest + Testing Library for API client, hooks, key components
+### 6. Polish
+- [x] Retry button on failed fetches (wire `useFetch.refetch` to error states)
+- [x] Breadcrumb improvements: show folder/item names instead of raw path segments
+- [x] Empty states with actionable guidance (e.g. "No media indexed — add a directory to get started")
+- [x] Frontend test suite: Vitest + Testing Library for API client, hooks, key components
 
 ### 7. Real-time Updates
 - [ ] WebSocket connection hook (`useWebSocket`) — connect to `/ws` on mount

@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { FetchError } from '~/components/fetch-error'
 import {
   DuplicatesSection,
   FacesSection,
@@ -9,6 +10,7 @@ import {
   ThumbnailsSection,
 } from '~/components/media-detail'
 import { Badge, Skeleton } from '~/components/primitives'
+import { useBreadcrumb } from '~/hooks/use-breadcrumb'
 import { useFetch } from '~/hooks/use-fetch'
 import { api } from '~/lib/api'
 
@@ -28,14 +30,12 @@ export function MediaItemPage() {
 }
 
 function MediaItemContent({ id }: { id: number }) {
-  const { data: item, isLoading, error } = useFetch(() => api.mediaItem(id), [id])
+  const { data: item, isLoading, error, refetch } = useFetch(() => api.mediaItem(id), [id])
+
+  useBreadcrumb(String(id), item?.name ?? undefined)
 
   if (error) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-foreground-muted">Failed to load: {error.message}</p>
-      </div>
-    )
+    return <FetchError message={`Failed to load: ${error.message}`} onRetry={refetch} />
   }
 
   if (isLoading || !item) {
