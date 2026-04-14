@@ -3,6 +3,7 @@ import { App } from '~/App'
 import { ErrorBoundary } from '~/components/error-boundary'
 import { RequireAuth } from '~/components/require-auth'
 import { AdminPage } from '~/pages/admin'
+import { AdminUsersPage } from '~/pages/admin-users'
 import { BrowsePage } from '~/pages/browse'
 import { KeywordDetailPage } from '~/pages/keyword-detail'
 import { KeywordsPage } from '~/pages/keywords'
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
           { path: 'map', element: <MapPage /> },
           { path: 'settings', element: <SettingsPage /> },
           { path: 'admin', element: <AdminPage /> },
+          { path: 'admin/users', element: <AdminUsersPage /> },
         ],
       },
     ],

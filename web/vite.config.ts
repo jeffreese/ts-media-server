@@ -34,6 +34,8 @@ export default defineConfig({
       '/auth': 'http://localhost:8080',
       '/setting': 'http://localhost:8080',
       '/admin': 'http://localhost:8080',
+      '/users': 'http://localhost:8080',
+      '/userGroup': 'http://localhost:8080',
       '/ws': {
         target: 'ws://localhost:8080',
         ws: true,
