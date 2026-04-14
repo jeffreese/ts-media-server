@@ -15,6 +15,7 @@ const ROUTE_LABELS: Record<string, string> = {
   map: 'Map',
   settings: 'Settings',
   search: 'Search',
+  admin: 'Admin',
 }
 
 export function Topbar() {

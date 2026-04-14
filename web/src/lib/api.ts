@@ -1,10 +1,15 @@
 const API_BASE = ''
 
+function getAuthHeaders(): Record<string, string> {
+  return {}
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
       ...init?.headers,
     },
   })
@@ -273,6 +278,45 @@ export interface MapMediaItem {
   type: string | null
   latitude: number
   longitude: number
+}
+
+// ---------------------------------------------------------------------------
+// Admin
+// ---------------------------------------------------------------------------
+
+export interface AdminStats {
+  paths: number
+  files: number
+  mediaItems: number
+  images: number
+  videos: number
+  features: number
+  matches: number
+  people: number
+  places: number
+  keywords: number
+  users: number
+}
+
+export interface IndexedPath {
+  id: number
+  dir: string
+  fileCount: number
+}
+
+export interface Setting {
+  id: number
+  key: string
+  value: string | null
+}
+
+export interface DirEntry {
+  name: string
+  path: string
+  type: 'file' | 'directory'
+  size?: number
+  modified?: string
+  extension?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -553,5 +597,74 @@ export const api = {
 
   faceUrl(id: number) {
     return `${API_BASE}/face/${id}`
+  },
+
+  // -- Admin --
+  adminStats() {
+    return request<AdminStats>('/admin/stats')
+  },
+
+  adminPaths() {
+    return request<{ paths: IndexedPath[] }>('/admin/paths')
+  },
+
+  adminSettings() {
+    return request<{ settings: Setting[] }>('/admin/settings')
+  },
+
+  adminGetSetting(key: string) {
+    return request<Setting>(`/admin/settings/${encodeURIComponent(key)}`)
+  },
+
+  adminSetSetting(key: string, value: string) {
+    return request<{ key: string; value: string }>(`/admin/settings/${encodeURIComponent(key)}`, {
+      method: 'POST',
+      body: JSON.stringify({ value }),
+    })
+  },
+
+  adminDir(path: string) {
+    const query = buildQuery({ path })
+    return request<DirEntry[]>(`/admin/dir${query}`)
+  },
+
+  adminUpload(path: string, files: File[]) {
+    const formData = new FormData()
+    formData.append('path', path)
+    for (const file of files) {
+      formData.append('file', file)
+    }
+    return fetch(`${API_BASE}/admin/dir/upload`, {
+      method: 'POST',
+      headers: {
+        ...getAuthHeaders(),
+      },
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const body = await res.text().catch(() => '')
+        throw new ApiError(res.status, body || res.statusText)
+      }
+      return res.json() as Promise<{ uploaded: string[] }>
+    })
+  },
+
+  adminDownloadUrl(path: string) {
+    const query = buildQuery({ path })
+    return `${API_BASE}/admin/dir/download${query}`
+  },
+
+  adminIndex(directory: string, concurrency?: number) {
+    return request<{ status: string; directory: string; concurrency: number }>('/admin/index', {
+      method: 'POST',
+      body: JSON.stringify({ directory, concurrency }),
+    })
+  },
+
+  adminReindex() {
+    return request<{ status: string; directories?: string[]; message?: string }>('/admin/reindex', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
   },
 }

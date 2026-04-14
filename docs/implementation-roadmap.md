@@ -699,14 +699,14 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 - [x] Connection status indicator in topbar (connected/disconnected)
 
 ### 8. Admin Panel
-- [ ] Admin page (`/admin`) with server status overview (indexed paths, file counts, media item counts)
-- [ ] View/edit server settings (`GET/POST /setting/:key`) — model paths, auth status, etc.
-- [ ] Directory browser: browse server filesystem (`GET /dir?path=`)
-- [ ] Trigger indexing: select a directory and start indexing from the UI (`POST` via add directory)
-- [ ] File upload: multipart upload to a server directory (`POST /dir/upload`)
-- [ ] File download from server (`GET /dir/download?path=`)
-- [ ] Re-index existing paths
-- [ ] Indexing log / progress view (driven by WebSocket notifications from item 7)
+- [x] Admin page (`/admin`) with server status overview (indexed paths, file counts, media item counts)
+- [x] View/edit server settings (`GET/POST /setting/:key`) — model paths, auth status, etc.
+- [x] Directory browser: browse server filesystem (`GET /dir?path=`)
+- [x] Trigger indexing: select a directory and start indexing from the UI (`POST` via add directory)
+- [x] File upload: multipart upload to a server directory (`POST /dir/upload`)
+- [x] File download from server (`GET /dir/download?path=`)
+- [x] Re-index existing paths
+- [x] Indexing log / progress view (driven by WebSocket notifications from item 7)
 
 ### 9. Authentication
 - [ ] Login page (`/login`) — username/password form → `POST /auth/login` → store JWT

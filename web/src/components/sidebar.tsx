@@ -1,4 +1,4 @@
-import { Images, Map as MapIcon, MapPin, Settings, Tag, Users } from 'lucide-react'
+import { Images, Map as MapIcon, MapPin, Settings, Shield, Tag, Users } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 const NAV_ITEMS = [
@@ -43,7 +43,18 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-border p-3">
+      <div className="border-t border-border p-3 space-y-1">
+        <NavLink
+          to="/admin"
+          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+            location.pathname.startsWith('/admin')
+              ? 'bg-accent-surface text-accent font-medium'
+              : 'text-foreground-muted hover:bg-control hover:text-foreground'
+          }`}
+        >
+          <Shield className="h-4 w-4" />
+          Admin
+        </NavLink>
         <NavLink
           to="/settings"
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground-muted transition-colors hover:bg-control hover:text-foreground"
