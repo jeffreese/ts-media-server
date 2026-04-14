@@ -18,5 +18,7 @@ face.jpg
 
 data/
 
+coverage/
+
 # Cursor plans (local workspace, not shared)
 .cursor/plans/
