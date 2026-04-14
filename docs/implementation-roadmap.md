@@ -678,13 +678,13 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 - [x] Person merge workflow (reassign features from one person to another)
 
 ### 5. Places & Map View
-- [ ] Places listing page (`/places`) — browse all places with names
-- [ ] Place detail page (`/places/:id`) — names, linked media grid, addresses
-- [ ] Map view page (`/map`) using Leaflet + OpenStreetMap (free, no API key)
-- [ ] Cluster GPS-tagged media items on the map (leaflet.markercluster)
-- [ ] Click map marker → show media thumbnail popup → navigate to media item
-- [ ] Link/unlink media to places (`POST/DELETE /place/:id/media`)
-- [ ] Manage place names and addresses
+- [x] Places listing page (`/places`) — browse all places with names
+- [x] Place detail page (`/places/:id`) — names, linked media grid, addresses
+- [x] Map view page (`/map`) using Leaflet + OpenStreetMap (free, no API key)
+- [x] Cluster GPS-tagged media items on the map (leaflet.markercluster)
+- [x] Click map marker → show media thumbnail popup → navigate to media item
+- [x] Link/unlink media to places (`POST/DELETE /place/:id/media`)
+- [x] Manage place names and addresses
 
 ### 6. Mobile & Polish
 - [ ] Working mobile sidebar: hamburger toggle opens/closes drawer overlay

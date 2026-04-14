@@ -26,6 +26,7 @@ import { keywordPlugin } from './routes/keywords.js';
 import { ratingPlugin } from './routes/ratings.js';
 import { peoplePlugin } from './routes/people.js';
 import { placesPlugin } from './routes/places.js';
+import { mapPlugin } from './routes/map.js';
 import { searchPlugin } from './routes/search.js';
 import type { NotificationService } from '../services/notification.js';
 import { websocketPlugin } from './websocket.js';
@@ -103,6 +104,7 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
     await server.register(ratingPlugin, { db, notificationService });
     await server.register(peoplePlugin, { db, notificationService });
     await server.register(placesPlugin, { db, notificationService });
+    await server.register(mapPlugin, { db });
     await server.register(searchPlugin, { db });
   }
 

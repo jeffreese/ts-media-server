@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type Database from 'better-sqlite3';
 import { z } from 'zod/v4';
@@ -9,6 +9,10 @@ import type { NotificationService } from '../../services/notification.js';
 
 const placeIdParams = z.object({
   placeId: z.coerce.number().int().positive(),
+});
+
+const batchPlacesBodySchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1).max(200),
 });
 
 const paginationSchema = z.object({
@@ -88,6 +92,54 @@ export const placesPlugin = fp<PlacesPluginOptions>(
         .where(eq(schema.place.id, placeId))
         .get();
     }
+
+    // -----------------------------------------------------------------------
+    // Batch: preferred name + media count for multiple places in one request
+    // -----------------------------------------------------------------------
+
+    app.post('/places/batch', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const body = batchPlacesBodySchema.safeParse(request.body);
+      if (!body.success) return reply.code(400).send({ error: 'Request body must include an "ids" array of place IDs' });
+      const { ids } = body.data;
+
+      const names = db
+        .select()
+        .from(schema.placeName)
+        .where(inArray(schema.placeName.placeId, ids))
+        .all();
+
+      const mediaCounts = db
+        .select({
+          placeId: schema.placeMedia.placeId,
+          count: sql<number>`count(*)`,
+        })
+        .from(schema.placeMedia)
+        .where(inArray(schema.placeMedia.placeId, ids))
+        .groupBy(schema.placeMedia.placeId)
+        .all();
+
+      const namesByPlace = new Map<number, typeof names>();
+      for (const name of names) {
+        const list = namesByPlace.get(name.placeId) ?? [];
+        list.push(name);
+        namesByPlace.set(name.placeId, list);
+      }
+
+      const mediaCountByPlace = new Map<number, number>();
+      for (const row of mediaCounts) {
+        mediaCountByPlace.set(row.placeId, Number(row.count));
+      }
+
+      const items = ids.map((id) => ({
+        placeId: id,
+        names: namesByPlace.get(id) ?? [],
+        mediaCount: mediaCountByPlace.get(id) ?? 0,
+      }));
+
+      return reply.send({ items });
+    });
 
     // -----------------------------------------------------------------------
     // Place Names
