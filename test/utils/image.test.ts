@@ -380,4 +380,45 @@ describe('image utilities', () => {
       expect(meta.format).toBe('jpeg');
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Corrupt / invalid image data
+  // -------------------------------------------------------------------------
+
+  describe('corrupt image handling', () => {
+    it('loadImage fails on a zero-byte file', async () => {
+      const filePath = join(tempDir, 'empty.jpg');
+      await writeFile(filePath, Buffer.alloc(0));
+
+      const image = loadImage(filePath);
+      await expect(getDimensions(image)).rejects.toThrow();
+    });
+
+    it('loadImage fails on random binary data', async () => {
+      const filePath = join(tempDir, 'garbage.jpg');
+      const garbage = Buffer.from(Array.from({ length: 256 }, (_, i) => i));
+      await writeFile(filePath, garbage);
+
+      const image = loadImage(filePath);
+      await expect(getDimensions(image)).rejects.toThrow();
+    });
+
+    it('loadImageFromBuffer fails on a non-image buffer', async () => {
+      const image = loadImageFromBuffer(Buffer.from('not an image'));
+      await expect(getDimensions(image)).rejects.toThrow();
+    });
+
+    it('toJpegBuffer fails on corrupt image data', async () => {
+      const filePath = join(tempDir, 'corrupt.jpg');
+      await writeFile(filePath, Buffer.from([0xff, 0xd8, 0xff, 0x00]));
+
+      const image = loadImage(filePath);
+      await expect(toJpegBuffer(image)).rejects.toThrow();
+    });
+
+    it('toRawPixelBuffer fails on corrupt image data', async () => {
+      const image = loadImageFromBuffer(Buffer.from('definitely not an image'));
+      await expect(toRawPixelBuffer(image)).rejects.toThrow();
+    });
+  });
 });

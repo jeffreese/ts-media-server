@@ -597,7 +597,7 @@ Wire the CLI subcommands to the services built in previous phases.
 
 ### Testing Coverage
 - [x] Review test coverage for all services
-- [ ] Add edge case tests: empty directories, corrupt images, missing FFmpeg, missing SpatiaLite
+- [x] Add edge case tests: empty directories, corrupt images, missing FFmpeg, missing SpatiaLite
 - [ ] Add integration test: full index → serve → browse cycle
 - [ ] Verify all security filter rules have test coverage
 

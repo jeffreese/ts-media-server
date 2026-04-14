@@ -168,6 +168,13 @@ describe('FileIndex', () => {
 
       expect(first[0].id).toBe(second[0].id);
     });
+
+    it('returns empty array for empty directory', async () => {
+      const hostId = insertHost(db);
+      const index = new FileIndex(createDeps(db));
+      const paths = await index.addPaths(tmpDir, hostId);
+      expect(paths).toHaveLength(0);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -482,6 +489,58 @@ describe('FileIndex', () => {
       expect(phases).toContain('registering_files');
       expect(phases).toContain('indexing');
       expect(phases).toContain('complete');
+    });
+
+    it('completes without error on empty directory', async () => {
+      const notifications = new NotificationService();
+      const events: unknown[] = [];
+      notifications.addListener((e) => events.push(e));
+
+      const index = new FileIndex(createDeps(db, { notifications }));
+      await index.addDirectory({ directory: tmpDir, concurrency: 1 });
+
+      const files = db.select().from(schema.file).all();
+      expect(files).toHaveLength(0);
+
+      const mediaItems = db.select().from(schema.mediaItem).all();
+      expect(mediaItems).toHaveLength(0);
+
+      const completeEvent = events.find(
+        (e: any) => e.action === 'progress' && e.data?.phase === 'complete',
+      ) as any;
+      expect(completeEvent).toBeDefined();
+      expect(completeEvent.data.processed).toBe(0);
+    });
+
+    it('handles deeply nested empty structure', async () => {
+      mkdirSync(join(tmpDir, 'a', 'b', 'c', 'd'), { recursive: true });
+
+      const index = new FileIndex(createDeps(db));
+      await index.addDirectory({ directory: tmpDir, concurrency: 1 });
+
+      const files = db.select().from(schema.file).all();
+      expect(files).toHaveLength(0);
+    });
+
+    it('continues when individual files fail to process', async () => {
+      const subDir = join(tmpDir, 'mixed');
+      mkdirSync(subDir, { recursive: true });
+
+      createTestImage(subDir, 'valid.jpg');
+
+      // A minimal JFIF header with no actual image data
+      writeFileSync(join(subDir, 'corrupt.jpg'), Buffer.from([
+        0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46,
+        0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01,
+        0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
+      ]));
+
+      const logger = createMockLogger();
+      const index = new FileIndex(createDeps(db, { logger }));
+      await index.addDirectory({ directory: tmpDir, concurrency: 1 });
+
+      const files = db.select().from(schema.file).all();
+      expect(files).toHaveLength(2);
     });
   });
 });

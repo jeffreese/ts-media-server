@@ -414,4 +414,60 @@ describe('FFmpeg', () => {
       expect(exts).toContain('.avi');
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Edge cases: missing/unreachable binaries
+  // -------------------------------------------------------------------------
+
+  describe('missing binary edge cases', () => {
+    it('validate() includes path in error when ffmpeg fails', async () => {
+      const custom = new FFmpeg({ ffmpegPath: '/nonexistent/ffmpeg' });
+      failWith('ENOENT');
+
+      await expect(custom.validate()).rejects.toThrow(/FFmpeg not found.*\/nonexistent\/ffmpeg/);
+    });
+
+    it('validate() includes path in error when ffprobe fails', async () => {
+      const custom = new FFmpeg({ ffprobePath: '/nonexistent/ffprobe' });
+      succeedWith('ffmpeg version 6.1');
+      failWith('ENOENT');
+
+      await expect(custom.validate()).rejects.toThrow(/ffprobe not found.*\/nonexistent\/ffprobe/);
+    });
+
+    it('getMetadata() propagates binary-not-found errors', async () => {
+      failWith('spawn ffprobe ENOENT');
+
+      await expect(ffmpeg.getMetadata('/some/video.mp4')).rejects.toThrow(/ENOENT/);
+    });
+
+    it('getDuration() propagates binary-not-found errors', async () => {
+      failWith('spawn ffprobe ENOENT');
+
+      await expect(ffmpeg.getDuration('/some/video.mp4')).rejects.toThrow(/ENOENT/);
+    });
+
+    it('createJPEG() propagates binary-not-found errors', async () => {
+      failWith('spawn ffmpeg ENOENT');
+
+      await expect(ffmpeg.createJPEG('/input.mp4', '/output.jpg')).rejects.toThrow(/ENOENT/);
+    });
+
+    it('createMP4() propagates binary-not-found errors', async () => {
+      failWith('spawn ffmpeg ENOENT');
+
+      await expect(ffmpeg.createMP4('/input.mkv', '/output.mp4')).rejects.toThrow(/ENOENT/);
+    });
+
+    it('isMovie works without requiring binary execution', () => {
+      const custom = new FFmpeg({ ffmpegPath: '/nonexistent/ffmpeg' });
+      expect(custom.isMovie('clip.mp4')).toBe(true);
+      expect(custom.isMovie('photo.jpg')).toBe(false);
+    });
+
+    it('getSupportedExtensions works without requiring binary execution', () => {
+      const custom = new FFmpeg({ ffmpegPath: '/nonexistent/ffmpeg' });
+      expect(custom.getSupportedExtensions()).toContain('.mp4');
+    });
+  });
 });

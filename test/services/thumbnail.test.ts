@@ -382,4 +382,18 @@ describe('thumbnail service', () => {
       expect(alphaWidths.length).toBe(THUMBNAIL_TIERS.length);
     });
   });
+
+  describe('corrupt image handling', () => {
+    it('createThumbnails throws on corrupt image data', async () => {
+      const subDir = join(tempDir, 'corrupt-thumb');
+      await mkdir(subDir, { recursive: true });
+
+      const filePath = join(subDir, 'broken.jpg');
+      await writeFile(filePath, Buffer.from([0xff, 0xd8, 0xff, 0x00]));
+
+      const { loadImage } = await import('../../src/utils/image.js');
+      const image = loadImage(filePath);
+      await expect(createThumbnails(image, filePath)).rejects.toThrow();
+    });
+  });
 });

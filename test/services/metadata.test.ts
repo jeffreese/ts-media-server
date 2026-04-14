@@ -362,4 +362,42 @@ describe('metadata service', () => {
       expect(meta.wkt).toBeUndefined();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Corrupt / malformed files
+  // -------------------------------------------------------------------------
+
+  describe('corrupt file handling', () => {
+    it('returns empty metadata for a corrupt JPEG header', async () => {
+      const filePath = join(tempDir, 'corrupt.jpg');
+      await writeFile(filePath, Buffer.from([0xff, 0xd8, 0x00, 0x00]));
+
+      const meta = await extractImageMetadata(filePath);
+      expect(meta.date).toBeUndefined();
+      expect(meta.camera.make).toBeUndefined();
+      expect(meta.gps).toBeUndefined();
+      expect(meta.iptc.keywords).toEqual([]);
+    });
+
+    it('returns empty metadata for plain text posing as JPEG', async () => {
+      const filePath = join(tempDir, 'text.jpg');
+      await writeFile(filePath, 'this is plain text pretending to be a jpg');
+
+      const meta = await extractImageMetadata(filePath);
+      expect(meta.date).toBeUndefined();
+      expect(meta.camera.make).toBeUndefined();
+    });
+
+    it('extractMetadata for image uses mock FFmpeg without requiring real binary', async () => {
+      const filePath = join(tempDir, 'mock-ffmpeg.jpg');
+      await writeFile(filePath, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+
+      const mockFfmpeg = { getMetadata: vi.fn() } as unknown as FFmpeg;
+      const meta = await extractMetadata(filePath, mockFfmpeg);
+
+      expect(meta.duration).toBeUndefined();
+      expect(meta.frameRate).toBeUndefined();
+      expect(mockFfmpeg.getMetadata).not.toHaveBeenCalled();
+    });
+  });
 });
