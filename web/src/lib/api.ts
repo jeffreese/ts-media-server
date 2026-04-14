@@ -137,6 +137,13 @@ export interface PersonFeature {
   label: string | null
 }
 
+export interface PersonBatchItem {
+  personId: number
+  names: PersonName[]
+  firstFeature: { id: number; featureId: number; personId: number; itemId: number } | null
+  photoCount: number
+}
+
 // ---------------------------------------------------------------------------
 // Features (faces)
 // ---------------------------------------------------------------------------
@@ -300,6 +307,13 @@ export const api = {
   personFeatures(personId: number, options?: PaginationOptions) {
     const query = buildQuery({ offset: options?.offset, limit: options?.limit })
     return request<PaginatedResponse<PersonFeature>>(`/person/${personId}/features${query}`)
+  },
+
+  peopleBatch(ids: number[]) {
+    return request<{ items: PersonBatchItem[] }>('/people/batch', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    })
   },
 
   // -- Features (faces) for a media item --

@@ -646,6 +646,102 @@ describe('people routes', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // POST /people/batch — batch loading of names + first feature
+  // ---------------------------------------------------------------------------
+
+  describe('POST /people/batch', () => {
+    it('returns names and first feature for multiple people', async () => {
+      const client = setupDb();
+      const personA = createPerson(client);
+      const personB = createPerson(client);
+      const featureId = createFeature(client);
+      await setupApp(client);
+
+      await app.server.inject({
+        method: 'POST',
+        url: `/person/${personA}/names`,
+        payload: { name: 'Alice', preferred: true },
+      });
+      await app.server.inject({
+        method: 'POST',
+        url: `/person/${personB}/names`,
+        payload: { name: 'Bob' },
+      });
+      await app.server.inject({
+        method: 'POST',
+        url: `/person/${personA}/features`,
+        payload: { featureId },
+      });
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: '/people/batch',
+        payload: { ids: [personA, personB] },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.items).toHaveLength(2);
+
+      const itemA = body.items.find((i: { personId: number }) => i.personId === personA);
+      expect(itemA.names).toHaveLength(1);
+      expect(itemA.names[0].name).toBe('Alice');
+      expect(itemA.firstFeature).not.toBeNull();
+      expect(itemA.firstFeature.featureId).toBe(featureId);
+      expect(itemA.photoCount).toBe(1);
+
+      const itemB = body.items.find((i: { personId: number }) => i.personId === personB);
+      expect(itemB.names).toHaveLength(1);
+      expect(itemB.names[0].name).toBe('Bob');
+      expect(itemB.firstFeature).toBeNull();
+      expect(itemB.photoCount).toBe(0);
+    });
+
+    it('returns empty items for unknown person IDs', async () => {
+      const client = setupDb();
+      await setupApp(client);
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: '/people/batch',
+        payload: { ids: [9999] },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.items).toHaveLength(1);
+      expect(body.items[0].names).toEqual([]);
+      expect(body.items[0].firstFeature).toBeNull();
+    });
+
+    it('returns 400 for missing ids', async () => {
+      const client = setupDb();
+      await setupApp(client);
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: '/people/batch',
+        payload: {},
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('returns 400 for empty ids array', async () => {
+      const client = setupDb();
+      await setupApp(client);
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: '/people/batch',
+        payload: { ids: [] },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // GET /feature/:featureId/person — reverse lookup
   // ---------------------------------------------------------------------------
 

@@ -634,8 +634,8 @@ React SPA served by Fastify via `@fastify/static` with SPA fallback. Mirrors the
 - [ ] Login / auth UI → Phase 16 item 8
 - [x] Search and keyword filtering → Phase 16 item 2
 - [ ] Frontend test suite → Phase 16 (added incrementally per feature)
-- [ ] Batch people+names API to avoid N+1 fetches → Phase 16 item 3
-- [ ] Infinite scroll / pagination on media grids → Phase 16 item 3
+- [x] Batch people+names API to avoid N+1 fetches → Phase 16 item 3
+- [x] Infinite scroll / pagination on media grids → Phase 16 item 3
 - [ ] Mobile sidebar (hamburger menu toggle) → Phase 16 item 6
 
 ---
@@ -664,11 +664,11 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 - [x] Keywords index page (`/keywords`) — browse all keywords, click to see tagged media
 
 ### 3. Pagination & Performance
-- [ ] Infinite scroll / load-more on folder browse grid (replace hardcoded `limit: 200`)
-- [ ] Infinite scroll on People page
-- [ ] Batch people loading: server-side endpoint or client-side batch to eliminate N+1 fetches on People page
-- [ ] Paginated face features on Person detail page
-- [ ] Loading states for all paginated transitions
+- [x] Infinite scroll / load-more on folder browse grid (replace hardcoded `limit: 200`)
+- [x] Infinite scroll on People page
+- [x] Batch people loading: server-side endpoint or client-side batch to eliminate N+1 fetches on People page
+- [x] Paginated face features on Person detail page
+- [x] Loading states for all paginated transitions
 
 ### 4. Face Matching & Person Assignment
 - [ ] "Similar faces" panel on media item detail: show faces detected in the image with match links

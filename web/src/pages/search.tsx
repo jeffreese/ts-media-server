@@ -1,10 +1,13 @@
 import { Filter, Image, Film, X } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { MediaGrid } from '~/components/media-grid'
 import { Badge, Skeleton } from '~/components/primitives'
-import { useFetch } from '~/hooks/use-fetch'
+import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
 import { type MediaItemEntry, type SearchFilters, api } from '~/lib/api'
+
+const PAGE_SIZE = 60
 
 export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -31,9 +34,28 @@ export function SearchPage() {
 
   const hasAnyFilter = Boolean(q || keyword || type || dateStart || dateEnd)
 
-  const { data, isLoading, error } = useFetch(
-    () => (hasAnyFilter ? api.search({ ...filters, limit: 200 }) : Promise.resolve(null)),
-    [q, keyword, type, dateStart, dateEnd],
+  const fetcher = useCallback(
+    (offset: number, limit: number) =>
+      api.search({ ...filters, offset, limit }),
+    [filters],
+  )
+
+  const noopFetcher = useCallback(
+    async (_offset: number, _limit: number) =>
+      ({ items: [] as never[], offset: 0, limit: PAGE_SIZE, total: 0 }),
+    [],
+  )
+
+  const { items: rawItems, total, isLoading, isLoadingMore, error, hasMore, sentinelRef } =
+    useInfiniteScroll({
+      fetcher: hasAnyFilter ? fetcher : noopFetcher,
+      pageSize: PAGE_SIZE,
+      deps: [q, keyword, type, dateStart, dateEnd],
+    })
+
+  const items: MediaItemEntry[] = useMemo(
+    () => rawItems.map((r) => ({ ...r, folderEntryIndex: null })),
+    [rawItems],
   )
 
   const updateParam = useCallback(
@@ -57,15 +79,6 @@ export function SearchPage() {
     })
   }, [setSearchParams])
 
-  const items: MediaItemEntry[] = useMemo(
-    () =>
-      data?.items.map((r) => ({
-        ...r,
-        folderEntryIndex: null,
-      })) ?? [],
-    [data],
-  )
-
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -73,9 +86,9 @@ export function SearchPage() {
           <h1 className="text-xl font-semibold">
             {keyword ? `Keyword: ${keyword}` : q ? `Search: ${q}` : 'Search'}
           </h1>
-          {data && (
+          {hasAnyFilter && !isLoading && (
             <p className="text-sm text-foreground-muted">
-              {data.total} result{data.total !== 1 ? 's' : ''}
+              {total} result{total !== 1 ? 's' : ''}
             </p>
           )}
         </div>
@@ -183,13 +196,23 @@ export function SearchPage() {
 
       {hasAnyFilter && isLoading && <SearchSkeleton />}
 
-      {hasAnyFilter && data && items.length === 0 && (
+      {hasAnyFilter && !isLoading && items.length === 0 && (
         <div className="flex h-64 items-center justify-center">
           <p className="text-foreground-muted">No results found</p>
         </div>
       )}
 
-      {items.length > 0 && <MediaGrid items={items} />}
+      {items.length > 0 && (
+        <>
+          <MediaGrid items={items} />
+          <LoadMoreSentinel
+            sentinelRef={sentinelRef}
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            variant="grid"
+          />
+        </>
+      )}
     </div>
   )
 }
