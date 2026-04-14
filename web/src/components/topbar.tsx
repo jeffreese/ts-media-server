@@ -1,5 +1,6 @@
 import { ChevronRight, Menu, Moon, Sun } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { SearchBar } from '~/components/search-bar'
 import { useTheme } from '~/hooks/use-theme'
 
 export function Topbar() {
@@ -40,14 +41,18 @@ export function Topbar() {
         </nav>
       </div>
 
-      <button
-        type="button"
-        onClick={toggle}
-        className="rounded-lg p-1.5 text-foreground-muted transition-colors hover:bg-control hover:text-foreground"
-        aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-      >
-        {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      </button>
+      <div className="flex items-center gap-2">
+        <SearchBar />
+
+        <button
+          type="button"
+          onClick={toggle}
+          className="rounded-lg p-1.5 text-foreground-muted transition-colors hover:bg-control hover:text-foreground"
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+      </div>
     </header>
   )
 }

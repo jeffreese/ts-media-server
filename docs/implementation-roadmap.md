@@ -632,7 +632,7 @@ React SPA served by Fastify via `@fastify/static` with SPA fallback. Mirrors the
 
 ### Remaining
 - [ ] Login / auth UI → Phase 16 item 8
-- [ ] Search and keyword filtering → Phase 16 item 2
+- [x] Search and keyword filtering → Phase 16 item 2
 - [ ] Frontend test suite → Phase 16 (added incrementally per feature)
 - [ ] Batch people+names API to avoid N+1 fetches → Phase 16 item 3
 - [ ] Infinite scroll / pagination on media grids → Phase 16 item 3
@@ -657,11 +657,11 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 - [x] Server routes: `GET /mediaItem/:id/features` and `GET /mediaItem/:id/matches` (item-scoped queries)
 
 ### 2. Search & Filtering
-- [ ] Search bar in topbar: filter media items by name (client-side on loaded items, or via API)
-- [ ] Keyword-based filtering: browse all media tagged with a specific keyword
-- [ ] Date range filter: filter media grid by start/end date
-- [ ] Media type filter: toggle image-only, video-only, or all
-- [ ] Keywords index page (`/keywords`) — browse all keywords, click to see tagged media
+- [x] Search bar in topbar: filter media items by name (client-side on loaded items, or via API)
+- [x] Keyword-based filtering: browse all media tagged with a specific keyword
+- [x] Date range filter: filter media grid by start/end date
+- [x] Media type filter: toggle image-only, video-only, or all
+- [x] Keywords index page (`/keywords`) — browse all keywords, click to see tagged media
 
 ### 3. Pagination & Performance
 - [ ] Infinite scroll / load-more on folder browse grid (replace hardcoded `limit: 200`)
