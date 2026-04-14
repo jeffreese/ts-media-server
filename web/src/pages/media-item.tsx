@@ -10,6 +10,7 @@ import {
   ThumbnailsSection,
 } from '~/components/media-detail'
 import { Badge, Skeleton } from '~/components/primitives'
+import { useAutoRefresh } from '~/hooks/use-auto-refresh'
 import { useBreadcrumb } from '~/hooks/use-breadcrumb'
 import { useFetch } from '~/hooks/use-fetch'
 import { api } from '~/lib/api'
@@ -31,6 +32,8 @@ export function MediaItemPage() {
 
 function MediaItemContent({ id }: { id: number }) {
   const { data: item, isLoading, error, refetch } = useFetch(() => api.mediaItem(id), [id])
+
+  useAutoRefresh(['mediaItem', 'feature', 'keyword', 'mediaItemKeyword', 'userRating'], refetch)
 
   useBreadcrumb(String(id), item?.name ?? undefined)
 

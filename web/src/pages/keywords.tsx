@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '~/components/empty-state'
 import { FetchError } from '~/components/fetch-error'
 import { Badge, Skeleton } from '~/components/primitives'
+import { useAutoRefresh } from '~/hooks/use-auto-refresh'
 import { useFetch } from '~/hooks/use-fetch'
 import { type KeywordWithCount, api } from '~/lib/api'
 
 export function KeywordsPage() {
   const { data, isLoading, error, refetch } = useFetch(() => api.keywords({ limit: 500 }), [])
   const navigate = useNavigate()
+
+  useAutoRefresh(['keyword', 'mediaItemKeyword'], refetch)
 
   if (error) {
     return <FetchError message={`Failed to load keywords: ${error.message}`} onRetry={refetch} />

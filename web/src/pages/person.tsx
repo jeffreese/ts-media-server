@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { IconButton, Skeleton } from '~/components/primitives'
+import { useAutoRefresh } from '~/hooks/use-auto-refresh'
 import { useBreadcrumb } from '~/hooks/use-breadcrumb'
 import { useFetch } from '~/hooks/use-fetch'
 import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
@@ -58,6 +59,8 @@ function PersonContent({
     pageSize: PAGE_SIZE,
     deps: [personId],
   })
+
+  useAutoRefresh(['person', 'personName', 'feature', 'personFeature'], refetchFeatures)
 
   const error = namesError || featuresError
   if (error) {

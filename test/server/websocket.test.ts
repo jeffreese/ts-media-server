@@ -48,14 +48,24 @@ describe('formatMessage', () => {
     expect(formatMessage(event)).toBe('delete,folder,99,');
   });
 
-  it('handles progress events', () => {
+  it('handles progress events with no phase', () => {
     const event: NotificationEvent = {
       action: 'progress',
       source: 'indexing',
-      data: { current: 5, total: 100 },
+      data: { processed: 5, total: 100 },
       timestamp: '2026-01-01T00:00:00.000Z',
     };
-    expect(formatMessage(event)).toBe('progress,indexing,,');
+    expect(formatMessage(event)).toBe('progress,indexing,:5/100,');
+  });
+
+  it('encodes progress phase and counts', () => {
+    const event: NotificationEvent = {
+      action: 'progress',
+      source: 'fileIndex',
+      data: { phase: 'indexing', processed: 42, total: 100 },
+      timestamp: '2026-01-01T00:00:00.000Z',
+    };
+    expect(formatMessage(event)).toBe('progress,fileIndex,indexing:42/100,');
   });
 });
 

@@ -17,9 +17,16 @@ export interface WebSocketPluginOptions {
  * Format: `action,source,id,userId`
  * - `id` and `userId` are extracted from `event.data` when present
  * - Missing fields are sent as empty strings
+ * - Progress events encode `phase:processed/total` in the id field
  */
 export function formatMessage(event: NotificationEvent): string {
   const data = event.data as Record<string, unknown> | undefined;
+  if (event.action === 'progress' && data) {
+    const phase = data.phase ?? '';
+    const processed = data.processed ?? 0;
+    const total = data.total ?? 0;
+    return `progress,${event.source},${phase}:${processed}/${total},`;
+  }
   const id = data?.id ?? '';
   const userId = data?.userId ?? '';
   return `${event.action},${event.source},${id},${userId}`;

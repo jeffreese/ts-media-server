@@ -5,6 +5,7 @@ import { EmptyState } from '~/components/empty-state'
 import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { Skeleton } from '~/components/primitives'
+import { useAutoRefresh } from '~/hooks/use-auto-refresh'
 import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
 import { type Person, type PersonBatchItem, api } from '~/lib/api'
 
@@ -20,6 +21,8 @@ export function PeoplePage() {
 
   const { items, total, isLoading, isLoadingMore, error, hasMore, sentinelRef, refetch } =
     useInfiniteScroll<Person>({ fetcher, pageSize: PAGE_SIZE })
+
+  useAutoRefresh(['person', 'personName', 'feature', 'personFeature'], refetch)
 
   const [batchData, setBatchData] = useState<Map<number, PersonBatchItem>>(new Map())
   const pendingIdsRef = useRef<Set<number>>(new Set())

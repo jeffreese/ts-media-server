@@ -6,6 +6,7 @@ import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { MediaGrid } from '~/components/media-grid'
 import { Skeleton } from '~/components/primitives'
+import { useAutoRefresh } from '~/hooks/use-auto-refresh'
 import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
 import { type FolderEntry, type IndexResponse, api } from '~/lib/api'
 
@@ -38,6 +39,8 @@ export function BrowsePage() {
       pageSize: PAGE_SIZE,
       deps: [path],
     })
+
+  useAutoRefresh(['mediaItem', 'folder', 'folderEntry'], refetch)
 
   const folders = useMemo(
     () => allEntries.filter((e): e is Extract<typeof e, { kind: 'folder' }> => e.kind === 'folder'),

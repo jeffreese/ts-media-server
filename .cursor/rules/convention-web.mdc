@@ -27,9 +27,11 @@ alwaysApply: false
 - Path alias: `~/` maps to `web/src/`
 - API calls go through `~/lib/api.ts` — never use raw `fetch` in components
 - Use `useFetch` hook for data loading (auto-cancels stale requests)
+- Use `useAutoRefresh(sources, refetch)` to auto-refresh data when the server broadcasts a model change over WebSocket. Pass the relevant model source names (e.g. `['mediaItem', 'folder']`) and debounce handles the rest.
 - Custom primitives in `~/components/primitives/` — no UI library
 - Semantic color tokens via CSS custom properties (see `index.css`)
 - Dark-first: default theme is dark, light mode via class toggle
+- WebSocket notifications are provided app-wide via `WebSocketProvider` in `main.tsx`. Use `useNotifications()` for connection status/progress, `useModelNotifications(sources, handler)` for low-level subscriptions.
 
 ## File Organization
 
