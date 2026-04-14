@@ -589,11 +589,11 @@ Wire the CLI subcommands to the services built in previous phases.
 - [x] Document ONNX model setup (where to download, how to configure)
 
 ### Build & Distribution
-- [ ] Verify `tsup` production build works end-to-end
-- [ ] Test production build: `pnpm build && node dist/index.js serve`
-- [ ] Verify CLI works from built output: `node dist/index.js add directory --path /test`
-- [ ] Add `bin` entry to `package.json` for global install (`pnpm install -g`)
-- [ ] Test cross-platform: macOS, Linux (Windows if applicable)
+- [x] Verify `tsup` production build works end-to-end
+- [x] Test production build: `pnpm build && node dist/index.js serve`
+- [x] Verify CLI works from built output: `node dist/index.js add directory --path /test`
+- [x] Add `bin` entry to `package.json` for global install (`pnpm install -g`)
+- [x] Test cross-platform: macOS, Linux (Windows if applicable)
 
 ### Testing Coverage
 - [ ] Review test coverage for all services
