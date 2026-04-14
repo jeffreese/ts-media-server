@@ -459,6 +459,81 @@ describe('atomicWrite', () => {
 // createMediaFilter
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Edge cases: empty / nonexistent directories
+// ---------------------------------------------------------------------------
+
+describe('walkDirectory edge cases', () => {
+  const EDGE_DIR = join(import.meta.dirname, '.tmp-walk-edge');
+
+  beforeEach(async () => {
+    await mkdir(EDGE_DIR, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await rm(EDGE_DIR, { recursive: true, force: true });
+  });
+
+  it('returns empty array when directory has only subdirectories', async () => {
+    await mkdir(join(EDGE_DIR, 'sub1'));
+    await mkdir(join(EDGE_DIR, 'sub2', 'nested'), { recursive: true });
+
+    const files = await walkDirectory(EDGE_DIR);
+    expect(files).toEqual([]);
+  });
+
+  it('throws for a nonexistent directory', async () => {
+    await expect(walkDirectory(join(EDGE_DIR, 'nonexistent'))).rejects.toThrow();
+  });
+
+  it('returns empty when all directories are hidden', async () => {
+    await mkdir(join(EDGE_DIR, '.hidden'));
+    await writeFile(join(EDGE_DIR, '.hidden', 'photo.jpg'), 'fake');
+    await mkdir(join(EDGE_DIR, '_private'));
+    await writeFile(join(EDGE_DIR, '_private', 'photo.jpg'), 'fake');
+
+    const files = await walkDirectory(EDGE_DIR);
+    expect(files).toEqual([]);
+  });
+
+  it('returns empty array when all files are non-media with a media filter', async () => {
+    await writeFile(join(EDGE_DIR, 'readme.txt'), 'hello');
+    await writeFile(join(EDGE_DIR, 'data.json'), '{}');
+
+    const filter = createMediaFilter();
+    const files = await walkDirectory(EDGE_DIR, filter);
+    expect(files).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Edge cases: hash computation
+// ---------------------------------------------------------------------------
+
+describe('hash computation edge cases', () => {
+  const HASH_DIR = join(import.meta.dirname, '.tmp-hash-edge');
+
+  beforeEach(async () => {
+    await mkdir(HASH_DIR, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await rm(HASH_DIR, { recursive: true, force: true });
+  });
+
+  it('computeMd5 works on zero-byte file', async () => {
+    const filePath = join(HASH_DIR, 'empty.bin');
+    await writeFile(filePath, Buffer.alloc(0));
+
+    const hash = await computeMd5(filePath);
+    expect(hash).toBe('d41d8cd98f00b204e9800998ecf8427e');
+  });
+
+  it('computeSha1 rejects for a nonexistent file', async () => {
+    await expect(computeSha1(join(HASH_DIR, 'missing.jpg'))).rejects.toThrow();
+  });
+});
+
 describe('createMediaFilter', () => {
   it('accepts image files', () => {
     const filter = createMediaFilter();
