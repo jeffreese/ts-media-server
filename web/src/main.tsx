@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
+import { WebSocketProvider } from '~/hooks/use-notifications'
 import { ThemeProvider } from '~/hooks/use-theme'
 import { router } from '~/router'
 import './index.css'
@@ -11,7 +12,9 @@ if (!root) throw new Error('Root element not found')
 createRoot(root).render(
   <StrictMode>
     <ThemeProvider>
-      <RouterProvider router={router} />
+      <WebSocketProvider>
+        <RouterProvider router={router} />
+      </WebSocketProvider>
     </ThemeProvider>
   </StrictMode>,
 )

@@ -692,11 +692,11 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 - [x] Frontend test suite: Vitest + Testing Library for API client, hooks, key components
 
 ### 7. Real-time Updates
-- [ ] WebSocket connection hook (`useWebSocket`) — connect to `/ws` on mount
-- [ ] Parse notification wire format (`action,model,id,userId`)
-- [ ] Auto-refresh active grid when relevant model changes (mediaItem, folder, feature, person)
-- [ ] Indexing progress indicator: show progress when media is being indexed
-- [ ] Connection status indicator in topbar (connected/disconnected)
+- [x] WebSocket connection hook (`useWebSocket`) — connect to `/ws` on mount
+- [x] Parse notification wire format (`action,model,id,userId`)
+- [x] Auto-refresh active grid when relevant model changes (mediaItem, folder, feature, person)
+- [x] Indexing progress indicator: show progress when media is being indexed
+- [x] Connection status indicator in topbar (connected/disconnected)
 
 ### 8. Admin Panel
 - [ ] Admin page (`/admin`) with server status overview (indexed paths, file counts, media item counts)

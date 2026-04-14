@@ -1,5 +1,7 @@
 import { ChevronRight, Menu, Moon, Sun } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { ConnectionStatus } from '~/components/connection-status'
+import { IndexingIndicator } from '~/components/indexing-indicator'
 import { SearchBar } from '~/components/search-bar'
 import { useBreadcrumbOverrides } from '~/hooks/use-breadcrumb'
 import { useTheme } from '~/hooks/use-theme'
@@ -55,6 +57,8 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-2">
+        <IndexingIndicator />
+        <ConnectionStatus />
         <SearchBar />
 
         <button
