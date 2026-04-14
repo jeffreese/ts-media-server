@@ -1,5 +1,6 @@
-import { Images, Map as MapIcon, MapPin, Settings, Shield, Tag, Users } from 'lucide-react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { Images, LogOut, Map as MapIcon, MapPin, Settings, Shield, Tag, Users } from 'lucide-react'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '~/hooks/use-auth'
 
 const NAV_ITEMS = [
   { to: '/', icon: Images, label: 'Browse' },
@@ -11,6 +12,13 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, authEnabled, logout } = useAuth()
+
+  function handleLogout() {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <aside className="hidden w-[var(--sidebar-width)] flex-col border-r border-border bg-surface md:flex">
@@ -62,6 +70,22 @@ export function Sidebar() {
           <Settings className="h-4 w-4" />
           Settings
         </NavLink>
+
+        {authEnabled && user && (
+          <div className="flex items-center justify-between gap-2 rounded-lg px-3 py-2">
+            <span className="truncate text-xs text-foreground-muted">
+              {user.name ?? `User ${user.id}`}
+            </span>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex-shrink-0 rounded p-1 text-foreground-faint transition-colors hover:bg-control hover:text-foreground"
+              aria-label="Sign out"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   )
