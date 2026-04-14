@@ -1,6 +1,8 @@
-import { Folder } from 'lucide-react'
+import { Folder, Images } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { EmptyState } from '~/components/empty-state'
+import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { MediaGrid } from '~/components/media-grid'
 import { Skeleton } from '~/components/primitives'
@@ -20,7 +22,7 @@ export function BrowsePage() {
     [path],
   )
 
-  const { items: allEntries, total, isLoading, isLoadingMore, error, hasMore, sentinelRef } =
+  const { items: allEntries, total, isLoading, isLoadingMore, error, hasMore, sentinelRef, refetch } =
     useInfiniteScroll({
       fetcher: useCallback(
         async (offset: number, limit: number) => {
@@ -47,11 +49,7 @@ export function BrowsePage() {
   )
 
   if (error) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-foreground-muted">Failed to load: {error.message}</p>
-      </div>
-    )
+    return <FetchError message={`Failed to load: ${error.message}`} onRetry={refetch} />
   }
 
   if (isLoading) {
@@ -98,9 +96,15 @@ export function BrowsePage() {
       )}
 
       {!hasContent && (
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-foreground-muted">This folder is empty</p>
-        </div>
+        <EmptyState
+          icon={<Images className="h-12 w-12" />}
+          title={path ? 'This folder is empty' : 'No media indexed yet'}
+          description={
+            path
+              ? undefined
+              : 'Add a directory from the command line to start browsing your media library.'
+          }
+        />
       )}
     </div>
   )

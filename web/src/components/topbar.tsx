@@ -1,14 +1,27 @@
 import { ChevronRight, Menu, Moon, Sun } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { SearchBar } from '~/components/search-bar'
+import { useBreadcrumbOverrides } from '~/hooks/use-breadcrumb'
 import { useTheme } from '~/hooks/use-theme'
+
+const ROUTE_LABELS: Record<string, string> = {
+  browse: 'Browse',
+  media: 'Media',
+  keywords: 'Keywords',
+  people: 'People',
+  places: 'Places',
+  map: 'Map',
+  settings: 'Settings',
+  search: 'Search',
+}
 
 export function Topbar() {
   const { theme, toggle } = useTheme()
   const location = useLocation()
   const navigate = useNavigate()
+  const overrides = useBreadcrumbOverrides()
 
-  const breadcrumbs = buildBreadcrumbs(location.pathname)
+  const breadcrumbs = buildBreadcrumbs(location.pathname, overrides)
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-5">
@@ -62,7 +75,7 @@ interface Breadcrumb {
   path: string
 }
 
-function buildBreadcrumbs(pathname: string): Breadcrumb[] {
+function buildBreadcrumbs(pathname: string, overrides: Record<string, string>): Breadcrumb[] {
   if (pathname === '/') return [{ label: 'Browse', path: '/' }]
 
   const segments = pathname.replace(/^\//, '').split('/')
@@ -71,7 +84,16 @@ function buildBreadcrumbs(pathname: string): Breadcrumb[] {
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i]!
     const path = `/${segments.slice(0, i + 1).join('/')}`
-    const label = segment.charAt(0).toUpperCase() + segment.slice(1)
+
+    let label: string
+    if (overrides[segment]) {
+      label = overrides[segment]
+    } else if (i === 0 && ROUTE_LABELS[segment]) {
+      label = ROUTE_LABELS[segment]
+    } else {
+      label = decodeURIComponent(segment)
+    }
+
     crumbs.push({ label, path })
   }
 
