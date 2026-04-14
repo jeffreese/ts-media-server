@@ -1,4 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { eq } from 'drizzle-orm';
 import { createDatabaseClient, type DatabaseClient } from '../../../src/db/client.js';
@@ -24,6 +27,7 @@ const loggerOptions = { level: 'silent' as const };
 
 describe('admin routes', () => {
   const clients: DatabaseClient[] = [];
+  const tempDirs: string[] = [];
   let app: App;
 
   function setupDb(): DatabaseClient {
@@ -62,6 +66,10 @@ describe('admin routes', () => {
       c.db.close();
     }
     clients.length = 0;
+    for (const d of tempDirs) {
+      rmSync(d, { recursive: true, force: true });
+    }
+    tempDirs.length = 0;
     vi.restoreAllMocks();
   });
 
@@ -272,6 +280,207 @@ describe('admin routes', () => {
       });
 
       expect(response.statusCode).toBe(400);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/settings/:key
+  // ---------------------------------------------------------------------------
+
+  describe('GET /admin/settings/:key', () => {
+    it('returns a single setting by key', async () => {
+      const client = setupDb();
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/admin/settings/auth_status',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.key).toBe('auth_status');
+      expect(body.value).toBe('disabled');
+    });
+
+    it('returns 404 for non-existent key', async () => {
+      const client = setupDb();
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/admin/settings/nonexistent_key_xyz',
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error).toContain('not found');
+    });
+
+    it('requires SysAdmin access when auth is enabled', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const token = createNonAdminToken(client);
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/admin/settings/auth_status',
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/dir/download
+  // ---------------------------------------------------------------------------
+
+  describe('GET /admin/dir/download', () => {
+    it('downloads a file from the server', async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'admin-dl-'));
+      tempDirs.push(dir);
+      writeFileSync(join(dir, 'test.txt'), 'hello world');
+
+      const client = setupDb();
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: `/admin/dir/download?path=${encodeURIComponent(join(dir, 'test.txt'))}`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-type']).toContain('application/octet-stream');
+      expect(response.headers['content-disposition']).toContain('test.txt');
+      expect(response.body).toBe('hello world');
+    });
+
+    it('returns 400 when path query is missing', async () => {
+      const client = setupDb();
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/admin/dir/download',
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('returns 404 for non-existent file', async () => {
+      const client = setupDb();
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/admin/dir/download?path=/nonexistent_file_xyz_123.txt',
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('returns 400 for a directory path', async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'admin-dl-dir-'));
+      tempDirs.push(dir);
+
+      const client = setupDb();
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: `/admin/dir/download?path=${encodeURIComponent(dir)}`,
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toContain('not a file');
+    });
+
+    it('rejects paths with traversal', async () => {
+      const client = setupDb();
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/admin/dir/download?path=/tmp/../etc/passwd',
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toContain('traversal');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /admin/dir/upload
+  // ---------------------------------------------------------------------------
+
+  describe('POST /admin/dir/upload', () => {
+    it('returns 400 when path field is missing', async () => {
+      const client = setupDb();
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const boundary = '----TestBoundary';
+      const body = [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file"; filename="test.txt"',
+        'Content-Type: text/plain',
+        '',
+        'file content',
+        `--${boundary}--`,
+      ].join('\r\n');
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: '/admin/dir/upload',
+        headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+        body,
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('uploads a file to the target directory', async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'admin-upload-'));
+      tempDirs.push(dir);
+
+      const client = setupDb();
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const boundary = '----TestBoundary';
+      const body = [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="path"',
+        '',
+        dir,
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file"; filename="uploaded.txt"',
+        'Content-Type: text/plain',
+        '',
+        'uploaded content',
+        `--${boundary}--`,
+      ].join('\r\n');
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: '/admin/dir/upload',
+        headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+        body,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const result = response.json();
+      expect(result.uploaded).toHaveLength(1);
+      expect(result.uploaded[0]).toContain('uploaded.txt');
     });
   });
 

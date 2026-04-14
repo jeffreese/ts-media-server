@@ -596,7 +596,7 @@ Wire the CLI subcommands to the services built in previous phases.
 - [x] Test cross-platform: macOS, Linux (Windows if applicable)
 
 ### Testing Coverage
-- [ ] Review test coverage for all services
+- [x] Review test coverage for all services
 - [ ] Add edge case tests: empty directories, corrupt images, missing FFmpeg, missing SpatiaLite
 - [ ] Add integration test: full index → serve → browse cycle
 - [ ] Verify all security filter rules have test coverage

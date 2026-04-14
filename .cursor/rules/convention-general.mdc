@@ -15,6 +15,7 @@ A TypeScript/Node.js media server converted from the JavaXT Media Server. Manage
 - `pnpm build` — Build web frontend then production server bundle
 - `pnpm build:web` — Build web frontend only
 - `pnpm test` — Run server tests (vitest)
+- `pnpm test:coverage` — Run server tests with V8 coverage report
 - `pnpm test:web` — Run web tests
 - `pnpm typecheck` — Run tsc --noEmit on server
 
