@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ApiError, api } from '~/lib/api'
+import { ApiError, api, setTokenAccessor, setUnauthorizedHandler } from '~/lib/api'
 
 describe('api', () => {
   describe('URL builders', () => {
@@ -31,6 +31,8 @@ describe('api', () => {
   describe('request handling', () => {
     beforeEach(() => {
       vi.restoreAllMocks()
+      setTokenAccessor(() => null)
+      setUnauthorizedHandler(() => {})
     })
 
     it('throws ApiError on non-ok responses', async () => {
@@ -117,6 +119,47 @@ describe('api', () => {
           body: JSON.stringify({ word: 'nature' }),
         }),
       )
+    })
+
+    it('attaches Authorization header when token accessor is set', async () => {
+      setTokenAccessor(() => 'my-jwt-token')
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response('{}', { status: 200 }),
+      )
+
+      await api.mediaItem(1)
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/mediaItem/1',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer my-jwt-token',
+          }),
+        }),
+      )
+    })
+
+    it('does not attach Authorization header when token is null', async () => {
+      setTokenAccessor(() => null)
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response('{}', { status: 200 }),
+      )
+
+      await api.mediaItem(1)
+
+      const headers = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]![1]!.headers as Record<string, string>
+      expect(headers.Authorization).toBeUndefined()
+    })
+
+    it('calls unauthorized handler on 401 response', async () => {
+      const handler = vi.fn()
+      setUnauthorizedHandler(handler)
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response('Unauthorized', { status: 401, statusText: 'Unauthorized' }),
+      )
+
+      await expect(api.mediaItem(1)).rejects.toThrow(ApiError)
+      expect(handler).toHaveBeenCalledTimes(1)
     })
   })
 })

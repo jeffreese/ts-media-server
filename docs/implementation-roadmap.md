@@ -631,7 +631,7 @@ React SPA served by Fastify via `@fastify/static` with SPA fallback. Mirrors the
 - [x] Error boundary — friendly 404 / error page with "Go home" action
 
 ### Remaining
-- [ ] Login / auth UI → Phase 16 item 8
+- [x] Login / auth UI → Phase 16 item 9
 - [x] Search and keyword filtering → Phase 16 item 2
 - [x] Frontend test suite → Phase 16 (added incrementally per feature)
 - [x] Batch people+names API to avoid N+1 fetches → Phase 16 item 3
@@ -709,13 +709,13 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 - [x] Indexing log / progress view (driven by WebSocket notifications from item 7)
 
 ### 9. Authentication
-- [ ] Login page (`/login`) — username/password form → `POST /auth/login` → store JWT
-- [ ] Token storage in memory (not localStorage) with refresh via `POST /auth/refresh`
-- [ ] Auth context provider: expose current user, login/logout actions
-- [ ] Route guard: redirect to `/login` when token is missing/expired
-- [ ] Logout: clear token, redirect to login
-- [ ] Auth-aware API client: attach `Authorization: Bearer` header to all requests
-- [ ] Handle 401 responses: auto-redirect to login
+- [x] Login page (`/login`) — username/password form → `POST /auth/login` → store JWT
+- [x] Token storage in memory (not localStorage) with refresh via `POST /auth/refresh`
+- [x] Auth context provider: expose current user, login/logout actions
+- [x] Route guard: redirect to `/login` when token is missing/expired
+- [x] Logout: clear token, redirect to login
+- [x] Auth-aware API client: attach `Authorization: Bearer` header to all requests
+- [x] Handle 401 responses: auto-redirect to login
 
 ### 10. User Management (after auth)
 - [ ] Users page (`/admin/users`) — list users with names and last access

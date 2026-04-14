@@ -76,6 +76,20 @@ function findUserByUsername(
     .get();
 }
 
+function getUserDisplayName(
+  db: BetterSQLite3Database<typeof schema>,
+  userId: number,
+): string | null {
+  const user = db.select().from(schema.user).where(eq(schema.user.id, userId)).get();
+  if (!user?.personId) return null;
+  const name = db
+    .select()
+    .from(schema.personName)
+    .where(and(eq(schema.personName.personId, user.personId), eq(schema.personName.preferred, true)))
+    .get();
+  return name?.name ?? null;
+}
+
 function getStoredPassword(
   db: BetterSQLite3Database<typeof schema>,
   userId: number,
@@ -156,7 +170,8 @@ export const authPlugin = fp<AuthPluginOptions>(async function authPlugin(
     }
 
     const token = app.jwt.sign({ userId: user.id });
-    return reply.send({ token });
+    const name = getUserDisplayName(db, user.id);
+    return reply.send({ token, user: { id: user.id, name } });
   });
 
   app.post('/auth/refresh', {
@@ -167,7 +182,26 @@ export const authPlugin = fp<AuthPluginOptions>(async function authPlugin(
     }
 
     const token = app.jwt.sign({ userId: request.userId });
-    return reply.send({ token });
+    const name = getUserDisplayName(db, request.userId);
+    return reply.send({ token, user: { id: request.userId, name } });
+  });
+
+  app.get('/auth/status', async (request, reply) => {
+    const authStatus = getAuthStatus(db);
+
+    if (authStatus === 'disabled') {
+      const userId = getDefaultUserId(db);
+      const name = userId ? getUserDisplayName(db, userId) : null;
+      return reply.send({ authEnabled: false, user: userId ? { id: userId, name } : null });
+    }
+
+    try {
+      const decoded = await request.jwtVerify<JwtPayload>();
+      const name = getUserDisplayName(db, decoded.userId);
+      return reply.send({ authEnabled: true, user: { id: decoded.userId, name } });
+    } catch {
+      return reply.send({ authEnabled: true, user: null });
+    }
   });
 }, { name: 'auth' });
 

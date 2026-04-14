@@ -233,6 +233,134 @@ describe('auth plugin', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // GET /auth/status
+  // ---------------------------------------------------------------------------
+
+  describe('GET /auth/status', () => {
+    it('returns authEnabled: false with default user when auth is disabled', async () => {
+      const client = setupDb();
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/auth/status',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.authEnabled).toBe(false);
+      expect(body.user).toBeDefined();
+      expect(body.user.id).toBe(1);
+      expect(body.user.name).toBe('Admin');
+    });
+
+    it('returns authEnabled: true with user when valid token is provided', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const token = app.server.jwt.sign({ userId: 1 });
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/auth/status',
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.authEnabled).toBe(true);
+      expect(body.user).toBeDefined();
+      expect(body.user.id).toBe(1);
+      expect(body.user.name).toBe('Admin');
+    });
+
+    it('returns authEnabled: true with user: null when no token is provided', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/auth/status',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.authEnabled).toBe(true);
+      expect(body.user).toBeNull();
+    });
+
+    it('returns authEnabled: true with user: null for an invalid token', async () => {
+      const client = setupDb();
+      enableAuth(client);
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/auth/status',
+        headers: { authorization: 'Bearer invalid.token.here' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.authEnabled).toBe(true);
+      expect(body.user).toBeNull();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Login/refresh response shape
+  // ---------------------------------------------------------------------------
+
+  describe('response shapes', () => {
+    it('login includes user info in response', async () => {
+      const client = setupDb();
+      await setPassword(client, 1, 'secret123');
+      enableAuth(client);
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: { username: 'Admin', password: 'secret123' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.token).toBeDefined();
+      expect(body.user).toBeDefined();
+      expect(body.user.id).toBe(1);
+      expect(body.user.name).toBe('Admin');
+    });
+
+    it('refresh includes user info in response', async () => {
+      const client = setupDb();
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const token = app.server.jwt.sign({ userId: 1 });
+      const response = await app.server.inject({
+        method: 'POST',
+        url: '/auth/refresh',
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.token).toBeDefined();
+      expect(body.user).toBeDefined();
+      expect(body.user.id).toBe(1);
+      expect(body.user.name).toBe('Admin');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // authenticate hook
   // ---------------------------------------------------------------------------
 

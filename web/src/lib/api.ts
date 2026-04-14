@@ -1,7 +1,19 @@
 const API_BASE = ''
 
+let tokenAccessor: (() => string | null) | null = null
+let onUnauthorized: (() => void) | null = null
+
+export function setTokenAccessor(fn: () => string | null) {
+  tokenAccessor = fn
+}
+
+export function setUnauthorizedHandler(fn: () => void) {
+  onUnauthorized = fn
+}
+
 function getAuthHeaders(): Record<string, string> {
-  return {}
+  const token = tokenAccessor?.()
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -15,6 +27,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   if (!res.ok) {
+    if (res.status === 401 && onUnauthorized) {
+      onUnauthorized()
+    }
     const body = await res.text().catch(() => '')
     throw new ApiError(res.status, body || res.statusText)
   }
