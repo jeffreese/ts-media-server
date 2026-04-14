@@ -111,10 +111,15 @@ export function MapPage() {
 
       const popupContent = document.createElement('div')
       popupContent.className = 'map-popup'
-      popupContent.innerHTML = `
-        <img src="${api.imageUrl(item.id, 300)}" alt="${item.name ?? ''}" />
-        <p>${item.name ?? 'Untitled'}</p>
-      `
+
+      const img = document.createElement('img')
+      img.src = api.imageUrl(item.id, 300)
+      img.alt = item.name ?? ''
+
+      const p = document.createElement('p')
+      p.textContent = item.name ?? 'Untitled'
+
+      popupContent.append(img, p)
       popupContent.addEventListener('click', () => {
         navigateRef.current(`/media/${item.id}`)
       })

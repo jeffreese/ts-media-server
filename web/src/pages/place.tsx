@@ -170,8 +170,12 @@ function NamesSection({
   }
 
   const handleRemove = async (nameId: number) => {
-    await api.removePlaceName(placeId, nameId)
-    onUpdate()
+    try {
+      await api.removePlaceName(placeId, nameId)
+      onUpdate()
+    } catch {
+      // Removal failed — silently ignore; UI remains consistent
+    }
   }
 
   return (
@@ -262,8 +266,12 @@ function AddressesSection({
   }
 
   const handleRemove = async (addressId: number) => {
-    await api.removePlaceAddress(placeId, addressId)
-    onUpdate()
+    try {
+      await api.removePlaceAddress(placeId, addressId)
+      onUpdate()
+    } catch {
+      // Removal failed — silently ignore; UI remains consistent
+    }
   }
 
   return (
