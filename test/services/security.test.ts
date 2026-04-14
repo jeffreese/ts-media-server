@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { createDatabaseClient, type DatabaseClient } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrate.js';
 import { seedDatabase } from '../../src/db/seed.js';
@@ -146,6 +146,39 @@ describe('security service', () => {
       const result = checkUser(ctx(db, adminId), 'delete', { id: nonAdminId });
       expect(result.allowed).toBe(true);
     });
+
+    it('denies a non-admin from deleting another user', () => {
+      const { db, adminId, nonAdminId } = setup();
+      const result = checkUser(ctx(db, nonAdminId), 'delete', { id: adminId });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('UserAdmin');
+    });
+
+    it('treats save with no record id as managing another user', () => {
+      const { db, nonAdminId } = setup();
+      const result = checkUser(ctx(db, nonAdminId), 'save', {});
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('UserAdmin');
+    });
+
+    it('allows deleting an admin when another admin exists', () => {
+      const { db, adminId, nonAdminId } = setup();
+      const comp = db.select().from(schema.component).where(eq(schema.component.key, 'SysAdmin')).get()!;
+      db.insert(schema.userAccess).values({
+        userId: nonAdminId,
+        componentId: comp.id,
+        level: ADMIN_ACCESS_LEVEL,
+      }).run();
+      const userAdminComp = db.select().from(schema.component).where(eq(schema.component.key, 'UserAdmin')).get()!;
+      db.insert(schema.userAccess).values({
+        userId: nonAdminId,
+        componentId: userAdminComp.id,
+        level: ADMIN_ACCESS_LEVEL,
+      }).run();
+
+      const result = checkUser(ctx(db, nonAdminId), 'delete', { id: adminId });
+      expect(result.allowed).toBe(true);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -169,6 +202,19 @@ describe('security service', () => {
     it('allows access when no userId is specified on the record', () => {
       const { db, nonAdminId } = setup();
       const result = checkUserPreference(ctx(db, nonAdminId), 'list');
+      expect(result.allowed).toBe(true);
+    });
+
+    it('denies deleting another user\'s preferences', () => {
+      const { db, adminId, nonAdminId } = setup();
+      const result = checkUserPreference(ctx(db, nonAdminId), 'delete', { userId: adminId });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('own preferences');
+    });
+
+    it('allows deleting own preferences', () => {
+      const { db, nonAdminId } = setup();
+      const result = checkUserPreference(ctx(db, nonAdminId), 'delete', { userId: nonAdminId });
       expect(result.allowed).toBe(true);
     });
   });
@@ -202,6 +248,25 @@ describe('security service', () => {
       const result = await checkUserAuthentication(ctx(db, adminId), 'save', { userId: nonAdminId });
       expect(result.allowed).toBe(true);
     });
+
+    it('allows deleting own credentials', async () => {
+      const { db, nonAdminId } = setup();
+      const result = await checkUserAuthentication(ctx(db, nonAdminId), 'delete', { userId: nonAdminId });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('denies non-admin deleting another user\'s credentials', async () => {
+      const { db, adminId, nonAdminId } = setup();
+      const result = await checkUserAuthentication(ctx(db, nonAdminId), 'delete', { userId: adminId });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('UserAdmin');
+    });
+
+    it('allows UserAdmin to delete another user\'s credentials', async () => {
+      const { db, adminId, nonAdminId } = setup();
+      const result = await checkUserAuthentication(ctx(db, adminId), 'delete', { userId: nonAdminId });
+      expect(result.allowed).toBe(true);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -224,6 +289,11 @@ describe('security service', () => {
     it('returns the record unchanged when value is empty', async () => {
       const result = await hashPasswordField({ key: 'password', value: '' });
       expect(result.value).toBe('');
+    });
+
+    it('returns the record unchanged when value is undefined', async () => {
+      const result = await hashPasswordField({ key: 'password' });
+      expect(result.value).toBeUndefined();
     });
   });
 
@@ -296,6 +366,40 @@ describe('security service', () => {
       });
       expect(result.allowed).toBe(true);
     });
+
+    it('allows delete when another admin exists', () => {
+      const { db, adminId, nonAdminId } = setup();
+      const comp = db.select().from(schema.component).where(eq(schema.component.key, 'SysAdmin')).get()!;
+
+      db.insert(schema.userAccess).values({
+        userId: nonAdminId,
+        componentId: comp.id,
+        level: ADMIN_ACCESS_LEVEL,
+      }).run();
+
+      const result = checkUserAccess(ctx(db, adminId), 'delete', {
+        userId: adminId,
+        componentId: comp.id,
+      });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('allows admin save without userId/componentId (no last-admin check)', () => {
+      const { db, adminId } = setup();
+      const result = checkUserAccess(ctx(db, adminId), 'save', { level: 3 });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('allows admin save when level is at or above admin threshold', () => {
+      const { db, adminId, nonAdminId } = setup();
+      const comp = db.select().from(schema.component).where(eq(schema.component.key, 'SysAdmin')).get()!;
+      const result = checkUserAccess(ctx(db, adminId), 'save', {
+        userId: nonAdminId,
+        componentId: comp.id,
+        level: ADMIN_ACCESS_LEVEL,
+      });
+      expect(result.allowed).toBe(true);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -355,6 +459,18 @@ describe('security service', () => {
       const { db, adminId } = setup();
       expect(checkDatatype(ctx(db, adminId), 'save').allowed).toBe(true);
     });
+
+    it('denies non-admin from deleting datatypes', () => {
+      const { db, nonAdminId } = setup();
+      const result = checkDatatype(ctx(db, nonAdminId), 'delete');
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('SysAdmin');
+    });
+
+    it('allows SysAdmin to delete datatypes', () => {
+      const { db, adminId } = setup();
+      expect(checkDatatype(ctx(db, adminId), 'delete').allowed).toBe(true);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -405,6 +521,51 @@ describe('security service', () => {
       const result = checkDataAccess(ctx(db, nonAdminId), 'save', { groupId: group.id, readOnly: true });
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('Read-only');
+    });
+
+    it('allows SysAdmin to delete regardless of group membership', () => {
+      const { db, adminId } = setup();
+      const result = checkDataAccess(ctx(db, adminId), 'delete', { groupId: 999 });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('denies non-member from deleting data access', () => {
+      const { db, nonAdminId } = setup();
+      const group = db.insert(schema.userGroup).values({ name: 'TestGroup' }).returning().get();
+      const result = checkDataAccess(ctx(db, nonAdminId), 'delete', { groupId: group.id });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('not a member');
+    });
+
+    it('allows group member to delete data access', () => {
+      const { db, nonAdminId } = setup();
+      const group = db.insert(schema.userGroup).values({ name: 'TestGroup' }).returning().get();
+      db.insert(schema.userGroupUser).values({
+        userGroupId: group.id,
+        userId: nonAdminId,
+        isAdmin: false,
+      }).run();
+      const result = checkDataAccess(ctx(db, nonAdminId), 'delete', { groupId: group.id });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('denies delete when readOnly is true for group member', () => {
+      const { db, nonAdminId } = setup();
+      const group = db.insert(schema.userGroup).values({ name: 'TestGroup' }).returning().get();
+      db.insert(schema.userGroupUser).values({
+        userGroupId: group.id,
+        userId: nonAdminId,
+        isAdmin: false,
+      }).run();
+      const result = checkDataAccess(ctx(db, nonAdminId), 'delete', { groupId: group.id, readOnly: true });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('Read-only');
+    });
+
+    it('allows non-admin save when no groupId is specified', () => {
+      const { db, nonAdminId } = setup();
+      const result = checkDataAccess(ctx(db, nonAdminId), 'save', {});
+      expect(result.allowed).toBe(true);
     });
   });
 
@@ -471,6 +632,37 @@ describe('security service', () => {
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('not a member');
     });
+
+    it('allows group member to delete media access', () => {
+      const { db, nonAdminId } = setup();
+      const group = db.insert(schema.userGroup).values({ name: 'TestGroup' }).returning().get();
+      db.insert(schema.userGroupUser).values({
+        userGroupId: group.id,
+        userId: nonAdminId,
+        isAdmin: false,
+      }).run();
+      const result = checkMediaAccess(ctx(db, nonAdminId), 'delete', { groupId: group.id });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('denies delete when readOnly is true for group member', () => {
+      const { db, nonAdminId } = setup();
+      const group = db.insert(schema.userGroup).values({ name: 'TestGroup' }).returning().get();
+      db.insert(schema.userGroupUser).values({
+        userGroupId: group.id,
+        userId: nonAdminId,
+        isAdmin: false,
+      }).run();
+      const result = checkMediaAccess(ctx(db, nonAdminId), 'delete', { groupId: group.id, readOnly: true });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('Read-only');
+    });
+
+    it('allows non-admin save when no groupId is specified', () => {
+      const { db, nonAdminId } = setup();
+      const result = checkMediaAccess(ctx(db, nonAdminId), 'save', {});
+      expect(result.allowed).toBe(true);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -516,6 +708,19 @@ describe('security service', () => {
       const result = checkUserRating(ctx(db, nonAdminId), 'list');
       expect(result.allowed).toBe(true);
     });
+
+    it('allows deleting own rating', () => {
+      const { db, nonAdminId } = setup();
+      const result = checkUserRating(ctx(db, nonAdminId), 'delete', { userId: nonAdminId });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('denies deleting another user\'s rating', () => {
+      const { db, adminId, nonAdminId } = setup();
+      const result = checkUserRating(ctx(db, nonAdminId), 'delete', { userId: adminId });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('own ratings');
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -523,7 +728,7 @@ describe('security service', () => {
   // -------------------------------------------------------------------------
 
   describe('checkSecurity', () => {
-    it('dispatches to the correct checker for known models', async () => {
+    it('dispatches to the correct sync checker for known models', async () => {
       const { db, nonAdminId } = setup();
       const result = await checkSecurity('component', ctx(db, nonAdminId), 'save');
       expect(result.allowed).toBe(false);
@@ -540,6 +745,64 @@ describe('security service', () => {
       const { db, nonAdminId } = setup();
       const result = await checkSecurity('unknownModel', ctx(db, nonAdminId), 'delete');
       expect(result.allowed).toBe(true);
+    });
+
+    it('dispatches user checker', async () => {
+      const { db, adminId, nonAdminId } = setup();
+      const result = await checkSecurity('user', ctx(db, nonAdminId), 'save', { id: adminId });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('UserAdmin');
+    });
+
+    it('dispatches userPreference checker', async () => {
+      const { db, adminId, nonAdminId } = setup();
+      const result = await checkSecurity('userPreference', ctx(db, nonAdminId), 'get', { userId: adminId });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('own preferences');
+    });
+
+    it('dispatches userRating checker', async () => {
+      const { db, adminId, nonAdminId } = setup();
+      const result = await checkSecurity('userRating', ctx(db, nonAdminId), 'save', { userId: adminId });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('own ratings');
+    });
+
+    it('dispatches userAccess checker', async () => {
+      const { db, nonAdminId } = setup();
+      const result = await checkSecurity('userAccess', ctx(db, nonAdminId), 'save', { userId: 1, componentId: 1 });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('UserAdmin');
+    });
+
+    it('dispatches datatype checker', async () => {
+      const { db, nonAdminId } = setup();
+      const result = await checkSecurity('datatype', ctx(db, nonAdminId), 'save');
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('SysAdmin');
+    });
+
+    it('dispatches dataAccess checker', async () => {
+      const { db, nonAdminId } = setup();
+      const group = db.insert(schema.userGroup).values({ name: 'Dispatch' }).returning().get();
+      const result = await checkSecurity('dataAccess', ctx(db, nonAdminId), 'save', { groupId: group.id });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('not a member');
+    });
+
+    it('dispatches mediaAccess checker', async () => {
+      const { db, nonAdminId } = setup();
+      const group = db.insert(schema.userGroup).values({ name: 'Dispatch' }).returning().get();
+      const result = await checkSecurity('mediaAccess', ctx(db, nonAdminId), 'save', { groupId: group.id });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('not a member');
+    });
+
+    it('dispatches setting checker', async () => {
+      const { db, nonAdminId } = setup();
+      const result = await checkSecurity('setting', ctx(db, nonAdminId), 'delete');
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('cannot be deleted');
     });
   });
 });
