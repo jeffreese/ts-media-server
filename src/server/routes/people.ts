@@ -52,6 +52,10 @@ const batchPeopleBodySchema = z.object({
   ids: z.array(z.number().int().positive()).min(1).max(200),
 });
 
+const mergeBodySchema = z.object({
+  sourcePersonId: z.number().int().positive(),
+});
+
 export interface PeoplePluginOptions {
   db: Database.Database;
   notificationService?: NotificationService;
@@ -157,6 +161,59 @@ export const peoplePlugin = fp<PeoplePluginOptions>(
       }));
 
       return reply.send({ items });
+    });
+
+    // -----------------------------------------------------------------------
+    // Merge: reassign all features from source person to target person
+    // -----------------------------------------------------------------------
+
+    app.post('/person/:personId/merge', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const params = personIdParams.safeParse(request.params);
+      if (!params.success) return reply.code(400).send({ error: 'Invalid person ID' });
+      const targetId = params.data.personId;
+
+      const body = mergeBodySchema.safeParse(request.body);
+      if (!body.success) return reply.code(400).send({ error: 'Request body must include a positive "sourcePersonId" field' });
+      const { sourcePersonId } = body.data;
+
+      if (targetId === sourcePersonId) return reply.code(400).send({ error: 'Cannot merge a person into themselves' });
+      if (!assertPerson(targetId)) return reply.code(404).send({ error: 'Target person not found' });
+      if (!assertPerson(sourcePersonId)) return reply.code(404).send({ error: 'Source person not found' });
+
+      const sourceFeatures = db
+        .select()
+        .from(schema.personFeature)
+        .where(eq(schema.personFeature.personId, sourcePersonId))
+        .all();
+
+      let reassigned = 0;
+      for (const feat of sourceFeatures) {
+        const alreadyLinked = db
+          .select({ id: schema.personFeature.id })
+          .from(schema.personFeature)
+          .where(and(
+            eq(schema.personFeature.personId, targetId),
+            eq(schema.personFeature.featureId, feat.featureId),
+          ))
+          .get();
+
+        if (alreadyLinked) {
+          db.delete(schema.personFeature).where(eq(schema.personFeature.id, feat.id)).run();
+        } else {
+          db.update(schema.personFeature)
+            .set({ personId: targetId })
+            .where(eq(schema.personFeature.id, feat.id))
+            .run();
+          reassigned++;
+        }
+      }
+
+      notifications?.notify('update', 'person', { id: targetId });
+      notifications?.notify('update', 'person', { id: sourcePersonId });
+
+      return reply.send({ success: true, reassigned, sourcePersonId, targetPersonId: targetId });
     });
 
     // -----------------------------------------------------------------------

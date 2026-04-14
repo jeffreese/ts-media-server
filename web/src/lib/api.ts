@@ -316,6 +316,41 @@ export const api = {
     })
   },
 
+  createPerson(data?: { gender?: string; birthday?: string }) {
+    return request<Person>('/person', {
+      method: 'POST',
+      body: JSON.stringify(data ?? {}),
+    })
+  },
+
+  addPersonName(personId: number, name: string, preferred = true) {
+    return request<PersonName>(`/person/${personId}/names`, {
+      method: 'POST',
+      body: JSON.stringify({ name, preferred }),
+    })
+  },
+
+  linkFeatureToPerson(personId: number, featureId: number) {
+    return request<PersonFeature & { alreadyLinked?: boolean }>(`/person/${personId}/features`, {
+      method: 'POST',
+      body: JSON.stringify({ featureId }),
+    })
+  },
+
+  unlinkFeatureFromPerson(personId: number, linkId: number) {
+    return request<{ success: boolean }>(`/person/${personId}/features`, {
+      method: 'DELETE',
+      body: JSON.stringify({ id: linkId }),
+    })
+  },
+
+  mergePerson(targetPersonId: number, sourcePersonId: number) {
+    return request<{ success: boolean; reassigned: number }>(`/person/${targetPersonId}/merge`, {
+      method: 'POST',
+      body: JSON.stringify({ sourcePersonId }),
+    })
+  },
+
   // -- Features (faces) for a media item --
   mediaItemFeatures(mediaItemId: number, options?: PaginationOptions) {
     const query = buildQuery({ offset: options?.offset, limit: options?.limit })
@@ -323,9 +358,11 @@ export const api = {
   },
 
   featurePerson(featureId: number) {
-    return request<{ person: Person; names: PersonName[]; link: unknown }>(
-      `/feature/${featureId}/person`,
-    )
+    return request<{
+      person: Person
+      names: PersonName[]
+      link: { personFeatureId: number; personId: number; featureId: number }
+    }>(`/feature/${featureId}/person`)
   },
 
   // -- Face matching --

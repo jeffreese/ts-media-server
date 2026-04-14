@@ -671,11 +671,11 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 - [x] Loading states for all paginated transitions
 
 ### 4. Face Matching & Person Assignment
-- [ ] "Similar faces" panel on media item detail: show faces detected in the image with match links
-- [ ] Assign unlinked face to existing person (`POST /person/:id/features`)
-- [ ] Create new person from a face (create person → add name → link feature)
-- [ ] Unlink face from person (`DELETE /person/:id/features`)
-- [ ] Person merge workflow (reassign features from one person to another)
+- [x] "Similar faces" panel on media item detail: show faces detected in the image with match links
+- [x] Assign unlinked face to existing person (`POST /person/:id/features`)
+- [x] Create new person from a face (create person → add name → link feature)
+- [x] Unlink face from person (`DELETE /person/:id/features`)
+- [x] Person merge workflow (reassign features from one person to another)
 
 ### 5. Places & Map View
 - [ ] Places listing page (`/places`) — browse all places with names
