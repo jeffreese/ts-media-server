@@ -1,8 +1,9 @@
-import { Images, Settings, Users } from 'lucide-react'
+import { Images, Settings, Tag, Users } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 const NAV_ITEMS = [
   { to: '/', icon: Images, label: 'Browse' },
+  { to: '/keywords', icon: Tag, label: 'Keywords' },
   { to: '/people', icon: Users, label: 'People' },
 ] as const
 

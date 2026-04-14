@@ -179,6 +179,42 @@ export interface PaginatedResponse<T> {
 }
 
 // ---------------------------------------------------------------------------
+// Search
+// ---------------------------------------------------------------------------
+
+export interface SearchFilters {
+  q?: string
+  keyword?: string
+  type?: 'image' | 'video'
+  dateStart?: string
+  dateEnd?: string
+}
+
+export interface SearchResult {
+  id: number
+  name: string | null
+  description: string | null
+  type: string | null
+  startDate: string | null
+  endDate: string | null
+  info: unknown
+}
+
+export interface KeywordWithCount {
+  id: number
+  word: string
+  count: number
+}
+
+export interface KeywordItemsResponse {
+  keyword: { id: number; word: string }
+  items: SearchResult[]
+  offset: number
+  limit: number
+  total: number
+}
+
+// ---------------------------------------------------------------------------
 // Pagination options
 // ---------------------------------------------------------------------------
 
@@ -288,6 +324,31 @@ export const api = {
   mediaItemMatches(mediaItemId: number, options?: PaginationOptions) {
     const query = buildQuery({ offset: options?.offset, limit: options?.limit })
     return request<PaginatedResponse<MediaMatch>>(`/mediaItem/${mediaItemId}/matches${query}`)
+  },
+
+  // -- Search --
+  search(filters: SearchFilters & PaginationOptions) {
+    const query = buildQuery({
+      q: filters.q,
+      keyword: filters.keyword,
+      type: filters.type,
+      dateStart: filters.dateStart,
+      dateEnd: filters.dateEnd,
+      offset: filters.offset,
+      limit: filters.limit,
+    })
+    return request<PaginatedResponse<SearchResult>>(`/search${query}`)
+  },
+
+  // -- Keywords --
+  keywords(options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<KeywordWithCount>>(`/keywords${query}`)
+  },
+
+  keywordItems(keywordId: number, options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<KeywordItemsResponse>(`/keywords/${keywordId}/items${query}`)
   },
 
   // -- Asset URLs --
