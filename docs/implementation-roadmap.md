@@ -718,13 +718,13 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 - [x] Handle 401 responses: auto-redirect to login
 
 ### 10. User Management (after auth)
-- [ ] Users page (`/admin/users`) — list users with names and last access
-- [ ] Create user form (name, gender, birthday, status)
-- [ ] Edit user profile
-- [ ] Delete user (with admin protection)
-- [ ] User groups page: list groups, manage members
-- [ ] User preferences UI (per-user key/value settings)
-- [ ] User activity view (request counts by hour)
+- [x] Users page (`/admin/users`) — list users with names and last access
+- [x] Create user form (name, gender, birthday, status)
+- [x] Edit user profile
+- [x] Delete user (with admin protection)
+- [x] User groups page: list groups, manage members
+- [x] User preferences UI (per-user key/value settings)
+- [x] User activity view (request counts by hour)
 
 ---
 

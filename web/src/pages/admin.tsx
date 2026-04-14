@@ -19,16 +19,13 @@ import {
   Video,
 } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FetchError } from '~/components/fetch-error'
 import { SectionCard } from '~/components/primitives'
 import { useAutoRefresh } from '~/hooks/use-auto-refresh'
 import { useFetch } from '~/hooks/use-fetch'
 import { useNotifications } from '~/hooks/use-notifications'
-import {
-  type DirEntry,
-  type Setting,
-  api,
-} from '~/lib/api'
+import { type DirEntry, type Setting, api } from '~/lib/api'
 
 type Tab = 'overview' | 'settings' | 'files' | 'indexing'
 
@@ -41,10 +38,21 @@ const TABS: { id: Tab; label: string; icon: typeof Database }[] = [
 
 export function AdminPage() {
   const [tab, setTab] = useState<Tab>('overview')
+  const navigate = useNavigate()
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <h1 className="text-xl font-semibold">Admin</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Admin</h1>
+        <button
+          type="button"
+          onClick={() => navigate('/admin/users')}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm transition-colors hover:bg-surface-raised"
+        >
+          <Users className="h-3.5 w-3.5" />
+          Manage Users
+        </button>
+      </div>
 
       <div className="flex gap-1 rounded-xl border border-border bg-surface p-1">
         {TABS.map(({ id, label, icon: Icon }) => (
@@ -85,7 +93,8 @@ function OverviewTab() {
     refetchPaths()
   })
 
-  if (error) return <FetchError message={`Failed to load stats: ${error.message}`} onRetry={refetch} />
+  if (error)
+    return <FetchError message={`Failed to load stats: ${error.message}`} onRetry={refetch} />
 
   if (isLoading || !stats) {
     return (
@@ -164,7 +173,8 @@ function SettingsTab() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  if (error) return <FetchError message={`Failed to load settings: ${error.message}`} onRetry={refetch} />
+  if (error)
+    return <FetchError message={`Failed to load settings: ${error.message}`} onRetry={refetch} />
 
   if (isLoading || !data) {
     return (
@@ -250,7 +260,11 @@ function SettingsTab() {
                       disabled={saving}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
                     >
-                      {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                      {saving ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Save className="h-3 w-3" />
+                      )}
                       Save
                     </button>
                     <button
@@ -281,10 +295,12 @@ function SettingsTab() {
 
 function FileBrowserTab() {
   const [currentPath, setCurrentPath] = useState('/')
-  const { data: entries, error, isLoading, refetch } = useFetch(
-    () => api.adminDir(currentPath),
-    [currentPath],
-  )
+  const {
+    data: entries,
+    error,
+    isLoading,
+    refetch,
+  } = useFetch(() => api.adminDir(currentPath), [currentPath])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<string | null>(null)
@@ -368,15 +384,17 @@ function FileBrowserTab() {
             disabled={uploading}
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm transition-colors hover:bg-surface-raised disabled:opacity-50"
           >
-            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            {uploading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Upload className="h-3.5 w-3.5" />
+            )}
             Upload
           </button>
         </div>
       </div>
 
-      {uploadResult && (
-        <p className="text-xs text-foreground-muted">{uploadResult}</p>
-      )}
+      {uploadResult && <p className="text-xs text-foreground-muted">{uploadResult}</p>}
 
       {error && (
         <FetchError message={`Failed to browse directory: ${error.message}`} onRetry={refetch} />
@@ -406,11 +424,7 @@ function FileBrowserTab() {
             <p className="px-4 py-6 text-center text-sm text-foreground-muted">Empty directory</p>
           )}
           {entries.map((entry) => (
-            <DirEntryRow
-              key={entry.path}
-              entry={entry}
-              onNavigate={navigateTo}
-            />
+            <DirEntryRow key={entry.path} entry={entry} onNavigate={navigateTo} />
           ))}
         </div>
       )}
@@ -552,7 +566,10 @@ function IndexingTab() {
       <SectionCard title="Index New Directory">
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground-secondary" htmlFor="admin-index-dir">
+            <label
+              className="text-sm font-medium text-foreground-secondary"
+              htmlFor="admin-index-dir"
+            >
               Directory Path
             </label>
             <input
@@ -565,7 +582,10 @@ function IndexingTab() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground-secondary" htmlFor="admin-index-conc">
+            <label
+              className="text-sm font-medium text-foreground-secondary"
+              htmlFor="admin-index-conc"
+            >
               Concurrency
             </label>
             <input

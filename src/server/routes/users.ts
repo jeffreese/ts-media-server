@@ -524,6 +524,43 @@ export const userRoutesPlugin = fp<UserRoutesPluginOptions>(
     });
 
     // -----------------------------------------------------------------
+    // GET /users/:id/activity
+    // -----------------------------------------------------------------
+
+    app.get('/users/:id/activity', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const userId = request.userId;
+      if (userId === undefined) {
+        return reply.code(401).send({ error: 'Unauthorized' });
+      }
+
+      const paramsParsed = idParamsSchema.safeParse(request.params);
+      if (!paramsParsed.success) {
+        return reply.code(400).send({ error: 'Invalid id parameter' });
+      }
+      const targetUserId = paramsParsed.data.id;
+
+      if (targetUserId !== userId && !requireUserAdmin(db, userId)) {
+        return reply.code(403).send({ error: 'UserAdmin access required to view other users\' activity' });
+      }
+
+      const user = db.select().from(schema.user).where(eq(schema.user.id, targetUserId)).get();
+      if (!user) {
+        return reply.code(404).send({ error: 'User not found' });
+      }
+
+      const rows = db
+        .select()
+        .from(schema.userActivity)
+        .where(eq(schema.userActivity.userId, targetUserId))
+        .orderBy(schema.userActivity.hour, schema.userActivity.minute)
+        .all();
+
+      return reply.send(rows);
+    });
+
+    // -----------------------------------------------------------------
     // POST /userGroup/:id/members
     // -----------------------------------------------------------------
 

@@ -296,6 +296,45 @@ export interface MapMediaItem {
 }
 
 // ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
+
+export interface UserDetail {
+  id: number
+  personId: number | null
+  status: string | null
+  name: string | undefined
+  lastAccess: string | null
+}
+
+export interface UserPreference {
+  id: number
+  userId: number
+  key: string
+  value: string | null
+}
+
+export interface UserActivityEntry {
+  id: number
+  userId: number
+  hour: number
+  minute: number
+  count: number
+}
+
+export interface UserGroup {
+  id: number
+  name: string
+  description: string | null
+}
+
+export interface GroupMember {
+  userGroupId: number
+  userId: number
+  isAdmin: boolean
+}
+
+// ---------------------------------------------------------------------------
 // Admin
 // ---------------------------------------------------------------------------
 
@@ -612,6 +651,92 @@ export const api = {
 
   faceUrl(id: number) {
     return `${API_BASE}/face/${id}`
+  },
+
+  // -- Users (admin) --
+  users(options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<UserDetail>>(`/users${query}`)
+  },
+
+  user(id: number) {
+    return request<UserDetail>(`/users/${id}`)
+  },
+
+  createUser(data: { name: string; gender?: string; birthday?: string; status?: string }) {
+    return request<UserDetail>('/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  updateUser(
+    id: number,
+    data: { name?: string; gender?: string; birthday?: string; status?: string },
+  ) {
+    return request<UserDetail>(`/users/${id}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  deleteUser(id: number) {
+    return request<{ success: boolean }>(`/users/${id}`, { method: 'DELETE' })
+  },
+
+  userPreferences(userId: number) {
+    return request<UserPreference[]>(`/users/${userId}/preferences`)
+  },
+
+  upsertUserPreference(userId: number, key: string, value: string) {
+    return request<UserPreference>(`/users/${userId}/preferences`, {
+      method: 'POST',
+      body: JSON.stringify({ key, value }),
+    })
+  },
+
+  userActivity(userId: number) {
+    return request<UserActivityEntry[]>(`/users/${userId}/activity`)
+  },
+
+  userGroups(options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<UserGroup>>(`/userGroup${query}`)
+  },
+
+  createUserGroup(data: { name: string; description?: string }) {
+    return request<UserGroup>('/userGroup', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  updateUserGroup(id: number, data: { name?: string; description?: string }) {
+    return request<UserGroup>('/userGroup', {
+      method: 'POST',
+      body: JSON.stringify({ id, ...data }),
+    })
+  },
+
+  deleteUserGroup(id: number) {
+    return request<{ success: boolean }>(`/userGroup/${id}`, { method: 'DELETE' })
+  },
+
+  userGroupMembers(groupId: number) {
+    return request<GroupMember[]>(`/userGroup/${groupId}/members`)
+  },
+
+  addGroupMember(groupId: number, userId: number, isAdmin = false) {
+    return request<GroupMember>(`/userGroup/${groupId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, isAdmin }),
+    })
+  },
+
+  removeGroupMember(groupId: number, userId: number) {
+    return request<{ success: boolean }>(`/userGroup/${groupId}/members/${userId}`, {
+      method: 'DELETE',
+    })
   },
 
   // -- Admin --
