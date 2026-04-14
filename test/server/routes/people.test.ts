@@ -791,4 +791,145 @@ describe('people routes', () => {
       expect(res.statusCode).toBe(404);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // POST /person/:personId/merge — merge source person into target
+  // ---------------------------------------------------------------------------
+
+  describe('POST /person/:personId/merge', () => {
+    it('reassigns all features from source to target', async () => {
+      const client = setupDb();
+      const targetId = createPerson(client);
+      const sourceId = createPerson(client);
+      const featureId = createFeature(client);
+      await setupApp(client);
+
+      await app.server.inject({
+        method: 'POST',
+        url: `/person/${sourceId}/features`,
+        payload: { featureId },
+      });
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: `/person/${targetId}/merge`,
+        payload: { sourcePersonId: sourceId },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.success).toBe(true);
+      expect(body.reassigned).toBe(1);
+
+      const targetFeatures = await app.server.inject({
+        method: 'GET',
+        url: `/person/${targetId}/features`,
+      });
+      expect(targetFeatures.json().items).toHaveLength(1);
+      expect(targetFeatures.json().items[0].featureId).toBe(featureId);
+
+      const sourceFeatures = await app.server.inject({
+        method: 'GET',
+        url: `/person/${sourceId}/features`,
+      });
+      expect(sourceFeatures.json().items).toHaveLength(0);
+    });
+
+    it('skips duplicate features already linked to target', async () => {
+      const client = setupDb();
+      const targetId = createPerson(client);
+      const sourceId = createPerson(client);
+      const featureId = createFeature(client);
+      await setupApp(client);
+
+      await app.server.inject({
+        method: 'POST',
+        url: `/person/${targetId}/features`,
+        payload: { featureId },
+      });
+      await app.server.inject({
+        method: 'POST',
+        url: `/person/${sourceId}/features`,
+        payload: { featureId },
+      });
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: `/person/${targetId}/merge`,
+        payload: { sourcePersonId: sourceId },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().reassigned).toBe(0);
+
+      const targetFeatures = await app.server.inject({
+        method: 'GET',
+        url: `/person/${targetId}/features`,
+      });
+      expect(targetFeatures.json().items).toHaveLength(1);
+    });
+
+    it('returns 400 when merging a person into themselves', async () => {
+      const client = setupDb();
+      const personId = createPerson(client);
+      await setupApp(client);
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: `/person/${personId}/merge`,
+        payload: { sourcePersonId: personId },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('returns 404 when source person does not exist', async () => {
+      const client = setupDb();
+      const targetId = createPerson(client);
+      await setupApp(client);
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: `/person/${targetId}/merge`,
+        payload: { sourcePersonId: 9999 },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('returns 404 when target person does not exist', async () => {
+      const client = setupDb();
+      const sourceId = createPerson(client);
+      await setupApp(client);
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: '/person/9999/merge',
+        payload: { sourcePersonId: sourceId },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('emits update notifications for both source and target', async () => {
+      const client = setupDb();
+      const targetId = createPerson(client);
+      const sourceId = createPerson(client);
+      await setupApp(client);
+
+      const events: unknown[] = [];
+      notifications.addListener((e) => events.push(e));
+
+      await app.server.inject({
+        method: 'POST',
+        url: `/person/${targetId}/merge`,
+        payload: { sourcePersonId: sourceId },
+      });
+
+      const personEvents = (events as Array<{ action: string; source: string }>).filter(
+        (e) => e.action === 'update' && e.source === 'person',
+      );
+      expect(personEvents).toHaveLength(2);
+    });
+  });
 });
