@@ -346,6 +346,9 @@ export class FileIndex {
     if (metadata.width != null && metadata.height != null) {
       info.dimensions = { width: metadata.width, height: metadata.height };
     }
+    if (metadata.gps) {
+      info.gps = { latitude: metadata.gps.latitude, longitude: metadata.gps.longitude };
+    }
 
     const type = isVideoExtension(ext) ? 'video' : 'image';
     const startDate = metadata.date?.date;

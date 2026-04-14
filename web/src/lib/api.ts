@@ -222,6 +222,60 @@ export interface KeywordItemsResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Places
+// ---------------------------------------------------------------------------
+
+export interface Place {
+  id: number
+  info: unknown
+}
+
+export interface PlaceName {
+  id: number
+  placeId: number
+  name: string
+  preferred: boolean
+  info: unknown
+}
+
+export interface PlaceMediaItem {
+  id: number
+  mediaId: number
+  placeId: number
+  info: unknown
+  mediaName: string | null
+  mediaType: string | null
+}
+
+export interface PlaceBatchItem {
+  placeId: number
+  names: PlaceName[]
+  mediaCount: number
+}
+
+export interface Address {
+  id: number
+  street: string | null
+  city: string | null
+  state: string | null
+  postalCode: string | null
+  searchTerm: string | null
+  placeId: number | null
+}
+
+// ---------------------------------------------------------------------------
+// Map
+// ---------------------------------------------------------------------------
+
+export interface MapMediaItem {
+  id: number
+  name: string | null
+  type: string | null
+  latitude: number
+  longitude: number
+}
+
+// ---------------------------------------------------------------------------
 // Pagination options
 // ---------------------------------------------------------------------------
 
@@ -400,6 +454,91 @@ export const api = {
   keywordItems(keywordId: number, options?: PaginationOptions) {
     const query = buildQuery({ offset: options?.offset, limit: options?.limit })
     return request<KeywordItemsResponse>(`/keywords/${keywordId}/items${query}`)
+  },
+
+  // -- Places --
+  places(options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<Place>>(`/place${query}`)
+  },
+
+  placesBatch(ids: number[]) {
+    return request<{ items: PlaceBatchItem[] }>('/places/batch', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    })
+  },
+
+  placeNames(placeId: number) {
+    return request<PaginatedResponse<PlaceName>>(`/place/${placeId}/names`)
+  },
+
+  addPlaceName(placeId: number, name: string, preferred = false) {
+    return request<PlaceName>(`/place/${placeId}/names`, {
+      method: 'POST',
+      body: JSON.stringify({ name, preferred }),
+    })
+  },
+
+  removePlaceName(placeId: number, nameId: number) {
+    return request<{ success: boolean }>(`/place/${placeId}/names`, {
+      method: 'DELETE',
+      body: JSON.stringify({ id: nameId }),
+    })
+  },
+
+  placeMedia(placeId: number, options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<PlaceMediaItem>>(`/place/${placeId}/media${query}`)
+  },
+
+  linkMediaToPlace(placeId: number, mediaId: number) {
+    return request<PlaceMediaItem & { alreadyLinked?: boolean }>(`/place/${placeId}/media`, {
+      method: 'POST',
+      body: JSON.stringify({ mediaId }),
+    })
+  },
+
+  unlinkMediaFromPlace(placeId: number, linkId: number) {
+    return request<{ success: boolean }>(`/place/${placeId}/media`, {
+      method: 'DELETE',
+      body: JSON.stringify({ id: linkId }),
+    })
+  },
+
+  placeAddresses(placeId: number, options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<Address>>(`/place/${placeId}/addresses${query}`)
+  },
+
+  addPlaceAddress(
+    placeId: number,
+    address: { street?: string; city?: string; state?: string; postalCode?: string },
+  ) {
+    return request<Address>(`/place/${placeId}/addresses`, {
+      method: 'POST',
+      body: JSON.stringify(address),
+    })
+  },
+
+  removePlaceAddress(placeId: number, addressId: number) {
+    return request<{ success: boolean }>(`/place/${placeId}/addresses`, {
+      method: 'DELETE',
+      body: JSON.stringify({ id: addressId }),
+    })
+  },
+
+  createPlace() {
+    return request<Place>('/place', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
+  },
+
+  // -- Map --
+  mapMedia(options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit ?? 5000 })
+    return request<PaginatedResponse<MapMediaItem>>(`/map/media${query}`)
   },
 
   // -- Asset URLs --

@@ -1,10 +1,12 @@
-import { Images, Settings, Tag, Users } from 'lucide-react'
+import { Images, Map as MapIcon, MapPin, Settings, Tag, Users } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 const NAV_ITEMS = [
   { to: '/', icon: Images, label: 'Browse' },
   { to: '/keywords', icon: Tag, label: 'Keywords' },
   { to: '/people', icon: Users, label: 'People' },
+  { to: '/places', icon: MapPin, label: 'Places' },
+  { to: '/map', icon: MapIcon, label: 'Map' },
 ] as const
 
 export function Sidebar() {
