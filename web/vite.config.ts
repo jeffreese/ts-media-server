@@ -21,6 +21,7 @@ export default defineConfig({
       '/matchingFaces': 'http://localhost:8080',
       '/thumbnails': 'http://localhost:8080',
       '/person': 'http://localhost:8080',
+      '/people': 'http://localhost:8080',
       '/feature': 'http://localhost:8080',
       '/mediaMatch': 'http://localhost:8080',
       '/keyword': 'http://localhost:8080',

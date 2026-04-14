@@ -1,13 +1,49 @@
 import { Users } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PersonCard } from '~/components/person-card'
+import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { Skeleton } from '~/components/primitives'
-import { useFetch } from '~/hooks/use-fetch'
-import { api } from '~/lib/api'
+import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
+import { type Person, type PersonBatchItem, api } from '~/lib/api'
+
+const PAGE_SIZE = 60
 
 export function PeoplePage() {
   const navigate = useNavigate()
-  const { data, isLoading, error } = useFetch(() => api.people({ limit: 200 }), [])
+
+  const fetcher = useCallback(
+    (offset: number, limit: number) => api.people({ offset, limit }),
+    [],
+  )
+
+  const { items, total, isLoading, isLoadingMore, error, hasMore, sentinelRef } =
+    useInfiniteScroll<Person>({ fetcher, pageSize: PAGE_SIZE })
+
+  const [batchData, setBatchData] = useState<Map<number, PersonBatchItem>>(new Map())
+  const pendingIdsRef = useRef<Set<number>>(new Set())
+
+  useEffect(() => {
+    const newIds = items
+      .map((p) => p.id)
+      .filter((id) => !batchData.has(id) && !pendingIdsRef.current.has(id))
+
+    if (newIds.length === 0) return
+
+    for (const id of newIds) pendingIdsRef.current.add(id)
+
+    api.peopleBatch(newIds).then((res) => {
+      setBatchData((prev) => {
+        const next = new Map(prev)
+        for (const item of res.items) {
+          next.set(item.personId, item)
+        }
+        return next
+      })
+      for (const id of newIds) pendingIdsRef.current.delete(id)
+    }).catch(() => {
+      for (const id of newIds) pendingIdsRef.current.delete(id)
+    })
+  }, [items, batchData])
 
   if (error) {
     return (
@@ -17,7 +53,7 @@ export function PeoplePage() {
     )
   }
 
-  if (isLoading || !data) {
+  if (isLoading) {
     return (
       <div>
         <h1 className="mb-6 text-xl font-semibold">People</h1>
@@ -33,7 +69,7 @@ export function PeoplePage() {
     )
   }
 
-  if (data.items.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-3">
         <Users className="h-12 w-12 text-foreground-faint" />
@@ -45,17 +81,72 @@ export function PeoplePage() {
   return (
     <div>
       <h1 className="mb-6 text-xl font-semibold">
-        People <span className="text-foreground-muted font-normal">({data.total})</span>
+        People <span className="text-foreground-muted font-normal">({total})</span>
       </h1>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-        {data.items.map((person) => (
-          <PersonCard
-            key={person.id}
-            person={person}
-            onClick={() => navigate(`/people/${person.id}`)}
-          />
-        ))}
+        {items.map((person) => {
+          const batch = batchData.get(person.id)
+          return (
+            <BatchPersonCard
+              key={person.id}
+              person={person}
+              batch={batch}
+              onClick={() => navigate(`/people/${person.id}`)}
+            />
+          )
+        })}
       </div>
+      <LoadMoreSentinel
+        sentinelRef={sentinelRef}
+        isLoadingMore={isLoadingMore}
+        hasMore={hasMore}
+      />
     </div>
+  )
+}
+
+function BatchPersonCard({
+  person,
+  batch,
+  onClick,
+}: {
+  person: Person
+  batch: PersonBatchItem | undefined
+  onClick: () => void
+}) {
+  const displayName = batch
+    ? (batch.names.find((n) => n.preferred)?.name ?? batch.names[0]?.name ?? `Person ${person.id}`)
+    : `Person ${person.id}`
+
+  const featureId = batch?.firstFeature?.featureId
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-col items-center gap-2 rounded-xl p-3 transition-colors hover:bg-surface-raised"
+    >
+      <div className="aspect-square w-full max-w-[120px] overflow-hidden rounded-full bg-control">
+        {featureId ? (
+          <img
+            src={api.faceUrl(featureId)}
+            alt={displayName}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-foreground-faint">
+            {displayName.charAt(0).toUpperCase()}
+          </div>
+        )}
+      </div>
+      <span className="text-sm font-medium text-foreground truncate w-full text-center">
+        {displayName}
+      </span>
+      {batch && batch.photoCount > 0 && (
+        <span className="text-xs text-foreground-muted">
+          {batch.photoCount} photo{batch.photoCount !== 1 ? 's' : ''}
+        </span>
+      )}
+    </button>
   )
 }

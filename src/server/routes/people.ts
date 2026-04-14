@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type Database from 'better-sqlite3';
 import { z } from 'zod/v4';
@@ -46,6 +46,10 @@ const personFeatureBodySchema = z.object({
 
 const idBodySchema = z.object({
   id: z.coerce.number().int().positive(),
+});
+
+const batchPeopleBodySchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1).max(200),
 });
 
 export interface PeoplePluginOptions {
@@ -99,6 +103,61 @@ export const peoplePlugin = fp<PeoplePluginOptions>(
         .where(eq(schema.person.id, personId))
         .get();
     }
+
+    // -----------------------------------------------------------------------
+    // Batch: names + first feature for multiple people in one request
+    // -----------------------------------------------------------------------
+
+    app.post('/people/batch', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const body = batchPeopleBodySchema.safeParse(request.body);
+      if (!body.success) return reply.code(400).send({ error: 'Request body must include an "ids" array of person IDs' });
+      const { ids } = body.data;
+
+      const names = db
+        .select()
+        .from(schema.personName)
+        .where(inArray(schema.personName.personId, ids))
+        .all();
+
+      const features = db
+        .select({
+          id: schema.personFeature.id,
+          featureId: schema.personFeature.featureId,
+          personId: schema.personFeature.personId,
+          itemId: schema.feature.itemId,
+        })
+        .from(schema.personFeature)
+        .innerJoin(schema.feature, eq(schema.feature.id, schema.personFeature.featureId))
+        .where(inArray(schema.personFeature.personId, ids))
+        .all();
+
+      const namesByPerson = new Map<number, typeof names>();
+      for (const name of names) {
+        const list = namesByPerson.get(name.personId) ?? [];
+        list.push(name);
+        namesByPerson.set(name.personId, list);
+      }
+
+      const firstFeatureByPerson = new Map<number, (typeof features)[number]>();
+      const featureCountByPerson = new Map<number, number>();
+      for (const feat of features) {
+        if (!firstFeatureByPerson.has(feat.personId)) {
+          firstFeatureByPerson.set(feat.personId, feat);
+        }
+        featureCountByPerson.set(feat.personId, (featureCountByPerson.get(feat.personId) ?? 0) + 1);
+      }
+
+      const items = ids.map((id) => ({
+        personId: id,
+        names: namesByPerson.get(id) ?? [],
+        firstFeature: firstFeatureByPerson.get(id) ?? null,
+        photoCount: featureCountByPerson.get(id) ?? 0,
+      }));
+
+      return reply.send({ items });
+    });
 
     // -----------------------------------------------------------------------
     // Names

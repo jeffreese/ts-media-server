@@ -1,16 +1,50 @@
 import { Folder } from 'lucide-react'
+import { useCallback, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { MediaGrid } from '~/components/media-grid'
 import { Skeleton } from '~/components/primitives'
-import { useFetch } from '~/hooks/use-fetch'
-import { type FolderEntry, api } from '~/lib/api'
+import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
+import { type FolderEntry, type IndexResponse, api } from '~/lib/api'
+
+const PAGE_SIZE = 60
 
 export function BrowsePage() {
   const params = useParams()
   const navigate = useNavigate()
   const path = params['*'] ?? ''
 
-  const { data, isLoading, error } = useFetch(() => api.index(path, { limit: 200 }), [path])
+  const fetcher = useCallback(
+    (offset: number, limit: number) =>
+      api.index(path, { offset, limit }) as Promise<IndexResponse & { items: IndexResponse['items']; total: number }>,
+    [path],
+  )
+
+  const { items: allEntries, total, isLoading, isLoadingMore, error, hasMore, sentinelRef } =
+    useInfiniteScroll({
+      fetcher: useCallback(
+        async (offset: number, limit: number) => {
+          const res = await fetcher(offset, limit)
+          const combined = [
+            ...res.folders.map((f) => ({ kind: 'folder' as const, ...f })),
+            ...res.items.map((i) => ({ kind: 'item' as const, ...i })),
+          ]
+          return { items: combined, offset: res.offset, limit: res.limit, total: res.total }
+        },
+        [fetcher],
+      ),
+      pageSize: PAGE_SIZE,
+      deps: [path],
+    })
+
+  const folders = useMemo(
+    () => allEntries.filter((e): e is Extract<typeof e, { kind: 'folder' }> => e.kind === 'folder'),
+    [allEntries],
+  )
+  const items = useMemo(
+    () => allEntries.filter((e): e is Extract<typeof e, { kind: 'item' }> => e.kind === 'item'),
+    [allEntries],
+  )
 
   if (error) {
     return (
@@ -20,21 +54,21 @@ export function BrowsePage() {
     )
   }
 
-  if (isLoading || !data) {
+  if (isLoading) {
     return <BrowseSkeleton />
   }
 
-  const hasContent = data.folders.length > 0 || data.items.length > 0
+  const hasContent = folders.length > 0 || items.length > 0
 
   return (
     <div className="space-y-6">
-      {data.folders.length > 0 && (
+      {folders.length > 0 && (
         <section>
           <h2 className="mb-3 text-sm font-medium text-foreground-muted uppercase tracking-wider">
             Folders
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {data.folders.map((folder) => (
+            {folders.map((folder) => (
               <FolderCard
                 key={folder.id}
                 folder={folder}
@@ -48,12 +82,18 @@ export function BrowsePage() {
         </section>
       )}
 
-      {data.items.length > 0 && (
+      {items.length > 0 && (
         <section>
           <h2 className="mb-3 text-sm font-medium text-foreground-muted uppercase tracking-wider">
-            {data.items.length} item{data.items.length !== 1 ? 's' : ''}
+            {total - folders.length} item{total - folders.length !== 1 ? 's' : ''}
           </h2>
-          <MediaGrid items={data.items} />
+          <MediaGrid items={items} />
+          <LoadMoreSentinel
+            sentinelRef={sentinelRef}
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            variant="grid"
+          />
         </section>
       )}
 

@@ -1,10 +1,13 @@
 import { ArrowLeft, Tag } from 'lucide-react'
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { MediaGrid } from '~/components/media-grid'
 import { Skeleton } from '~/components/primitives'
-import { useFetch } from '~/hooks/use-fetch'
-import { type MediaItemEntry, api } from '~/lib/api'
+import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
+import { type KeywordItemsResponse, type MediaItemEntry, api } from '~/lib/api'
+
+const PAGE_SIZE = 60
 
 export function KeywordDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -22,18 +25,29 @@ export function KeywordDetailPage() {
 }
 
 function KeywordDetailContent({ id }: { id: number }) {
-  const { data, isLoading, error } = useFetch(
-    () => api.keywordItems(id, { limit: 200 }),
+  const [keywordWord, setKeywordWord] = useState<string | undefined>(undefined)
+
+  const fetcher = useCallback(
+    async (offset: number, limit: number) => {
+      const res: KeywordItemsResponse = await api.keywordItems(id, { offset, limit })
+      if (offset === 0) {
+        setKeywordWord(res.keyword.word)
+      }
+      return { items: res.items, offset: res.offset, limit: res.limit, total: res.total }
+    },
     [id],
   )
 
+  const { items: rawItems, total, isLoading, isLoadingMore, error, hasMore, sentinelRef } =
+    useInfiniteScroll({
+      fetcher,
+      pageSize: PAGE_SIZE,
+      deps: [id],
+    })
+
   const items: MediaItemEntry[] = useMemo(
-    () =>
-      data?.items.map((r) => ({
-        ...r,
-        folderEntryIndex: null,
-      })) ?? [],
-    [data],
+    () => rawItems.map((r) => ({ ...r, folderEntryIndex: null })),
+    [rawItems],
   )
 
   if (error) {
@@ -44,7 +58,7 @@ function KeywordDetailContent({ id }: { id: number }) {
     )
   }
 
-  if (isLoading || !data) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-5 w-20" />
@@ -70,9 +84,9 @@ function KeywordDetailContent({ id }: { id: number }) {
 
       <div className="flex items-center gap-3">
         <Tag className="h-5 w-5 text-accent" />
-        <h1 className="text-xl font-semibold">{data.keyword.word}</h1>
+        <h1 className="text-xl font-semibold">{keywordWord}</h1>
         <span className="text-sm text-foreground-muted">
-          {data.total} item{data.total !== 1 ? 's' : ''}
+          {total} item{total !== 1 ? 's' : ''}
         </span>
       </div>
 
@@ -81,7 +95,15 @@ function KeywordDetailContent({ id }: { id: number }) {
           <p className="text-foreground-muted">No media items tagged with this keyword</p>
         </div>
       ) : (
-        <MediaGrid items={items} />
+        <>
+          <MediaGrid items={items} />
+          <LoadMoreSentinel
+            sentinelRef={sentinelRef}
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            variant="grid"
+          />
+        </>
       )}
     </div>
   )

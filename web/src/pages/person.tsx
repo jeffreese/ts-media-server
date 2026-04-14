@@ -1,8 +1,13 @@
 import { ArrowLeft } from 'lucide-react'
+import { useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { LoadMoreSentinel } from '~/components/load-more-sentinel'
 import { IconButton, Skeleton } from '~/components/primitives'
 import { useFetch } from '~/hooks/use-fetch'
+import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
 import { api } from '~/lib/api'
+
+const PAGE_SIZE = 60
 
 export function PersonPage() {
   const { id } = useParams<{ id: string }>()
@@ -32,10 +37,23 @@ function PersonContent({
     [personId],
   )
 
-  const { data: features, isLoading: featuresLoading } = useFetch(
-    () => api.personFeatures(personId, { limit: 200 }),
+  const featureFetcher = useCallback(
+    (offset: number, limit: number) => api.personFeatures(personId, { offset, limit }),
     [personId],
   )
+
+  const {
+    items: features,
+    total: featuresTotal,
+    isLoading: featuresLoading,
+    isLoadingMore,
+    hasMore,
+    sentinelRef,
+  } = useInfiniteScroll({
+    fetcher: featureFetcher,
+    pageSize: PAGE_SIZE,
+    deps: [personId],
+  })
 
   const isLoading = namesLoading || featuresLoading
   const displayName =
@@ -58,6 +76,9 @@ function PersonContent({
       <section>
         <h2 className="mb-3 text-sm font-medium text-foreground-muted uppercase tracking-wider">
           Faces
+          {!featuresLoading && featuresTotal > 0 && (
+            <span className="ml-2 font-normal">({featuresTotal})</span>
+          )}
         </h2>
         {featuresLoading ? (
           <div className="flex gap-3">
@@ -65,9 +86,9 @@ function PersonContent({
               <Skeleton key={i} className="h-20 w-20 rounded-full" />
             ))}
           </div>
-        ) : features && features.items.length > 0 ? (
+        ) : features.length > 0 ? (
           <div className="flex flex-wrap gap-3">
-            {features.items.map((feat) => (
+            {features.map((feat) => (
               <button
                 type="button"
                 key={feat.id}
@@ -88,13 +109,13 @@ function PersonContent({
       </section>
 
       {/* Media items with this person's face */}
-      {features && features.items.length > 0 && (
+      {features.length > 0 && (
         <section>
           <h2 className="mb-3 text-sm font-medium text-foreground-muted uppercase tracking-wider">
             Photos
           </h2>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {features.items.map((feat) => (
+            {features.map((feat) => (
               <button
                 type="button"
                 key={feat.id}
@@ -110,6 +131,12 @@ function PersonContent({
               </button>
             ))}
           </div>
+          <LoadMoreSentinel
+            sentinelRef={sentinelRef}
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            variant="grid"
+          />
         </section>
       )}
     </div>
