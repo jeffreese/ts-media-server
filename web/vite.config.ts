@@ -33,6 +33,7 @@ export default defineConfig({
       '/map': 'http://localhost:8080',
       '/auth': 'http://localhost:8080',
       '/setting': 'http://localhost:8080',
+      '/admin': 'http://localhost:8080',
       '/ws': {
         target: 'ws://localhost:8080',
         ws: true,

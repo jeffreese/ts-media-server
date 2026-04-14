@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { App } from '~/App'
 import { ErrorBoundary } from '~/components/error-boundary'
+import { AdminPage } from '~/pages/admin'
 import { BrowsePage } from '~/pages/browse'
 import { KeywordDetailPage } from '~/pages/keyword-detail'
 import { KeywordsPage } from '~/pages/keywords'
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
       { path: 'places/:id', element: <PlacePage /> },
       { path: 'map', element: <MapPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'admin', element: <AdminPage /> },
     ],
   },
 ])

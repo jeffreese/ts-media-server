@@ -28,6 +28,7 @@ import { peoplePlugin } from './routes/people.js';
 import { placesPlugin } from './routes/places.js';
 import { mapPlugin } from './routes/map.js';
 import { searchPlugin } from './routes/search.js';
+import { adminPlugin } from './routes/admin.js';
 import type { NotificationService } from '../services/notification.js';
 import { websocketPlugin } from './websocket.js';
 import { errorHandlerPlugin } from './error-handler.js';
@@ -45,6 +46,7 @@ export interface CreateAppOptions {
   db?: Database.Database;
   loggerOptions?: { level?: LogLevel; name?: string };
   notificationService?: NotificationService;
+  onIndexDirectory?: (directory: string, concurrency: number) => void;
 }
 
 /** Running application: the Fastify server plus {@link App.close} for teardown. */
@@ -61,7 +63,7 @@ export interface App {
  * route that uses `request.jwtVerify`.
  */
 export async function createApp(options: CreateAppOptions): Promise<App> {
-  const { config, db, loggerOptions, notificationService } = options;
+  const { config, db, loggerOptions, notificationService, onIndexDirectory } = options;
 
   const server = Fastify({
     logger: {
@@ -106,6 +108,7 @@ export async function createApp(options: CreateAppOptions): Promise<App> {
     await server.register(placesPlugin, { db, notificationService });
     await server.register(mapPlugin, { db });
     await server.register(searchPlugin, { db });
+    await server.register(adminPlugin, { db, onIndexDirectory });
   }
 
   if (notificationService) {
