@@ -85,7 +85,7 @@ describe('face triage routes', () => {
   describe('GET /faces/unlinked/clusters', () => {
     it('returns clusters of unlinked faces grouped by feature_match graph', async () => {
       const client = setupDb();
-      const { fA, fB, fC, fD } = seedGraph(client);
+      const { fA, fB, fC, fD, itemA, itemB, itemC, itemD } = seedGraph(client);
 
       app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
       await app.server.ready();
@@ -105,12 +105,20 @@ describe('face triage routes', () => {
       expect(body.clusters[0].featureIds).toContain(fA.id);
       expect(body.clusters[0].featureIds).toContain(fB.id);
       expect(body.clusters[0].featureIds).toContain(fC.id);
+      expect(body.clusters[0].features).toEqual(
+        expect.arrayContaining([
+          { featureId: fA.id, itemId: itemA.id },
+          { featureId: fB.id, itemId: itemB.id },
+          { featureId: fC.id, itemId: itemC.id },
+        ]),
+      );
       expect(body.clusters[0].topCandidateScore).toBeNull();
       expect(body.clusters[0].topCandidatePersonId).toBeNull();
 
       // Single face cluster (D)
       expect(body.clusters[1].size).toBe(1);
       expect(body.clusters[1].featureIds).toEqual([fD.id]);
+      expect(body.clusters[1].features).toEqual([{ featureId: fD.id, itemId: itemD.id }]);
       expect(body.clusters[1].topCandidateScore).toBeNull();
     });
 

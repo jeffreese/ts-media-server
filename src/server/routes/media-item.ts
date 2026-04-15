@@ -57,7 +57,30 @@ export const mediaItemPlugin = fp<MediaItemPluginOptions>(
         return reply.code(404).send({ error: 'Media item not found' });
       }
 
-      return reply.send(row);
+      const folderEntry = db
+        .select({ folderId: schema.folderEntry.folderId })
+        .from(schema.folderEntry)
+        .where(eq(schema.folderEntry.itemId, id))
+        .get();
+
+      let folderPath: string | null = null;
+      if (folderEntry) {
+        const segments: string[] = [];
+        let currentId: number | null = folderEntry.folderId;
+        while (currentId !== null) {
+          const f = db
+            .select({ name: schema.folder.name, parentId: schema.folder.parentId })
+            .from(schema.folder)
+            .where(eq(schema.folder.id, currentId))
+            .get();
+          if (!f) break;
+          segments.unshift(f.name);
+          currentId = f.parentId;
+        }
+        folderPath = segments.join('/');
+      }
+
+      return reply.send({ ...row, folderPath });
     });
   },
   { name: 'media-item-routes', dependencies: ['auth'] },

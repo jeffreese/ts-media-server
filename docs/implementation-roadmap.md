@@ -767,10 +767,10 @@ Improve the face-to-person assignment workflow with smarter scoring, better UX p
 - [x] Re-sort on each refresh as new assignments shift scores
 
 ### 2. Face-in-Context View
-- [ ] Click a face thumbnail in the triage filmstrip to see the full source photo
-- [ ] Resolve original media item via `feature.itemId`
-- [ ] Show as a popover or slide-out panel (not a full navigation) so the user stays in triage flow
-- [ ] Include media item date and folder path for additional context
+- [x] Click a face thumbnail in the triage filmstrip to see the full source photo
+- [x] Resolve original media item via `feature.itemId`
+- [x] Show as a popover or slide-out panel (not a full navigation) so the user stays in triage flow
+- [x] Include media item date and folder path for additional context
 
 ### 3. Hide/Ignore Face Action
 - [ ] Add an "Ignore" action per-face in the triage UI (X button or swipe)

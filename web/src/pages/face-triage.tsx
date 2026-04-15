@@ -3,6 +3,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Eye,
   Link2,
   Plus,
   Search,
@@ -197,8 +198,8 @@ function ClusterCard({
     ?? topCandidate?.names[0]?.name
 
   const selectedFeatureIds = [...selected]
-  const visibleFaces = expanded ? cluster.featureIds : cluster.featureIds.slice(0, 8)
-  const overflowCount = expanded ? 0 : Math.max(0, cluster.featureIds.length - 8)
+  const visibleFeatures = expanded ? cluster.features : cluster.features.slice(0, 8)
+  const overflowCount = expanded ? 0 : Math.max(0, cluster.features.length - 8)
 
   useEffect(() => {
     if (naming) nameInputRef.current?.focus()
@@ -284,21 +285,14 @@ function ClusterCard({
         <div className="min-w-0 flex-1">
           {/* Filmstrip */}
           <div className="mb-2 flex items-center gap-1.5">
-            {visibleFaces.slice(0, 8).map((fId) => (
-              <button
-                key={fId}
-                type="button"
-                onClick={() => toggleSelect(fId)}
-                className={`h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-control transition-all cursor-pointer hover:ring-2 hover:ring-accent ${
-                  selected.has(fId) ? 'ring-2 ring-accent' : 'opacity-50'
-                }`}
-              >
-                <img
-                  src={api.faceUrl(fId)}
-                  alt={`Face ${fId}`}
-                  className="h-full w-full object-cover"
-                />
-              </button>
+            {visibleFeatures.slice(0, 8).map((f) => (
+              <FaceThumbnail
+                key={f.featureId}
+                featureId={f.featureId}
+                itemId={f.itemId}
+                selected={selected.has(f.featureId)}
+                onClick={() => toggleSelect(f.featureId)}
+              />
             ))}
             {overflowCount > 0 && (
               <span className="shrink-0 text-xs text-foreground-muted">+{overflowCount}</span>
@@ -365,23 +359,16 @@ function ClusterCard({
       </div>
 
       {/* Expanded face grid */}
-      {expanded && cluster.featureIds.length > 8 && (
+      {expanded && cluster.features.length > 8 && (
         <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
-          {cluster.featureIds.slice(8).map((fId) => (
-            <button
-              key={fId}
-              type="button"
-              onClick={() => toggleSelect(fId)}
-              className={`h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-control transition-all cursor-pointer hover:ring-2 hover:ring-accent ${
-                selected.has(fId) ? 'ring-2 ring-accent' : 'opacity-50'
-              }`}
-            >
-              <img
-                src={api.faceUrl(fId)}
-                alt={`Face ${fId}`}
-                className="h-full w-full object-cover"
-              />
-            </button>
+          {cluster.features.slice(8).map((f) => (
+            <FaceThumbnail
+              key={f.featureId}
+              featureId={f.featureId}
+              itemId={f.itemId}
+              selected={selected.has(f.featureId)}
+              onClick={() => toggleSelect(f.featureId)}
+            />
           ))}
         </div>
       )}
@@ -440,11 +427,13 @@ function ConfirmationCard({
   const [naming, setNaming] = useState(false)
   const [nameValue, setNameValue] = useState('')
   const [assigning, setAssigning] = useState(false)
+  const [showContext, setShowContext] = useState(false)
   const [busy, setBusy] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
 
   const featureId = cluster.featureIds[0]!
+  const itemId = cluster.features[0]?.itemId
 
   const { data: candidateData } = useFetch(
     () => api.clusterCandidates(featureId),
@@ -526,12 +515,23 @@ function ConfirmationCard({
     <div ref={cardRef} className="rounded-xl border border-border bg-surface p-4">
       <div className="flex items-center gap-4">
         {/* Unlinked face */}
-        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-control ring-2 ring-border">
-          <img
-            src={api.faceUrl(featureId)}
-            alt="Unlinked face"
-            className="h-full w-full object-cover"
-          />
+        <div className="group relative shrink-0">
+          <div className="h-16 w-16 overflow-hidden rounded-full bg-control ring-2 ring-border">
+            <img
+              src={api.faceUrl(featureId)}
+              alt="Unlinked face"
+              className="h-full w-full object-cover"
+            />
+          </div>
+          {itemId != null && (
+            <button
+              type="button"
+              onClick={() => setShowContext(true)}
+              className="absolute -right-0.5 -top-0.5 rounded-full bg-surface/90 p-0.5 text-foreground-muted/40 shadow-sm ring-1 ring-border transition-colors hover:bg-surface hover:text-foreground group-hover:text-foreground-muted"
+            >
+              <Eye className="h-3 w-3" />
+            </button>
+          )}
         </div>
 
         {topCandidate && candidateName ? (
@@ -637,6 +637,149 @@ function ConfirmationCard({
           onSelect={handleAssignToPerson}
         />
       )}
+
+      {/* Face context popover */}
+      {showContext && itemId != null && (
+        <FaceContextPopover
+          featureId={featureId}
+          itemId={itemId}
+          onClose={() => setShowContext(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Face thumbnail with context popover trigger
+// ---------------------------------------------------------------------------
+
+function FaceThumbnail({
+  featureId,
+  itemId,
+  selected,
+  onClick,
+}: {
+  featureId: number
+  itemId: number
+  selected: boolean
+  onClick: () => void
+}) {
+  const [showContext, setShowContext] = useState(false)
+
+  return (
+    <>
+      <div className="group relative">
+        <button
+          type="button"
+          onClick={onClick}
+          className={`h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-control transition-all cursor-pointer hover:ring-2 hover:ring-accent ${
+            selected ? 'ring-2 ring-accent' : 'opacity-50'
+          }`}
+        >
+          <img
+            src={api.faceUrl(featureId)}
+            alt={`Face ${featureId}`}
+            className="h-full w-full object-cover"
+          />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setShowContext(true) }}
+          className="absolute -right-0.5 -top-0.5 rounded-full bg-surface/90 p-0.5 text-foreground-muted/40 shadow-sm ring-1 ring-border transition-colors hover:bg-surface hover:text-foreground group-hover:text-foreground-muted"
+        >
+          <Eye className="h-3 w-3" />
+        </button>
+      </div>
+      {showContext && (
+        <FaceContextPopover
+          featureId={featureId}
+          itemId={itemId}
+          onClose={() => setShowContext(false)}
+        />
+      )}
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Face-in-context popover
+// ---------------------------------------------------------------------------
+
+function FaceContextPopover({
+  featureId,
+  itemId,
+  onClose,
+}: {
+  featureId: number
+  itemId: number
+  onClose: () => void
+}) {
+  const backdropRef = useRef<HTMLDivElement>(null)
+  const { data: mediaItem, isLoading } = useFetch(
+    () => api.mediaItem(itemId),
+    [itemId],
+  )
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const formattedDate = mediaItem?.startDate
+    ? new Date(mediaItem.startDate).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+    : null
+
+  return (
+    <div
+      ref={backdropRef}
+      role="presentation"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={(e) => { if (e.target === backdropRef.current) onClose() }}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}
+    >
+      <div className="relative flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h3 className="truncate text-sm font-medium">
+            {isLoading ? 'Loading…' : (mediaItem?.name ?? 'Source Photo')}
+          </h3>
+          <IconButton label="Close" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </IconButton>
+        </div>
+
+        <div className="relative min-h-0 flex-1 overflow-auto bg-black">
+          <img
+            src={api.imageUrl(itemId, 640)}
+            alt={mediaItem?.name ?? 'Source photo'}
+            className="h-auto w-full object-contain"
+          />
+          <div className="absolute bottom-3 left-3">
+            <div className="h-14 w-14 overflow-hidden rounded-full bg-control ring-2 ring-white/50">
+              <img
+                src={api.faceUrl(featureId)}
+                alt="Face"
+                className="h-full w-full object-cover"
+              />
+            </div>
+          </div>
+        </div>
+
+        {(formattedDate || mediaItem?.folderPath) && (
+          <div className="border-t border-border px-4 py-2.5">
+            <p className="text-xs text-foreground-muted">
+              {[formattedDate, mediaItem?.folderPath].filter(Boolean).join(' · ')}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
