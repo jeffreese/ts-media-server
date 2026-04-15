@@ -468,11 +468,43 @@ describe('MaintenanceService', () => {
       expect(remaining).toHaveLength(1);
     });
 
+    it('removes duplicate features on the same media item', async () => {
+      const mediaId = insertMediaItem(db, null);
+      const coords = { x: 10, y: 20, width: 100, height: 100 };
+
+      db.insert(schema.feature).values({ itemId: mediaId, coordinates: coords, label: 'face' }).run();
+      db.insert(schema.feature).values({ itemId: mediaId, coordinates: coords, label: 'face' }).run();
+      db.insert(schema.feature).values({ itemId: mediaId, coordinates: coords, label: 'face' }).run();
+
+      const result = await service.cleanOrphans();
+
+      expect(result.duplicateFeatures).toBe(2);
+
+      const remaining = db.select().from(schema.feature).all();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].itemId).toBe(mediaId);
+    });
+
+    it('keeps distinct features on the same media item', async () => {
+      const mediaId = insertMediaItem(db, null);
+
+      db.insert(schema.feature).values({ itemId: mediaId, coordinates: { x: 10, y: 20, width: 100, height: 100 } }).run();
+      db.insert(schema.feature).values({ itemId: mediaId, coordinates: { x: 200, y: 300, width: 80, height: 80 } }).run();
+
+      const result = await service.cleanOrphans();
+
+      expect(result.duplicateFeatures).toBe(0);
+
+      const remaining = db.select().from(schema.feature).all();
+      expect(remaining).toHaveLength(2);
+    });
+
     it('returns zero counts when nothing to clean', async () => {
       const result = await service.cleanOrphans();
 
       expect(result.mediaMatches).toBe(0);
       expect(result.featureMatches).toBe(0);
+      expect(result.duplicateFeatures).toBe(0);
       expect(result.keywords).toBe(0);
       expect(result.persons).toBe(0);
       expect(result.places).toBe(0);

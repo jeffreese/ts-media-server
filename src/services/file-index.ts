@@ -265,6 +265,115 @@ export class FileIndex {
     const primary = group.primary;
     const ext = primary.extension.toLowerCase();
 
+    // Check for existing media item linked to these files before doing
+    // any heavy processing. On re-index the item already has thumbnails,
+    // a perceptual hash, and face features — skip all of that.
+    const existingLink = this.db
+      .select({ mediaItemId: schema.mediaItemFile.mediaItemId })
+      .from(schema.mediaItemFile)
+      .where(inArray(schema.mediaItemFile.fileId, fileIds))
+      .get();
+
+    if (existingLink) {
+      return this.updateExistingMediaItem(existingLink.mediaItemId, group, fileIds, folderId, folderIndex);
+    }
+
+    return this.createNewMediaItem(group, fileIds, folderId, folderIndex);
+  }
+
+  /**
+   * Fast path for re-indexing: refresh metadata on an existing media item
+   * without re-running thumbnails, hashing, or face detection.
+   */
+  private async updateExistingMediaItem(
+    mediaItemId: number,
+    group: FileGroup,
+    fileIds: number[],
+    folderId: number,
+    folderIndex: number,
+  ): Promise<{ mediaItemId: number; faceMatchPromises: Promise<void>[] }> {
+    const primary = group.primary;
+    const ext = primary.extension.toLowerCase();
+
+    let metadata: MediaMetadata;
+    try {
+      if (isVideoExtension(ext)) {
+        metadata = await extractMetadata(primary.path, this.ffmpeg);
+      } else {
+        metadata = await extractMetadata(primary.path, this.ffmpeg);
+      }
+    } catch (err) {
+      this.logger.warn({ file: primary.path, err }, 'Failed to refresh metadata on re-index');
+      return { mediaItemId, faceMatchPromises: [] };
+    }
+
+    const info: Record<string, unknown> = {};
+    if (metadata.camera.make || metadata.camera.model) info.camera = metadata.camera;
+    if (metadata.exposure.iso || metadata.exposure.focalLength) info.exposure = metadata.exposure;
+    if (metadata.iptc.keywords.length > 0 || metadata.iptc.headline) info.iptc = metadata.iptc;
+    if (metadata.duration != null) info.duration = metadata.duration;
+    if (metadata.frameRate != null) info.frameRate = metadata.frameRate;
+    if (metadata.width != null && metadata.height != null) {
+      info.dimensions = { width: metadata.width, height: metadata.height };
+    }
+    if (metadata.gps) {
+      info.gps = { latitude: metadata.gps.latitude, longitude: metadata.gps.longitude };
+    }
+
+    const type = isVideoExtension(ext) ? 'video' : 'image';
+    const startDate = metadata.date?.date;
+
+    this.db
+      .update(schema.mediaItem)
+      .set({
+        name: group.baseName,
+        type,
+        startDate,
+        endDate: startDate,
+        info: Object.keys(info).length > 0 ? info : undefined,
+      })
+      .where(eq(schema.mediaItem.id, mediaItemId))
+      .run();
+    this.mediaLog?.log('update', mediaItemId);
+
+    const primaryIndex = group.files.indexOf(primary);
+    for (let i = 0; i < fileIds.length; i++) {
+      this.db
+        .insert(schema.mediaItemFile)
+        .values({
+          mediaItemId,
+          fileId: fileIds[i],
+          isPrimary: i === primaryIndex,
+        })
+        .onConflictDoNothing()
+        .run();
+    }
+
+    this.db
+      .insert(schema.folderEntry)
+      .values({ folderId, itemId: mediaItemId, index: folderIndex })
+      .onConflictDoNothing()
+      .run();
+
+    this.notifications.notify('update', 'mediaItem', { id: mediaItemId, name: group.baseName });
+
+    return { mediaItemId, faceMatchPromises: [] };
+  }
+
+  /**
+   * Full processing path for new media items: extract metadata, compute
+   * perceptual hash, generate thumbnails, detect faces, and create all
+   * necessary DB records.
+   */
+  private async createNewMediaItem(
+    group: FileGroup,
+    fileIds: number[],
+    folderId: number,
+    folderIndex: number,
+  ): Promise<{ mediaItemId: number; faceMatchPromises: Promise<void>[] } | undefined> {
+    const primary = group.primary;
+    const ext = primary.extension.toLowerCase();
+
     let image: ReturnType<typeof loadImage> | undefined;
     let metadata: MediaMetadata;
 
@@ -353,45 +462,19 @@ export class FileIndex {
     const type = isVideoExtension(ext) ? 'video' : 'image';
     const startDate = metadata.date?.date;
 
-    // Check for existing media item linked to these files
-    const existingLink = this.db
-      .select({ mediaItemId: schema.mediaItemFile.mediaItemId })
-      .from(schema.mediaItemFile)
-      .where(inArray(schema.mediaItemFile.fileId, fileIds))
-      .get();
-
-    let mediaItemId: number;
-
-    if (existingLink) {
-      mediaItemId = existingLink.mediaItemId;
-      this.db
-        .update(schema.mediaItem)
-        .set({
-          name: group.baseName,
-          type,
-          startDate,
-          endDate: startDate,
-          hash: pHash ?? undefined,
-          info: Object.keys(info).length > 0 ? info : undefined,
-        })
-        .where(eq(schema.mediaItem.id, mediaItemId))
-        .run();
-      this.mediaLog?.log('update', mediaItemId);
-    } else {
-      mediaItemId = this.db
-        .insert(schema.mediaItem)
-        .values({
-          name: group.baseName,
-          type,
-          startDate,
-          endDate: startDate,
-          hash: pHash,
-          info: Object.keys(info).length > 0 ? info : undefined,
-        })
-        .returning({ id: schema.mediaItem.id })
-        .get().id;
-      this.mediaLog?.log('create', mediaItemId);
-    }
+    const mediaItemId = this.db
+      .insert(schema.mediaItem)
+      .values({
+        name: group.baseName,
+        type,
+        startDate,
+        endDate: startDate,
+        hash: pHash,
+        info: Object.keys(info).length > 0 ? info : undefined,
+      })
+      .returning({ id: schema.mediaItem.id })
+      .get().id;
+    this.mediaLog?.log('create', mediaItemId);
 
     // Create media_item_file junction records
     const primaryIndex = group.files.indexOf(primary);

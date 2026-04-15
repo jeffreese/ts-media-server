@@ -13,7 +13,7 @@ import { hasAdminAccess, assertSafePath } from './shared.js';
 
 export interface MaintenanceResult {
   dedup?: { duplicateGroups: number; mergedMediaItems: number; removedMediaItems: number };
-  orphans?: { mediaMatches: number; featureMatches: number; keywords: number; persons: number; places: number; folders: number };
+  orphans?: { mediaMatches: number; featureMatches: number; duplicateFeatures: number; keywords: number; persons: number; places: number; folders: number };
 }
 
 export interface AdminPluginOptions {

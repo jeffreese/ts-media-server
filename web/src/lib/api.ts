@@ -825,6 +825,7 @@ export const api = {
       status: string
       mediaMatches: number
       featureMatches: number
+      duplicateFeatures: number
       keywords: number
       persons: number
       places: number
