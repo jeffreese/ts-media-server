@@ -24,6 +24,7 @@ export interface DedupResult {
 export interface OrphanCleanupResult {
   mediaMatches: number;
   featureMatches: number;
+  duplicateFeatures: number;
   keywords: number;
   persons: number;
   places: number;
@@ -384,6 +385,7 @@ export class MaintenanceService {
    * This complements FileIndex.deleteOrphans() (which focuses on disk↔DB
    * consistency) by cleaning up relational orphans:
    *
+   * - Duplicate `feature` records on the same media item (from repeated indexing)
    * - `keyword` records with no `media_item_keyword` links
    * - `person` records with no `person_name`, `person_feature`, or `user` links
    * - `place` records with no `place_name` or `place_media` links
@@ -394,6 +396,7 @@ export class MaintenanceService {
   async cleanOrphans(): Promise<OrphanCleanupResult> {
     this.notifications?.notify('progress', 'maintenance', { phase: 'orphan_scanning' });
 
+    const duplicateFeatures = this.cleanDuplicateFeatures();
     const mediaMatches = this.cleanOrphanedMediaMatches();
     const featureMatches = this.cleanOrphanedFeatureMatches();
     const keywords = this.cleanOrphanedKeywords();
@@ -404,6 +407,7 @@ export class MaintenanceService {
     const result: OrphanCleanupResult = {
       mediaMatches,
       featureMatches,
+      duplicateFeatures,
       keywords,
       persons,
       places,
@@ -418,6 +422,49 @@ export class MaintenanceService {
     this.logger.info(result, 'Orphan cleanup complete');
 
     return result;
+  }
+
+  /**
+   * Remove duplicate feature records on the same media item. When a directory
+   * is re-indexed, face detection may have run multiple times, creating
+   * duplicate features with identical coordinates. For each media item,
+   * group features by their serialized coordinates and keep only the oldest
+   * (lowest ID) in each group.
+   */
+  private cleanDuplicateFeatures(): number {
+    const itemIds = this.db
+      .select({ itemId: schema.feature.itemId })
+      .from(schema.feature)
+      .groupBy(schema.feature.itemId)
+      .having(sql`count(*) > 1`)
+      .all();
+
+    const deleteIds: number[] = [];
+
+    for (const { itemId } of itemIds) {
+      const features = this.db
+        .select({
+          id: schema.feature.id,
+          coordinates: schema.feature.coordinates,
+        })
+        .from(schema.feature)
+        .where(eq(schema.feature.itemId, itemId))
+        .orderBy(schema.feature.id)
+        .all();
+
+      const seen = new Map<string, number>();
+
+      for (const f of features) {
+        const key = JSON.stringify(f.coordinates ?? null);
+        if (seen.has(key)) {
+          deleteIds.push(f.id);
+        } else {
+          seen.set(key, f.id);
+        }
+      }
+    }
+
+    return this.batchDelete(schema.feature, schema.feature.id, deleteIds);
   }
 
   private cleanOrphanedMediaMatches(): number {

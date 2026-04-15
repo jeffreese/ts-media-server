@@ -674,6 +674,7 @@ interface OrphanResult {
   status: string
   mediaMatches: number
   featureMatches: number
+  duplicateFeatures: number
   keywords: number
   persons: number
   places: number
@@ -797,7 +798,8 @@ function MaintenanceTab() {
             <div className="rounded-lg bg-accent-surface px-4 py-3 text-sm text-accent">
               Orphan cleanup complete
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <ResultStat label="Duplicate Faces" value={orphanResult.duplicateFeatures} />
               <ResultStat label="Media Matches" value={orphanResult.mediaMatches} />
               <ResultStat label="Feature Matches" value={orphanResult.featureMatches} />
               <ResultStat label="Keywords" value={orphanResult.keywords} />
