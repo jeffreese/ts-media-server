@@ -244,8 +244,8 @@ describe('face triage routes', () => {
     });
   });
 
-  describe('GET /faces/cluster/:featureId/candidates', () => {
-    it('returns candidate people ranked by embedding similarity', async () => {
+  describe('inline candidates in GET /faces/unlinked/clusters', () => {
+    it('returns candidate people inline with clusters', async () => {
       const client = setupDb();
       const db = drizzle(client.db, { schema });
       const { fA } = seedGraph(client);
@@ -266,18 +266,20 @@ describe('face triage routes', () => {
 
       const response = await app.server.inject({
         method: 'GET',
-        url: `/faces/cluster/${fA.id}/candidates`,
+        url: '/faces/unlinked/clusters?limit=200',
       });
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      expect(body.candidates).toHaveLength(1);
-      expect(body.candidates[0].personId).toBe(person.id);
-      expect(body.candidates[0].names[0].name).toBe('Alice');
-      expect(body.candidates[0].matchScore).toBeGreaterThan(0.9);
+      const cluster = body.clusters.find((c: { featureIds: number[] }) => c.featureIds.includes(fA.id));
+      expect(cluster).toBeDefined();
+      expect(cluster.candidates).toHaveLength(1);
+      expect(cluster.candidates[0].personId).toBe(person.id);
+      expect(cluster.candidates[0].names[0].name).toBe('Alice');
+      expect(cluster.candidates[0].matchScore).toBeGreaterThan(0.9);
     });
 
-    it('returns empty candidates when no match links to assigned people', async () => {
+    it('returns empty candidates when no person matches a cluster', async () => {
       const client = setupDb();
       const { fA } = seedGraph(client);
 
@@ -286,26 +288,14 @@ describe('face triage routes', () => {
 
       const response = await app.server.inject({
         method: 'GET',
-        url: `/faces/cluster/${fA.id}/candidates`,
+        url: '/faces/unlinked/clusters?limit=200',
       });
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      expect(body.candidates).toHaveLength(0);
-    });
-
-    it('returns 404 for non-existent feature', async () => {
-      const client = setupDb();
-
-      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
-      await app.server.ready();
-
-      const response = await app.server.inject({
-        method: 'GET',
-        url: '/faces/cluster/99999/candidates',
-      });
-
-      expect(response.statusCode).toBe(404);
+      const cluster = body.clusters.find((c: { featureIds: number[] }) => c.featureIds.includes(fA.id));
+      expect(cluster).toBeDefined();
+      expect(cluster.candidates).toHaveLength(0);
     });
   });
 

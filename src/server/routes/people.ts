@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
-import { eq, and, sql, inArray } from 'drizzle-orm';
+import { eq, and, sql, inArray, like } from 'drizzle-orm';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type Database from 'better-sqlite3';
 import { z } from 'zod/v4';
@@ -111,6 +111,79 @@ export const peoplePlugin = fp<PeoplePluginOptions>(
         .where(eq(schema.person.id, personId))
         .get();
     }
+
+    // -----------------------------------------------------------------------
+    // GET /people/search?q= — server-side name search with batch details
+    // -----------------------------------------------------------------------
+
+    app.get('/people/search', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const querySchema = z.object({
+        q: z.string().optional().default(''),
+        limit: z.coerce.number().int().positive().max(200).optional().default(50),
+      });
+      const parsed = querySchema.safeParse(request.query);
+      if (!parsed.success) return reply.code(400).send({ error: 'Invalid query parameters' });
+      const { q, limit } = parsed.data;
+
+      const nameRows = q
+        ? db.select({ personId: schema.personName.personId })
+            .from(schema.personName)
+            .where(like(schema.personName.name, `%${q}%`))
+            .all()
+        : db.select({ personId: schema.personName.personId })
+            .from(schema.personName)
+            .all();
+
+      const uniqueIds = [...new Set(nameRows.map((r) => r.personId))];
+      uniqueIds.sort((a, b) => a - b);
+      const ids = uniqueIds.slice(0, limit);
+      if (ids.length === 0) return reply.send({ items: [] });
+
+      const names = db
+        .select()
+        .from(schema.personName)
+        .where(inArray(schema.personName.personId, ids))
+        .all();
+
+      const features = db
+        .select({
+          id: schema.personFeature.id,
+          featureId: schema.personFeature.featureId,
+          personId: schema.personFeature.personId,
+          itemId: schema.feature.itemId,
+        })
+        .from(schema.personFeature)
+        .innerJoin(schema.feature, eq(schema.feature.id, schema.personFeature.featureId))
+        .where(inArray(schema.personFeature.personId, ids))
+        .all();
+
+      const namesByPerson = new Map<number, typeof names>();
+      for (const name of names) {
+        const list = namesByPerson.get(name.personId) ?? [];
+        list.push(name);
+        namesByPerson.set(name.personId, list);
+      }
+
+      const firstFeatureByPerson = new Map<number, (typeof features)[number]>();
+      const featureCountByPerson = new Map<number, number>();
+      for (const feat of features) {
+        if (!firstFeatureByPerson.has(feat.personId)) {
+          firstFeatureByPerson.set(feat.personId, feat);
+        }
+        featureCountByPerson.set(feat.personId, (featureCountByPerson.get(feat.personId) ?? 0) + 1);
+      }
+
+      const items = ids.map((id) => ({
+        personId: id,
+        names: namesByPerson.get(id) ?? [],
+        firstFeature: firstFeatureByPerson.get(id) ?? null,
+        photoCount: featureCountByPerson.get(id) ?? 0,
+      }));
+
+      return reply.send({ items });
+    });
 
     // -----------------------------------------------------------------------
     // Batch: names + first feature for multiple people in one request
