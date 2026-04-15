@@ -9,7 +9,7 @@ import type { NotificationService } from '../../services/notification.js';
 
 const CLUSTER_SIMILARITY_THRESHOLD = 0.55;
 const MAX_CLUSTER_SIZE = 20;
-const CANDIDATE_MIN_SCORE = 0.65;
+const CANDIDATE_MIN_SCORE = 0.70;
 const CANDIDATE_TOP_K = 5;
 
 const paginationSchema = z.object({
@@ -191,9 +191,10 @@ function loadPersonEmbeddings(db: Db): Map<number, Float32Array[]> {
 }
 
 /**
- * Score a representative embedding against all known persons using the top-K
- * average similarity approach. Returns the best scoring person (if any meets
- * the minimum threshold).
+ * Score a representative embedding against all known persons using an adaptive
+ * top-K average similarity approach. K scales with the number of linked faces
+ * so that persons with many diverse embeddings require consistency across a
+ * larger sample, preventing a few outlier matches from inflating the score.
  */
 function scoreTopCandidate(
   representativeEmbedding: Float32Array,
@@ -203,10 +204,11 @@ function scoreTopCandidate(
   let bestScore = -1;
 
   for (const [personId, embeddings] of personEmbeddings) {
+    const k = Math.max(CANDIDATE_TOP_K, Math.floor(embeddings.length * 0.5));
     const sims = embeddings
       .map((e) => cosineSimilarity(representativeEmbedding, e))
       .sort((a, b) => b - a);
-    const topK = sims.slice(0, Math.min(CANDIDATE_TOP_K, sims.length));
+    const topK = sims.slice(0, Math.min(k, sims.length));
     const avgTopK = topK.reduce((a, b) => a + b, 0) / topK.length;
 
     if (avgTopK >= CANDIDATE_MIN_SCORE && avgTopK > bestScore) {
@@ -364,10 +366,11 @@ export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
 
       const scored: { personId: number; similarity: number }[] = [];
       for (const [personId, embeddings] of personEmbeddings) {
+        const k = Math.max(CANDIDATE_TOP_K, Math.floor(embeddings.length * 0.5));
         const sims = embeddings
           .map((e) => cosineSimilarity(representativeEmbedding, e))
           .sort((a, b) => b - a);
-        const topK = sims.slice(0, Math.min(CANDIDATE_TOP_K, sims.length));
+        const topK = sims.slice(0, Math.min(k, sims.length));
         const avgTopK = topK.reduce((a, b) => a + b, 0) / topK.length;
 
         if (avgTopK >= CANDIDATE_MIN_SCORE) {
