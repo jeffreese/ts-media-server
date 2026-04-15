@@ -596,6 +596,23 @@ export const api = {
     })
   },
 
+  ignoreFace(featureId: number) {
+    return request<{ success: boolean }>(`/faces/${featureId}/ignore`, {
+      method: 'POST',
+    })
+  },
+
+  unignoreFace(featureId: number) {
+    return request<{ success: boolean }>(`/faces/${featureId}/unignore`, {
+      method: 'POST',
+    })
+  },
+
+  ignoredFaces(options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<PaginatedResponse<{ id: number; itemId: number; label: string | null }>>(`/faces/ignored${query}`)
+  },
+
   // -- Duplicate matches for a media item --
   mediaItemMatches(mediaItemId: number, options?: PaginationOptions) {
     const query = buildQuery({ offset: options?.offset, limit: options?.limit })

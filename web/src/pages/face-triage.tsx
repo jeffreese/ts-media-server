@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  Ban,
   Check,
   ChevronDown,
   ChevronUp,
@@ -144,7 +145,72 @@ export function FaceTriagePage() {
           </div>
         </section>
       )}
+
+      <IgnoredFacesSection onRestored={fetchClusters} />
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Ignored faces section (collapsible, at page bottom)
+// ---------------------------------------------------------------------------
+
+function IgnoredFacesSection({ onRestored }: { onRestored: () => void }) {
+  const [expanded, setExpanded] = useState(false)
+  const { data, refetch } = useFetch(
+    () => api.ignoredFaces({ limit: 200 }),
+    [],
+  )
+
+  useAutoRefresh(['feature'], refetch)
+
+  const total = data?.total ?? 0
+  if (total === 0) return null
+
+  const handleUnignore = async (featureId: number) => {
+    try {
+      await api.unignoreFace(featureId)
+      refetch()
+      onRestored()
+    } catch {
+      // face stays in the ignored list — user can retry
+    }
+  }
+
+  return (
+    <section className="mt-8 border-t border-border pt-6">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground-muted transition-colors hover:text-foreground"
+      >
+        {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        Ignored Faces ({total})
+      </button>
+      {expanded && data && (
+        <div className="flex flex-wrap gap-2">
+          {data.items.map((face) => (
+            <div key={face.id} className="group relative">
+              <div className="h-12 w-12 overflow-hidden rounded-lg bg-control opacity-50 ring-1 ring-border">
+                <img
+                  src={api.faceUrl(face.id)}
+                  alt={`Ignored face ${face.id}`}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleUnignore(face.id)}
+                title="Restore this face"
+                className="absolute -right-1 -top-1 hidden rounded-full bg-surface p-0.5 text-foreground-muted shadow-sm ring-1 ring-border transition-colors hover:bg-accent hover:text-accent-foreground group-hover:block"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -242,6 +308,23 @@ function ClusterCard({
     }
   }
 
+  const handleIgnore = async (featureId: number) => {
+    setBusy(true)
+    try {
+      await api.ignoreFace(featureId)
+      setSelected((prev) => {
+        const next = new Set(prev)
+        next.delete(featureId)
+        return next
+      })
+      onAssigned()
+    } catch {
+      // face stays in the cluster — user can retry
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const toggleSelect = (featureId: number) => {
     setSelected((prev) => {
       const next = new Set(prev)
@@ -292,6 +375,7 @@ function ClusterCard({
                 itemId={f.itemId}
                 selected={selected.has(f.featureId)}
                 onClick={() => toggleSelect(f.featureId)}
+                onIgnore={handleIgnore}
               />
             ))}
             {overflowCount > 0 && (
@@ -368,6 +452,7 @@ function ClusterCard({
               itemId={f.itemId}
               selected={selected.has(f.featureId)}
               onClick={() => toggleSelect(f.featureId)}
+              onIgnore={handleIgnore}
             />
           ))}
         </div>
@@ -511,6 +596,18 @@ function ConfirmationCard({
     }
   }
 
+  const handleIgnore = async () => {
+    setBusy(true)
+    try {
+      await api.ignoreFace(featureId)
+      onAssigned()
+    } catch {
+      // face stays in the card — user can retry
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div ref={cardRef} className="rounded-xl border border-border bg-surface p-4">
       <div className="flex items-center gap-4">
@@ -532,6 +629,15 @@ function ConfirmationCard({
               <Eye className="h-3 w-3" />
             </button>
           )}
+          <button
+            type="button"
+            onClick={handleIgnore}
+            disabled={busy}
+            title="Ignore this face"
+            className="absolute -left-0.5 -top-0.5 hidden rounded-full bg-surface/90 p-0.5 text-foreground-muted/40 shadow-sm ring-1 ring-border transition-colors hover:bg-red-500/20 hover:text-red-400 disabled:opacity-40 group-hover:block group-hover:text-foreground-muted"
+          >
+            <Ban className="h-3 w-3" />
+          </button>
         </div>
 
         {topCandidate && candidateName ? (
@@ -659,11 +765,13 @@ function FaceThumbnail({
   itemId,
   selected,
   onClick,
+  onIgnore,
 }: {
   featureId: number
   itemId: number
   selected: boolean
   onClick: () => void
+  onIgnore?: (featureId: number) => void
 }) {
   const [showContext, setShowContext] = useState(false)
 
@@ -690,6 +798,16 @@ function FaceThumbnail({
         >
           <Eye className="h-3 w-3" />
         </button>
+        {onIgnore && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onIgnore(featureId) }}
+            title="Ignore this face"
+            className="absolute -left-0.5 -top-0.5 hidden rounded-full bg-surface/90 p-0.5 text-foreground-muted/40 shadow-sm ring-1 ring-border transition-colors hover:bg-red-500/20 hover:text-red-400 group-hover:block group-hover:text-foreground-muted"
+          >
+            <Ban className="h-3 w-3" />
+          </button>
+        )}
       </div>
       {showContext && (
         <FaceContextPopover

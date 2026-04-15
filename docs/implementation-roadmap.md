@@ -773,11 +773,11 @@ Improve the face-to-person assignment workflow with smarter scoring, better UX p
 - [x] Include media item date and folder path for additional context
 
 ### 3. Hide/Ignore Face Action
-- [ ] Add an "Ignore" action per-face in the triage UI (X button or swipe)
-- [ ] Persist ignore state on the `feature` record (new `ignored` flag or reuse existing pattern)
-- [ ] Ignored faces are excluded from clustering and triage display
-- [ ] Useful for artwork, TV screens, too-blurry crops, and other non-person detections
-- [ ] Reversible via admin or person detail page
+- [x] Add an "Ignore" action per-face in the triage UI (X button or swipe)
+- [x] Persist ignore state on the `feature` record (new `ignored` flag or reuse existing pattern)
+- [x] Ignored faces are excluded from clustering and triage display
+- [x] Useful for artwork, TV screens, too-blurry crops, and other non-person detections
+- [x] Reversible via admin or person detail page
 
 ### 4. Merge Duplicate People
 - [ ] Add a "Merge into…" action on the person detail page
