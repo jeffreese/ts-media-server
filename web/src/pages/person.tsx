@@ -68,6 +68,7 @@ function PersonContent({
   const [removing, setRemoving] = useState(false)
   const [showMergeModal, setShowMergeModal] = useState(false)
   const [merging, setMerging] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   function toggleSelect(personFeatureId: number) {
     setSelected((prev) => {
@@ -111,6 +112,21 @@ function PersonContent({
     }
   }
 
+  async function handleDelete() {
+    const confirmed = window.confirm(
+      `Delete "${displayName}"? This will remove the person and unlink all associated faces.`,
+    )
+    if (!confirmed) return
+
+    setDeleting(true)
+    try {
+      await api.deletePerson(personId)
+      navigate('/people')
+    } catch {
+      setDeleting(false)
+    }
+  }
+
   const error = namesError || featuresError
   if (error) {
     return (
@@ -139,14 +155,25 @@ function PersonContent({
           <h1 className="text-xl font-semibold">{displayName}</h1>
         )}
         {!isLoading && (
-          <button
-            type="button"
-            onClick={() => setShowMergeModal(true)}
-            className="ml-auto flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
-          >
-            <GitMerge className="h-3.5 w-3.5" />
-            Merge into…
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setShowMergeModal(true)}
+              className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
+            >
+              <GitMerge className="h-3.5 w-3.5" />
+              Merge into…
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-foreground-muted transition-colors hover:bg-red-500/10 hover:text-red-500 disabled:opacity-40"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
         )}
       </div>
 

@@ -546,6 +546,10 @@ export const api = {
     })
   },
 
+  deletePerson(personId: number) {
+    return request<{ success: boolean }>(`/person/${personId}`, { method: 'DELETE' })
+  },
+
   // -- Features (faces) for a media item --
   mediaItemFeatures(mediaItemId: number, options?: PaginationOptions) {
     const query = buildQuery({ offset: options?.offset, limit: options?.limit })
