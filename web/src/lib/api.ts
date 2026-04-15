@@ -195,6 +195,32 @@ export interface MatchingFace {
 }
 
 // ---------------------------------------------------------------------------
+// Face triage
+// ---------------------------------------------------------------------------
+
+export interface FaceCluster {
+  representativeFeatureId: number
+  featureIds: number[]
+  size: number
+}
+
+export interface UnlinkedClustersResponse {
+  clusters: FaceCluster[]
+  offset: number
+  limit: number
+  total: number
+  totalUnlinkedFaces: number
+}
+
+export interface PersonCandidate {
+  personId: number
+  names: PersonName[]
+  firstFeature: { featureId: number } | null
+  photoCount: number
+  matchScore: number
+}
+
+// ---------------------------------------------------------------------------
 // Generic paginated response
 // ---------------------------------------------------------------------------
 
@@ -496,6 +522,13 @@ export const api = {
     })
   },
 
+  unlinkFeaturesFromPerson(personId: number, personFeatureIds: number[]) {
+    return request<{ success: boolean; removed: number }>(`/person/${personId}/features/unlink`, {
+      method: 'POST',
+      body: JSON.stringify({ personFeatureIds }),
+    })
+  },
+
   mergePerson(targetPersonId: number, sourcePersonId: number) {
     return request<{ success: boolean; reassigned: number }>(`/person/${targetPersonId}/merge`, {
       method: 'POST',
@@ -521,6 +554,37 @@ export const api = {
   matchingFaces(featureId: number, options?: PaginationOptions) {
     const query = buildQuery({ offset: options?.offset, limit: options?.limit })
     return request<PaginatedResponse<MatchingFace>>(`/matchingFaces/${featureId}${query}`)
+  },
+
+  // -- Face triage --
+  unlinkedClusters(options?: PaginationOptions) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+    return request<UnlinkedClustersResponse>(`/faces/unlinked/clusters${query}`)
+  },
+
+  clusterCandidates(featureId: number) {
+    return request<{ candidates: PersonCandidate[] }>(`/faces/cluster/${featureId}/candidates`)
+  },
+
+  bulkAssignFaces(personId: number, featureIds: number[]) {
+    return request<{ success: boolean; personId: number; assigned: number }>('/faces/bulk-assign', {
+      method: 'POST',
+      body: JSON.stringify({ personId, featureIds }),
+    })
+  },
+
+  bulkCreatePerson(name: string, featureIds: number[]) {
+    return request<{ success: boolean; personId: number; assigned: number }>('/faces/bulk-create', {
+      method: 'POST',
+      body: JSON.stringify({ name, featureIds }),
+    })
+  },
+
+  ignoreMatch(featureId: number, matchingFeatureId: number) {
+    return request<{ success: boolean }>('/faces/ignore-match', {
+      method: 'POST',
+      body: JSON.stringify({ featureId, matchingFeatureId }),
+    })
   },
 
   // -- Duplicate matches for a media item --
@@ -831,6 +895,38 @@ export const api = {
       places: number
       folders: number
     }>('/admin/clean-orphans', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
+  },
+
+  adminBackfillFaceMatches() {
+    return request<{
+      status: string
+      featuresProcessed: number
+      newMatchesFound: number
+      totalFeatureMatches: number
+    }>('/admin/backfill-face-matches', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
+  },
+
+  adminReEmbedFaces() {
+    return request<{
+      status: string
+      embeddingsUpdated: number
+      skipped: number
+      failed: number
+      newMatchesFound: number
+    }>('/admin/re-embed-faces', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
+  },
+
+  adminResetFaceAssignments() {
+    return request<{ status: string; removed: number }>('/admin/reset-face-assignments', {
       method: 'POST',
       body: JSON.stringify({}),
     })

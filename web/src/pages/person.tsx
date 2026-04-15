@@ -1,5 +1,5 @@
-import { ArrowLeft } from 'lucide-react'
-import { useCallback } from 'react'
+import { ArrowLeft, Check, Pencil, Trash2, X } from 'lucide-react'
+import { useCallback, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
@@ -8,7 +8,7 @@ import { useAutoRefresh } from '~/hooks/use-auto-refresh'
 import { useBreadcrumb } from '~/hooks/use-breadcrumb'
 import { useFetch } from '~/hooks/use-fetch'
 import { useInfiniteScroll } from '~/hooks/use-infinite-scroll'
-import { api } from '~/lib/api'
+import { type PersonFeature, api } from '~/lib/api'
 
 const PAGE_SIZE = 60
 
@@ -62,6 +62,41 @@ function PersonContent({
 
   useAutoRefresh(['person', 'personName', 'feature', 'personFeature'], refetchFeatures)
 
+  const [selecting, setSelecting] = useState(false)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [removing, setRemoving] = useState(false)
+
+  function toggleSelect(personFeatureId: number) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(personFeatureId)) {
+        next.delete(personFeatureId)
+      } else {
+        next.add(personFeatureId)
+      }
+      return next
+    })
+  }
+
+  function exitSelecting() {
+    setSelecting(false)
+    setSelected(new Set())
+  }
+
+  async function removeSelected() {
+    if (selected.size === 0) return
+    setRemoving(true)
+    try {
+      await api.unlinkFeaturesFromPerson(personId, [...selected])
+      exitSelecting()
+      refetchFeatures()
+    } catch {
+      // stay in selection mode so user can retry
+    } finally {
+      setRemoving(false)
+    }
+  }
+
   const error = namesError || featuresError
   if (error) {
     return (
@@ -93,12 +128,37 @@ function PersonContent({
 
       {/* Face thumbnails */}
       <section>
-        <h2 className="mb-3 text-sm font-medium text-foreground-muted uppercase tracking-wider">
-          Faces
-          {!featuresLoading && featuresTotal > 0 && (
-            <span className="ml-2 font-normal">({featuresTotal})</span>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-foreground-muted uppercase tracking-wider">
+            Faces
+            {!featuresLoading && featuresTotal > 0 && (
+              <span className="ml-2 font-normal">({featuresTotal})</span>
+            )}
+          </h2>
+          {!featuresLoading && features.length > 0 && !selecting && (
+            <button
+              type="button"
+              onClick={() => setSelecting(true)}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </button>
           )}
-        </h2>
+        </div>
+
+        {selecting && (
+          <SelectionToolbar
+            count={selected.size}
+            total={features.length}
+            removing={removing}
+            onSelectAll={() => setSelected(new Set(features.map((f) => f.id)))}
+            onDeselectAll={() => setSelected(new Set())}
+            onRemove={removeSelected}
+            onCancel={exitSelecting}
+          />
+        )}
+
         {featuresLoading ? (
           <div className="flex gap-3">
             {Array.from({ length: 4 }, (_, i) => (
@@ -108,18 +168,14 @@ function PersonContent({
         ) : features.length > 0 ? (
           <div className="flex flex-wrap gap-3">
             {features.map((feat) => (
-              <button
-                type="button"
+              <FaceThumbnail
                 key={feat.id}
-                onClick={() => navigate(`/media/${feat.itemId}`)}
-                className="h-20 w-20 overflow-hidden rounded-full bg-control transition-transform hover:scale-105"
-              >
-                <img
-                  src={api.faceUrl(feat.featureId)}
-                  alt={`Face ${feat.featureId}`}
-                  className="h-full w-full object-cover"
-                />
-              </button>
+                feat={feat}
+                selecting={selecting}
+                isSelected={selected.has(feat.id)}
+                onToggle={() => toggleSelect(feat.id)}
+                onNavigate={() => navigate(`/media/${feat.itemId}`)}
+              />
             ))}
           </div>
         ) : (
@@ -159,5 +215,103 @@ function PersonContent({
         </section>
       )}
     </div>
+  )
+}
+
+function SelectionToolbar({
+  count,
+  total,
+  removing,
+  onSelectAll,
+  onDeselectAll,
+  onRemove,
+  onCancel,
+}: {
+  count: number
+  total: number
+  removing: boolean
+  onSelectAll: () => void
+  onDeselectAll: () => void
+  onRemove: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="mb-3 flex items-center gap-3 rounded-lg border border-border bg-surface-raised px-3 py-2">
+      <span className="text-sm font-medium">
+        {count} selected
+      </span>
+      <button
+        type="button"
+        onClick={count === total ? onDeselectAll : onSelectAll}
+        className="text-xs font-medium text-accent hover:text-accent/80"
+      >
+        {count === total ? 'Deselect all' : 'Select all'}
+      </button>
+      <div className="flex-1" />
+      <button
+        type="button"
+        onClick={onRemove}
+        disabled={count === 0 || removing}
+        className="flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-40"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+        {removing ? 'Removing…' : 'Remove'}
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={removing}
+        className="rounded-md p-1.5 text-foreground-muted transition-colors hover:bg-surface hover:text-foreground disabled:opacity-40"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
+function FaceThumbnail({
+  feat,
+  selecting,
+  isSelected,
+  onToggle,
+  onNavigate,
+}: {
+  feat: PersonFeature
+  selecting: boolean
+  isSelected: boolean
+  onToggle: () => void
+  onNavigate: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={selecting ? onToggle : onNavigate}
+      className={`relative h-20 w-20 overflow-hidden rounded-full bg-control transition-transform hover:scale-105 ${
+        selecting && isSelected ? 'ring-2 ring-accent ring-offset-2 ring-offset-background' : ''
+      }`}
+    >
+      <img
+        src={api.faceUrl(feat.featureId)}
+        alt={`Face ${feat.featureId}`}
+        className={`h-full w-full object-cover ${selecting && isSelected ? 'brightness-75' : ''}`}
+      />
+      {selecting && (
+        <div
+          className={`absolute inset-0 flex items-center justify-center ${
+            isSelected ? 'bg-accent/30' : 'bg-black/10'
+          }`}
+        >
+          <div
+            className={`flex h-6 w-6 items-center justify-center rounded-full border-2 ${
+              isSelected
+                ? 'border-accent bg-accent text-white'
+                : 'border-white/70 bg-black/20'
+            }`}
+          >
+            {isSelected && <Check className="h-3.5 w-3.5" />}
+          </div>
+        </div>
+      )}
+    </button>
   )
 }

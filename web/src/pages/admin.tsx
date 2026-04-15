@@ -15,6 +15,7 @@ import {
   Settings,
   Shield,
   Upload,
+  UserX,
   Users,
   Video,
   Wrench,
@@ -681,6 +682,21 @@ interface OrphanResult {
   folders: number
 }
 
+interface BackfillResult {
+  status: string
+  featuresProcessed: number
+  newMatchesFound: number
+  totalFeatureMatches: number
+}
+
+interface ReEmbedResult {
+  status: string
+  embeddingsUpdated: number
+  skipped: number
+  failed: number
+  newMatchesFound: number
+}
+
 function MaintenanceTab() {
   const [deduplicating, setDeduplicating] = useState(false)
   const [dedupResult, setDedupResult] = useState<DedupResult | null>(null)
@@ -689,6 +705,18 @@ function MaintenanceTab() {
   const [cleaningOrphans, setCleaningOrphans] = useState(false)
   const [orphanResult, setOrphanResult] = useState<OrphanResult | null>(null)
   const [orphanError, setOrphanError] = useState<string | null>(null)
+
+  const [backfilling, setBackfilling] = useState(false)
+  const [backfillResult, setBackfillResult] = useState<BackfillResult | null>(null)
+  const [backfillError, setBackfillError] = useState<string | null>(null)
+
+  const [reEmbedding, setReEmbedding] = useState(false)
+  const [reEmbedResult, setReEmbedResult] = useState<ReEmbedResult | null>(null)
+  const [reEmbedError, setReEmbedError] = useState<string | null>(null)
+
+  const [resettingFaces, setResettingFaces] = useState(false)
+  const [resetFacesResult, setResetFacesResult] = useState<{ removed: number } | null>(null)
+  const [resetFacesError, setResetFacesError] = useState<string | null>(null)
 
   const runDedup = async () => {
     setDeduplicating(true)
@@ -718,6 +746,51 @@ function MaintenanceTab() {
     }
   }
 
+  const runBackfill = async () => {
+    setBackfilling(true)
+    setBackfillResult(null)
+    setBackfillError(null)
+    try {
+      const result = await api.adminBackfillFaceMatches()
+      setBackfillResult(result)
+    } catch (err) {
+      setBackfillError(err instanceof Error ? err.message : 'Backfill failed')
+    } finally {
+      setBackfilling(false)
+    }
+  }
+
+  const runReEmbed = async () => {
+    setReEmbedding(true)
+    setReEmbedResult(null)
+    setReEmbedError(null)
+    try {
+      const result = await api.adminReEmbedFaces()
+      setReEmbedResult(result)
+    } catch (err) {
+      setReEmbedError(err instanceof Error ? err.message : 'Re-embedding failed')
+    } finally {
+      setReEmbedding(false)
+    }
+  }
+
+  const anyRunning = deduplicating || cleaningOrphans || backfilling || reEmbedding || resettingFaces
+
+  const runResetFaceAssignments = async () => {
+    if (!window.confirm('This will unlink ALL faces from people. You will need to re-triage from scratch. Continue?')) return
+    setResettingFaces(true)
+    setResetFacesResult(null)
+    setResetFacesError(null)
+    try {
+      const result = await api.adminResetFaceAssignments()
+      setResetFacesResult(result)
+    } catch (err) {
+      setResetFacesError(err instanceof Error ? err.message : 'Reset failed')
+    } finally {
+      setResettingFaces(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <SectionCard
@@ -726,7 +799,7 @@ function MaintenanceTab() {
           <button
             type="button"
             onClick={runDedup}
-            disabled={deduplicating || cleaningOrphans}
+            disabled={deduplicating || anyRunning}
             className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
           >
             {deduplicating ? (
@@ -770,7 +843,7 @@ function MaintenanceTab() {
           <button
             type="button"
             onClick={runOrphanCleanup}
-            disabled={cleaningOrphans || deduplicating}
+            disabled={cleaningOrphans || anyRunning}
             className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
           >
             {cleaningOrphans ? (
@@ -806,6 +879,137 @@ function MaintenanceTab() {
               <ResultStat label="Persons" value={orphanResult.persons} />
               <ResultStat label="Places" value={orphanResult.places} />
               <ResultStat label="Folders" value={orphanResult.folders} />
+            </div>
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard
+        title="Backfill Face Matches"
+        action={
+          <button
+            type="button"
+            onClick={runBackfill}
+            disabled={backfilling || anyRunning}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+          >
+            {backfilling ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Shield className="h-3.5 w-3.5" />
+            )}
+            Run Backfill
+          </button>
+        }
+      >
+        <p className="text-sm text-foreground-muted">
+          Compares all face embeddings against each other and creates match records for similar faces.
+          Use this after indexing if face matches are missing, or after a bug fix to the matching pipeline.
+          This may take a while for large libraries.
+        </p>
+
+        {backfillError && (
+          <div className="mt-3 rounded-lg bg-error/10 px-4 py-3 text-sm text-error">
+            {backfillError}
+          </div>
+        )}
+
+        {backfillResult && (
+          <div className="mt-3 space-y-2">
+            <div className="rounded-lg bg-accent-surface px-4 py-3 text-sm text-accent">
+              Backfill complete
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <ResultStat label="Features Processed" value={backfillResult.featuresProcessed} />
+              <ResultStat label="New Matches" value={backfillResult.newMatchesFound} />
+              <ResultStat label="Total Matches" value={backfillResult.totalFeatureMatches} />
+            </div>
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard
+        title="Re-extract Face Embeddings"
+        action={
+          <button
+            type="button"
+            onClick={runReEmbed}
+            disabled={reEmbedding || anyRunning}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+          >
+            {reEmbedding ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            Re-extract Embeddings
+          </button>
+        }
+      >
+        <p className="text-sm text-foreground-muted">
+          Re-runs face recognition on all detected faces using the currently configured model.
+          Use this after changing the recognition model. Clears existing match data and rebuilds
+          it from scratch. This will take a while for large libraries.
+        </p>
+
+        {reEmbedError && (
+          <div className="mt-3 rounded-lg bg-error/10 px-4 py-3 text-sm text-error">
+            {reEmbedError}
+          </div>
+        )}
+
+        {reEmbedResult && (
+          <div className="mt-3 space-y-2">
+            <div className="rounded-lg bg-accent-surface px-4 py-3 text-sm text-accent">
+              Re-extraction complete
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <ResultStat label="Embeddings Updated" value={reEmbedResult.embeddingsUpdated} />
+              <ResultStat label="Skipped" value={reEmbedResult.skipped} />
+              <ResultStat label="Failed" value={reEmbedResult.failed} />
+              <ResultStat label="New Matches" value={reEmbedResult.newMatchesFound} />
+            </div>
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard
+        title="Reset Face Assignments"
+        action={
+          <button
+            type="button"
+            onClick={runResetFaceAssignments}
+            disabled={resettingFaces || anyRunning}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          >
+            {resettingFaces ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <UserX className="h-3.5 w-3.5" />
+            )}
+            Reset All Assignments
+          </button>
+        }
+      >
+        <p className="text-sm text-foreground-muted">
+          Unlinks all faces from all people. Person records are kept but all face-to-person
+          associations are removed. Use this to start fresh after a model change or bad bulk
+          assignments.
+        </p>
+
+        {resetFacesError && (
+          <div className="mt-3 rounded-lg bg-error/10 px-4 py-3 text-sm text-error">
+            {resetFacesError}
+          </div>
+        )}
+
+        {resetFacesResult && (
+          <div className="mt-3 space-y-2">
+            <div className="rounded-lg bg-accent-surface px-4 py-3 text-sm text-accent">
+              Reset complete
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <ResultStat label="Assignments Removed" value={resetFacesResult.removed} />
             </div>
           </div>
         )}

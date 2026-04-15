@@ -11,6 +11,7 @@ import { LoginPage } from '~/pages/login'
 import { MapPage } from '~/pages/map'
 import { MediaItemPage } from '~/pages/media-item'
 import { PeoplePage } from '~/pages/people'
+import { FaceTriagePage } from '~/pages/face-triage'
 import { PersonPage } from '~/pages/person'
 import { PlacePage } from '~/pages/place'
 import { PlacesPage } from '~/pages/places'
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
           { path: 'keywords', element: <KeywordsPage /> },
           { path: 'keywords/:id', element: <KeywordDetailPage /> },
           { path: 'people', element: <PeoplePage /> },
+          { path: 'people/triage', element: <FaceTriagePage /> },
           { path: 'people/:id', element: <PersonPage /> },
           { path: 'places', element: <PlacesPage /> },
           { path: 'places/:id', element: <PlacePage /> },

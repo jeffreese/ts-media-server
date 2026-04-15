@@ -9,7 +9,7 @@ import type { FaceLandmarks } from './face-detection.js';
 
 const RECOGNITION_INPUT_SIZE = 112;
 
-const DEFAULT_SIMILARITY_THRESHOLD = 0.363;
+const DEFAULT_SIMILARITY_THRESHOLD = 0.5;
 
 /**
  * Canonical landmark positions for a 112x112 aligned face.
