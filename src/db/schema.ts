@@ -127,6 +127,7 @@ export const feature = sqliteTable('feature', {
   thumbnail: blob('thumbnail'),
   label: text('label'),
   info: text('info', { mode: 'json' }),
+  ignored: integer('ignored', { mode: 'boolean' }).notNull().default(false),
 }, (table) => [
   index('feature_item_id_idx').on(table.itemId),
 ]);

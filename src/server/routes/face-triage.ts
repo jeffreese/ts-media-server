@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
-import { eq, and, inArray, isNull, or } from 'drizzle-orm';
+import { eq, and, inArray, isNull, or, count as countFn } from 'drizzle-orm';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type Database from 'better-sqlite3';
 import { z } from 'zod/v4';
@@ -153,7 +153,7 @@ function loadUnlinkedFeatures(db: Db): FeatureWithEmbedding[] {
     .select({ id: schema.feature.id, itemId: schema.feature.itemId, info: schema.feature.info })
     .from(schema.feature)
     .leftJoin(schema.personFeature, eq(schema.personFeature.featureId, schema.feature.id))
-    .where(isNull(schema.personFeature.id))
+    .where(and(isNull(schema.personFeature.id), eq(schema.feature.ignored, false)))
     .all();
 
   const features: FeatureWithEmbedding[] = [];
@@ -243,6 +243,9 @@ function extractEmbedding(info: unknown): Float32Array | null {
  * - `POST /faces/bulk-assign` — link multiple features to an existing person
  * - `POST /faces/bulk-create` — create a person and link multiple features
  * - `POST /faces/ignore-match` — suppress a feature match pair
+ * - `POST /faces/:featureId/ignore` — mark a face as ignored (excluded from triage)
+ * - `POST /faces/:featureId/unignore` — restore an ignored face
+ * - `GET /faces/ignored` — list all ignored faces (paginated)
  */
 export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
   async function faceTriagePlugin(
@@ -576,6 +579,107 @@ export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
       notifications?.notify('update', 'feature', { id: featureId });
 
       return reply.send({ success: true });
+    });
+
+    // -------------------------------------------------------------------
+    // POST /faces/:featureId/ignore
+    // -------------------------------------------------------------------
+
+    app.post('/faces/:featureId/ignore', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const paramsParsed = featureIdParams.safeParse(request.params);
+      if (!paramsParsed.success) {
+        return reply.code(400).send({ error: 'Invalid feature ID' });
+      }
+      const { featureId } = paramsParsed.data;
+
+      const feat = db
+        .select({ id: schema.feature.id })
+        .from(schema.feature)
+        .where(eq(schema.feature.id, featureId))
+        .get();
+
+      if (!feat) {
+        return reply.code(404).send({ error: 'Feature not found' });
+      }
+
+      db.update(schema.feature)
+        .set({ ignored: true })
+        .where(eq(schema.feature.id, featureId))
+        .run();
+
+      notifications?.notify('update', 'feature', { id: featureId });
+
+      return reply.send({ success: true });
+    });
+
+    // -------------------------------------------------------------------
+    // POST /faces/:featureId/unignore
+    // -------------------------------------------------------------------
+
+    app.post('/faces/:featureId/unignore', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const paramsParsed = featureIdParams.safeParse(request.params);
+      if (!paramsParsed.success) {
+        return reply.code(400).send({ error: 'Invalid feature ID' });
+      }
+      const { featureId } = paramsParsed.data;
+
+      const feat = db
+        .select({ id: schema.feature.id })
+        .from(schema.feature)
+        .where(eq(schema.feature.id, featureId))
+        .get();
+
+      if (!feat) {
+        return reply.code(404).send({ error: 'Feature not found' });
+      }
+
+      db.update(schema.feature)
+        .set({ ignored: false })
+        .where(eq(schema.feature.id, featureId))
+        .run();
+
+      notifications?.notify('update', 'feature', { id: featureId });
+
+      return reply.send({ success: true });
+    });
+
+    // -------------------------------------------------------------------
+    // GET /faces/ignored
+    // -------------------------------------------------------------------
+
+    app.get('/faces/ignored', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const queryParsed = paginationSchema.safeParse(request.query);
+      if (!queryParsed.success) {
+        return reply.code(400).send({ error: 'Invalid pagination parameters' });
+      }
+      const { offset, limit } = queryParsed.data;
+
+      const totalRow = db
+        .select({ count: countFn() })
+        .from(schema.feature)
+        .where(eq(schema.feature.ignored, true))
+        .get();
+      const total = totalRow?.count ?? 0;
+
+      const rows = db
+        .select({
+          id: schema.feature.id,
+          itemId: schema.feature.itemId,
+          label: schema.feature.label,
+        })
+        .from(schema.feature)
+        .where(eq(schema.feature.ignored, true))
+        .limit(limit)
+        .offset(offset)
+        .all();
+
+      return reply.send({ items: rows, offset, limit, total });
     });
   },
   { name: 'face-triage-routes', dependencies: ['auth'] },

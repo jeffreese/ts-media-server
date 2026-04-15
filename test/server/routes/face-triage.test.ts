@@ -483,4 +483,222 @@ describe('face triage routes', () => {
       expect(response.statusCode).toBe(404);
     });
   });
+
+  describe('POST /faces/:featureId/ignore', () => {
+    it('marks a feature as ignored', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const { fA } = seedGraph(client);
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: `/faces/${fA.id}/ignore`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().success).toBe(true);
+
+      const feat = db
+        .select()
+        .from(schema.feature)
+        .where(eq(schema.feature.id, fA.id))
+        .get();
+      expect(feat!.ignored).toBe(true);
+    });
+
+    it('returns 404 for non-existent feature', async () => {
+      const client = setupDb();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: '/faces/99999/ignore',
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('excludes ignored faces from unlinked clusters', async () => {
+      const client = setupDb();
+      const { fA, fD } = seedGraph(client);
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      // Ignore fD (the lone cluster face)
+      const ignoreRes = await app.server.inject({
+        method: 'POST',
+        url: `/faces/${fD.id}/ignore`,
+      });
+      expect(ignoreRes.statusCode).toBe(200);
+
+      const clustersRes = await app.server.inject({
+        method: 'GET',
+        url: '/faces/unlinked/clusters',
+      });
+
+      expect(clustersRes.statusCode).toBe(200);
+      const body = clustersRes.json();
+      expect(body.totalUnlinkedFaces).toBe(3);
+      expect(body.total).toBe(1);
+      const allFeatureIds = body.clusters.flatMap((c: { featureIds: number[] }) => c.featureIds);
+      expect(allFeatureIds).not.toContain(fD.id);
+      expect(allFeatureIds).toContain(fA.id);
+    });
+  });
+
+  describe('POST /faces/:featureId/unignore', () => {
+    it('restores an ignored feature', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const { fD } = seedGraph(client);
+
+      // Ignore first
+      db.update(schema.feature)
+        .set({ ignored: true })
+        .where(eq(schema.feature.id, fD.id))
+        .run();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: `/faces/${fD.id}/unignore`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().success).toBe(true);
+
+      const feat = db
+        .select()
+        .from(schema.feature)
+        .where(eq(schema.feature.id, fD.id))
+        .get();
+      expect(feat!.ignored).toBe(false);
+    });
+
+    it('unignored feature reappears in clusters', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const { fD } = seedGraph(client);
+
+      db.update(schema.feature)
+        .set({ ignored: true })
+        .where(eq(schema.feature.id, fD.id))
+        .run();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      // Verify it's excluded
+      let res = await app.server.inject({ method: 'GET', url: '/faces/unlinked/clusters' });
+      expect(res.json().totalUnlinkedFaces).toBe(3);
+
+      // Unignore it
+      await app.server.inject({ method: 'POST', url: `/faces/${fD.id}/unignore` });
+
+      // Verify it's back
+      res = await app.server.inject({ method: 'GET', url: '/faces/unlinked/clusters' });
+      expect(res.json().totalUnlinkedFaces).toBe(4);
+      const allFeatureIds = res.json().clusters.flatMap((c: { featureIds: number[] }) => c.featureIds);
+      expect(allFeatureIds).toContain(fD.id);
+    });
+
+    it('returns 404 for non-existent feature', async () => {
+      const client = setupDb();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: '/faces/99999/unignore',
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+  });
+
+  describe('GET /faces/ignored', () => {
+    it('returns empty when no faces are ignored', async () => {
+      const client = setupDb();
+      seedGraph(client);
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/faces/ignored',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.items).toHaveLength(0);
+      expect(body.total).toBe(0);
+    });
+
+    it('returns ignored faces', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const { fA, fD } = seedGraph(client);
+
+      db.update(schema.feature)
+        .set({ ignored: true })
+        .where(eq(schema.feature.id, fA.id))
+        .run();
+      db.update(schema.feature)
+        .set({ ignored: true })
+        .where(eq(schema.feature.id, fD.id))
+        .run();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/faces/ignored',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.total).toBe(2);
+      expect(body.items).toHaveLength(2);
+      const ids = body.items.map((i: { id: number }) => i.id);
+      expect(ids).toContain(fA.id);
+      expect(ids).toContain(fD.id);
+    });
+
+    it('supports pagination', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const { fA, fB, fC } = seedGraph(client);
+
+      for (const f of [fA, fB, fC]) {
+        db.update(schema.feature)
+          .set({ ignored: true })
+          .where(eq(schema.feature.id, f.id))
+          .run();
+      }
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/faces/ignored?offset=0&limit=2',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.total).toBe(3);
+      expect(body.items).toHaveLength(2);
+    });
+  });
 });

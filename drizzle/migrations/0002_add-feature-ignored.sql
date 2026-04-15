@@ -1,0 +1,1 @@
+ALTER TABLE `feature` ADD `ignored` integer DEFAULT false NOT NULL;
