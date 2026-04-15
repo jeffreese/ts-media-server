@@ -32,12 +32,26 @@ globs: ["src/services/**/*.ts", "src/utils/image.ts", "src/utils/ffmpeg.ts"]
 
 ## Face Detection (onnxruntime-node)
 
-- YuNet ONNX model for detection, SFace for recognition
+- YuNet ONNX model for detection, ArcFace w600k_r50 for recognition (512-dim embeddings)
 - Resize input to 600px max width for detection performance
 - Scale coordinates back to original dimensions after detection
 - Filter out images with >20 detections (false positive heuristic)
 - Generate 300px max face thumbnail crops stored as blob in DB
-- Cosine similarity for face comparison (threshold: 0.363)
+
+### Face Alignment & Landmark Conventions
+
+YuNet and insightface use **different left/right conventions** for landmark naming:
+
+- **YuNet (face-detection.ts):** Subject-relative. `leftEye` = subject's left eye = **right side** of the image (large x). `rightEye` = subject's right eye = **left side** of the image (small x).
+- **InsightFace/ArcFace reference landmarks:** Image-relative. Index 0 `[38.29, 51.70]` = **left side** of the 112x112 image (small x) = subject's right eye.
+
+In `alignFace`, map `rightEye` → ref[0] and `leftEye` → ref[1] (not the other way around). Same swap for mouth corners. Getting this wrong horizontally flips every face, destroying embedding discriminability.
+
+### Face Matching
+
+- Cosine similarity on L2-normalized embeddings (dot product)
+- Average-linkage clustering with size cap (20) for triage grouping
+- Candidate scoring: top-K average similarity (K adapts to person's linked face count)
 - Transitive matching via BFS up to 10 levels deep
 
 ## Perceptual Hashing
