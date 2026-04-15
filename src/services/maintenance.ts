@@ -106,15 +106,44 @@ export class MaintenanceService {
   }
 
   /**
-   * Group media items by identical perceptual hash. Returns arrays of
-   * media item IDs where each group has 2+ items sharing the same hash.
-   * IDs are sorted ascending so the first element is always the keeper.
+   * Identify groups of duplicate media items using three signals:
+   * 1. Identical perceptual hash (media_item.hash)
+   * 2. Shared file content (same file.hash MD5 linked to different media items)
+   * 3. Existing media_match records with Hamming distance = 0
+   *
+   * Uses union-find to merge overlapping pairs into connected groups.
+   * Returns arrays of media item IDs (sorted ascending, keeper first).
    */
   private findDuplicateGroups(): number[][] {
-    const rows = this.db
+    const parent = new Map<number, number>();
+
+    function find(x: number): number {
+      let root = x;
+      while (parent.get(root) !== root) root = parent.get(root)!;
+      let curr = x;
+      while (curr !== root) {
+        const next = parent.get(curr)!;
+        parent.set(curr, root);
+        curr = next;
+      }
+      return root;
+    }
+
+    function union(a: number, b: number): void {
+      if (!parent.has(a)) parent.set(a, a);
+      if (!parent.has(b)) parent.set(b, b);
+      const rootA = find(a);
+      const rootB = find(b);
+      if (rootA !== rootB) {
+        const [lo, hi] = rootA < rootB ? [rootA, rootB] : [rootB, rootA];
+        parent.set(hi, lo);
+      }
+    }
+
+    // Signal 1: identical perceptual hash
+    const hashRows = this.db
       .select({
         hash: schema.mediaItem.hash,
-        count: sql<number>`count(*)`,
       })
       .from(schema.mediaItem)
       .where(sql`${schema.mediaItem.hash} is not null AND ${schema.mediaItem.hash} != ''`)
@@ -122,9 +151,7 @@ export class MaintenanceService {
       .having(sql`count(*) > 1`)
       .all();
 
-    const groups: number[][] = [];
-
-    for (const row of rows) {
+    for (const row of hashRows) {
       const items = this.db
         .select({ id: schema.mediaItem.id })
         .from(schema.mediaItem)
@@ -132,8 +159,73 @@ export class MaintenanceService {
         .orderBy(schema.mediaItem.id)
         .all();
 
-      if (items.length > 1) {
-        groups.push(items.map((i) => i.id));
+      for (let i = 1; i < items.length; i++) {
+        union(items[0].id, items[i].id);
+      }
+    }
+
+    // Signal 2: shared file MD5 hash across different media items
+    const fileHashRows = this.db
+      .select({
+        fileHash: schema.file.hash,
+      })
+      .from(schema.file)
+      .where(sql`${schema.file.hash} is not null AND ${schema.file.hash} != ''`)
+      .groupBy(schema.file.hash)
+      .having(sql`count(*) > 1`)
+      .all();
+
+    for (const row of fileHashRows) {
+      const mediaIds = this.db
+        .select({ mediaItemId: schema.mediaItemFile.mediaItemId })
+        .from(schema.file)
+        .innerJoin(schema.mediaItemFile, eq(schema.mediaItemFile.fileId, schema.file.id))
+        .where(eq(schema.file.hash, row.fileHash!))
+        .groupBy(schema.mediaItemFile.mediaItemId)
+        .orderBy(schema.mediaItemFile.mediaItemId)
+        .all();
+
+      const ids = [...new Set(mediaIds.map((r) => r.mediaItemId))];
+      for (let i = 1; i < ids.length; i++) {
+        union(ids[0], ids[i]);
+      }
+    }
+
+    // Signal 3: existing media_match records with Hamming distance = 0
+    const exactMatches = this.db
+      .select({
+        mediaItemId: schema.mediaMatch.mediaItemId,
+        matchingItemId: schema.mediaMatch.matchingItemId,
+        matchInfo: schema.mediaMatch.matchInfo,
+      })
+      .from(schema.mediaMatch)
+      .where(eq(schema.mediaMatch.ignoreMatch, false))
+      .all();
+
+    for (const match of exactMatches) {
+      const info = match.matchInfo as { hamming_distance?: number } | null;
+      if (info?.hamming_distance === 0) {
+        union(match.mediaItemId, match.matchingItemId);
+      }
+    }
+
+    // Collect groups from union-find
+    const groupMap = new Map<number, number[]>();
+    for (const id of parent.keys()) {
+      const root = find(id);
+      let group = groupMap.get(root);
+      if (!group) {
+        group = [];
+        groupMap.set(root, group);
+      }
+      group.push(id);
+    }
+
+    const groups: number[][] = [];
+    for (const members of groupMap.values()) {
+      if (members.length > 1) {
+        members.sort((a, b) => a - b);
+        groups.push(members);
       }
     }
 

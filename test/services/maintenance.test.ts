@@ -55,10 +55,11 @@ function insertFile(
   db: BetterSQLite3Database<typeof schema>,
   pathId: number,
   name: string,
+  fileHash?: string,
 ): number {
   return db
     .insert(schema.file)
-    .values({ name, extension: 'jpg', pathId, type: 'image' })
+    .values({ name, extension: 'jpg', pathId, type: 'image', hash: fileHash ?? null })
     .returning({ id: schema.file.id })
     .get().id;
 }
@@ -280,6 +281,89 @@ describe('MaintenanceService', () => {
       expect(events).toContain('dedup_scanning');
       expect(events).toContain('dedup_merging');
       expect(events).toContain('dedup_complete');
+    });
+
+    it('detects duplicates via shared file MD5 hash', async () => {
+      const id1 = insertMediaItem(db, null, 'photo_a');
+      const id2 = insertMediaItem(db, null, 'photo_b');
+
+      const hostId = insertHost(db);
+      const pathA = insertPath(db, hostId, '/photos/a');
+      const pathB = insertPath(db, hostId, '/photos/b');
+
+      const md5 = 'abc123def456';
+      const fileA = insertFile(db, pathA, 'photo', md5);
+      const fileB = insertFile(db, pathB, 'photo', md5);
+
+      db.insert(schema.mediaItemFile).values({ mediaItemId: id1, fileId: fileA, isPrimary: true }).run();
+      db.insert(schema.mediaItemFile).values({ mediaItemId: id2, fileId: fileB, isPrimary: true }).run();
+
+      const result = await service.deduplicate();
+
+      expect(result.duplicateGroups).toBe(1);
+      expect(result.removedMediaItems).toBe(1);
+
+      const remaining = db.select().from(schema.mediaItem).all();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].id).toBe(id1);
+    });
+
+    it('detects duplicates via media_match records with hamming_distance 0', async () => {
+      const id1 = insertMediaItem(db, null, 'photo_a');
+      const id2 = insertMediaItem(db, null, 'photo_b');
+
+      db.insert(schema.mediaMatch).values({
+        mediaItemId: id1,
+        matchingItemId: id2,
+        matchInfo: { hamming_distance: 0, match_date: new Date().toISOString() },
+      }).run();
+
+      const result = await service.deduplicate();
+
+      expect(result.duplicateGroups).toBe(1);
+      expect(result.removedMediaItems).toBe(1);
+
+      const remaining = db.select().from(schema.mediaItem).all();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].id).toBe(id1);
+    });
+
+    it('does not merge media_match records with hamming_distance > 0', async () => {
+      const id1 = insertMediaItem(db, null, 'photo_a');
+      const id2 = insertMediaItem(db, null, 'photo_b');
+
+      db.insert(schema.mediaMatch).values({
+        mediaItemId: id1,
+        matchingItemId: id2,
+        matchInfo: { hamming_distance: 5, match_date: new Date().toISOString() },
+      }).run();
+
+      const result = await service.deduplicate();
+
+      expect(result.duplicateGroups).toBe(0);
+      expect(result.removedMediaItems).toBe(0);
+    });
+
+    it('merges groups across signals via union-find', async () => {
+      const hash = '0'.repeat(64);
+      const id1 = insertMediaItem(db, hash, 'photo_a');
+      const id2 = insertMediaItem(db, hash, 'photo_b');
+      const id3 = insertMediaItem(db, null, 'photo_c');
+
+      db.insert(schema.mediaMatch).values({
+        mediaItemId: id2,
+        matchingItemId: id3,
+        matchInfo: { hamming_distance: 0, match_date: new Date().toISOString() },
+      }).run();
+
+      const result = await service.deduplicate();
+
+      expect(result.duplicateGroups).toBe(1);
+      expect(result.removedMediaItems).toBe(2);
+
+      const remaining = db.select().from(schema.mediaItem).all();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].id).toBe(id1);
     });
   });
 
