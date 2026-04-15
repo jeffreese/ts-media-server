@@ -17,7 +17,7 @@ Three new endpoints, wrapped in a standard Fastify plugin (`fp`-wrapped, `preHan
 
 ### `GET /faces/unlinked/clusters`
 
-The core new query. Finds all features with no `person_feature` row, then groups them into connected components via the `feature_match` graph (reusing the BFS pattern from `FaceMatcher`). Returns clusters sorted by size (largest first), each with representative face IDs and total count. Paginated at the cluster level.
+The core query. Finds all features with no `person_feature` row, then groups them into clusters by embedding similarity (average-linkage with size cap). Returns clusters sorted by candidate confidence then size, each with representative face IDs, total count, and **inline candidate suggestions** (top-5 matching persons with names, first feature, photo count, and match score).
 
 Response shape:
 
@@ -27,7 +27,19 @@ Response shape:
     {
       "representativeFeatureId": 42,
       "featureIds": [42, 87, 103, 215],
-      "size": 4
+      "features": [{ "featureId": 42, "itemId": 1 }, ...],
+      "size": 4,
+      "topCandidateScore": 0.82,
+      "topCandidatePersonId": 5,
+      "candidates": [
+        {
+          "personId": 5,
+          "names": [{ "id": 1, "name": "Alice", "preferred": true }],
+          "firstFeature": { "featureId": 99 },
+          "photoCount": 23,
+          "matchScore": 0.82
+        }
+      ]
     }
   ],
   "offset": 0,
@@ -39,38 +51,14 @@ Response shape:
 
 Implementation approach:
 1. Query all feature IDs that have no `person_feature` row (`LEFT JOIN ... WHERE pf.id IS NULL`)
-2. Load the `feature_match` edges (non-ignored) for those feature IDs
-3. Build connected components via union-find or BFS
-4. Sort clusters by size descending
-5. Paginate the cluster list
-6. For each cluster, pick the representative as the feature with the lowest ID (stable, deterministic)
+2. Load embeddings and build clusters via average-linkage with size cap
+3. Score every cluster representative against all known persons (top-K average similarity)
+4. Batch-load names and first-feature for all candidate persons in two queries
+5. Sort clusters: candidate score descending, then size descending
+6. Paginate the cluster list
+7. For each cluster, pick the representative as the feature with the lowest ID (stable, deterministic)
 
-### `GET /faces/cluster/:featureId/candidates`
-
-For a given face (or cluster representative), returns the top N existing people ranked by how many `feature_match` links exist between the cluster's features and that person's linked features. Falls back gracefully when no match links exist.
-
-Response shape:
-
-```json
-{
-  "candidates": [
-    {
-      "personId": 5,
-      "names": [{ "id": 1, "name": "Alice", "preferred": true }],
-      "firstFeature": { "featureId": 99 },
-      "photoCount": 23,
-      "matchScore": 7
-    }
-  ]
-}
-```
-
-Implementation approach:
-1. Get the cluster's feature IDs (BFS from the given feature through unlinked features)
-2. Find all `feature_match` rows where one side is in the cluster and the other side is linked to a person (via `person_feature`)
-3. Group by person, count matches as `matchScore`
-4. Join person names and first feature for display
-5. Return top 5 candidates sorted by matchScore descending
+> **Note:** The separate `GET /faces/cluster/:featureId/candidates` endpoint was removed. It previously re-clustered all features from scratch on every call, causing an O(N*K) re-computation per visible cluster card. Candidates are now computed once during clustering and returned inline.
 
 ### `POST /faces/bulk-assign`
 
@@ -98,7 +86,11 @@ New types:
 interface FaceCluster {
   representativeFeatureId: number
   featureIds: number[]
+  features: { featureId: number; itemId: number }[]
   size: number
+  topCandidateScore: number | null
+  topCandidatePersonId: number | null
+  candidates: PersonCandidate[]
 }
 
 interface UnlinkedClustersResponse {
@@ -122,11 +114,13 @@ New methods:
 
 ```typescript
 unlinkedClusters(options?: PaginationOptions) → UnlinkedClustersResponse
-clusterCandidates(featureId: number) → { candidates: PersonCandidate[] }
 bulkAssignFaces(personId: number, featureIds: number[]) → { success: true; personId: number; assigned: number }
 bulkCreatePerson(name: string, featureIds: number[]) → { success: true; personId: number; assigned: number }
 ignoreMatch(featureId: number, matchingFeatureId: number) → { success: true }
+peopleSearch(q: string, limit?: number) → { items: PersonBatchItem[] }
 ```
+
+> **Note:** `clusterCandidates(featureId)` was removed. Candidates are now returned inline in the `unlinkedClusters` response.
 
 ## Phase 3: Frontend — Cluster Inbox Page
 
@@ -207,9 +201,11 @@ This requires a lightweight endpoint or piggybacking on the clusters endpoint wi
 
 ## Key Design Decisions
 
-- **Clusters computed server-side.** The connected-component grouping uses the existing `feature_match` graph and runs on the server. No new ML inference needed; just graph traversal of existing data.
+- **Clusters computed server-side.** The clustering uses average-linkage on raw embeddings with a size cap, and runs on the server. No new ML inference needed; just vector similarity on existing embeddings.
 
-- **Candidate ranking by match-link count.** Rather than re-computing cosine similarity at query time, rank candidates by how many `feature_match` edges connect the cluster to a person's linked features. This is fast (pure SQL joins) and correlates well with actual similarity.
+- **Candidate scoring inline with clustering.** Candidates are computed once during the cluster listing request and returned inline per cluster, avoiding the previous N+1 pattern where each cluster card triggered a separate request that re-clustered all features from scratch.
+
+- **Candidate ranking by top-K average similarity.** For each cluster's representative face, compare against every linked face of each candidate person, average the top-K (K=5) highest similarities. Only suggest when that average exceeds 0.65. This requires similarity to *multiple* known faces, preventing single-outlier false matches.
 
 - **`ignoreMatch` for "No" decisions.** Already exists in the schema. Setting it prevents the pair from appearing in future BFS traversals, so dismissed suggestions stay dismissed.
 

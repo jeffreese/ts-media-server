@@ -211,6 +211,7 @@ export interface FaceCluster {
   size: number
   topCandidateScore: number | null
   topCandidatePersonId: number | null
+  candidates: PersonCandidate[]
 }
 
 export interface UnlinkedClustersResponse {
@@ -571,8 +572,9 @@ export const api = {
     return request<UnlinkedClustersResponse>(`/faces/unlinked/clusters${query}`)
   },
 
-  clusterCandidates(featureId: number) {
-    return request<{ candidates: PersonCandidate[] }>(`/faces/cluster/${featureId}/candidates`)
+  peopleSearch(q: string, limit = 50) {
+    const query = buildQuery({ q, limit })
+    return request<{ items: PersonBatchItem[] }>(`/people/search${query}`)
   },
 
   bulkAssignFaces(personId: number, featureIds: number[]) {

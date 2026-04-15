@@ -932,4 +932,134 @@ describe('people routes', () => {
       expect(personEvents).toHaveLength(2);
     });
   });
+
+  describe('GET /people/search', () => {
+    it('returns all people when query is empty', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const p1 = createPerson(client);
+      const p2 = createPerson(client);
+      db.insert(schema.personName).values({ personId: p1, name: 'Alice', preferred: true, info: null }).run();
+      db.insert(schema.personName).values({ personId: p2, name: 'Bob', preferred: true, info: null }).run();
+
+      await setupApp(client);
+
+      const res = await app.server.inject({
+        method: 'GET',
+        url: '/people/search',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.items.length).toBeGreaterThanOrEqual(2);
+      const names = body.items.flatMap((i: { names: { name: string }[] }) => i.names.map((n) => n.name));
+      expect(names).toContain('Alice');
+      expect(names).toContain('Bob');
+    });
+
+    it('filters people by name substring', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const p1 = createPerson(client);
+      const p2 = createPerson(client);
+      db.insert(schema.personName).values({ personId: p1, name: 'Alice Smith', preferred: true, info: null }).run();
+      db.insert(schema.personName).values({ personId: p2, name: 'Bob Jones', preferred: true, info: null }).run();
+
+      await setupApp(client);
+
+      const res = await app.server.inject({
+        method: 'GET',
+        url: '/people/search?q=alice',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.items).toHaveLength(1);
+      expect(body.items[0].personId).toBe(p1);
+    });
+
+    it('returns empty when no names match', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const p1 = createPerson(client);
+      db.insert(schema.personName).values({ personId: p1, name: 'Alice', preferred: true, info: null }).run();
+
+      await setupApp(client);
+
+      const res = await app.server.inject({
+        method: 'GET',
+        url: '/people/search?q=zzz',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.items).toHaveLength(0);
+    });
+
+    it('respects limit parameter', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      for (let i = 0; i < 5; i++) {
+        const pid = createPerson(client);
+        db.insert(schema.personName).values({ personId: pid, name: `Person ${i}`, preferred: true, info: null }).run();
+      }
+
+      await setupApp(client);
+
+      const res = await app.server.inject({
+        method: 'GET',
+        url: '/people/search?limit=2',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.items).toHaveLength(2);
+    });
+
+    it('includes first feature and photo count', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const pid = createPerson(client);
+      const featureId = createFeature(client);
+      db.insert(schema.personName).values({ personId: pid, name: 'Alice', preferred: true, info: null }).run();
+      db.insert(schema.personFeature).values({ personId: pid, featureId, info: null }).run();
+
+      await setupApp(client);
+
+      const res = await app.server.inject({
+        method: 'GET',
+        url: '/people/search?q=Alice',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.items).toHaveLength(1);
+      expect(body.items[0].photoCount).toBe(1);
+      expect(body.items[0].firstFeature).not.toBeNull();
+      expect(body.items[0].firstFeature.featureId).toBe(featureId);
+    });
+
+    it('returns results in stable order by person id', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const ids: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        const pid = createPerson(client);
+        ids.push(pid);
+        db.insert(schema.personName).values({ personId: pid, name: `Person ${i}`, preferred: true, info: null }).run();
+      }
+
+      await setupApp(client);
+
+      const res = await app.server.inject({
+        method: 'GET',
+        url: '/people/search',
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      const returnedIds = body.items.map((i: { personId: number }) => i.personId);
+      expect(returnedIds).toEqual([...returnedIds].sort((a: number, b: number) => a - b));
+    });
+  });
 });

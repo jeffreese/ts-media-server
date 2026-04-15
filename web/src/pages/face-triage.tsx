@@ -22,6 +22,7 @@ import { useFetch } from '~/hooks/use-fetch'
 import {
   type FaceCluster,
   type PersonBatchItem,
+  type PersonCandidate,
   api,
 } from '~/lib/api'
 
@@ -254,12 +255,7 @@ function ClusterCard({
   const [busy, setBusy] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
 
-  const { data: candidateData } = useFetch(
-    () => api.clusterCandidates(cluster.representativeFeatureId),
-    [cluster.representativeFeatureId],
-  )
-
-  const topCandidate = candidateData?.candidates[0]
+  const topCandidate = cluster.candidates[0] as PersonCandidate | undefined
   const candidateName = topCandidate?.names.find((n) => n.preferred)?.name
     ?? topCandidate?.names[0]?.name
 
@@ -520,12 +516,7 @@ function ConfirmationCard({
   const featureId = cluster.featureIds[0]!
   const itemId = cluster.features[0]?.itemId
 
-  const { data: candidateData } = useFetch(
-    () => api.clusterCandidates(featureId),
-    [featureId],
-  )
-
-  const topCandidate = candidateData?.candidates[0]
+  const topCandidate = cluster.candidates[0] as PersonCandidate | undefined
   const candidateName = topCandidate?.names.find((n) => n.preferred)?.name
     ?? topCandidate?.names[0]?.name
 
@@ -959,6 +950,7 @@ function PersonSearchList({
   const [results, setResults] = useState<PersonBatchItem[]>([])
   const [loading, setLoading] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const versionRef = useRef(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -967,27 +959,20 @@ function PersonSearchList({
 
   const search = useCallback(
     (q: string) => {
+      const version = ++versionRef.current
       setLoading(true)
       api
-        .people({ limit: 200 })
+        .peopleSearch(q, 200)
         .then((res) => {
-          const ids = res.items.map((p) => p.id)
-          if (ids.length === 0) {
-            setResults([])
-            setLoading(false)
-            return
-          }
-          return api.peopleBatch(ids).then((batch) => {
-            const lq = q.toLowerCase()
-            const filtered = batch.items.filter((item) => {
-              if (!lq) return true
-              return item.names.some((n) => n.name.toLowerCase().includes(lq))
-            })
-            setResults(filtered)
-            setLoading(false)
-          })
+          if (version !== versionRef.current) return
+          setResults(res.items)
+          setLoading(false)
         })
-        .catch(() => setLoading(false))
+        .catch(() => {
+          if (version !== versionRef.current) return
+          setResults([])
+          setLoading(false)
+        })
     },
     [],
   )
