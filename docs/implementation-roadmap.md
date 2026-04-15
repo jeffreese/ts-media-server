@@ -728,6 +728,33 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 
 ---
 
+## Phase 17: Database Maintenance
+
+### Deduplication
+- [x] Implement `MaintenanceService` (`src/services/maintenance.ts`)
+- [x] Find duplicate media items by identical perceptual hash (Hamming distance = 0)
+- [x] Merge duplicates: transfer file links, folder entries, keywords, ratings, features, place links, and access records to the keeper (lowest ID)
+- [x] Delete merged duplicates (cascade handles match records and log entries)
+- [x] Emit progress notifications during dedup scan and merge
+
+### Orphan Cleanup (database-level)
+- [x] Clean dangling `media_match` records where either side no longer exists
+- [x] Clean dangling `feature_match` records where either side no longer exists
+- [x] Remove `keyword` records with no `media_item_keyword` links
+- [x] Remove `person` records with no names, features, or user links
+- [x] Remove `place` records with no names, media, or address links
+- [x] Remove empty `folder` records (recursive bottom-up)
+
+### Admin API & UI
+- [x] `POST /admin/deduplicate` — trigger deduplication (SysAdmin only)
+- [x] `POST /admin/clean-orphans` — trigger orphan cleanup (SysAdmin only)
+- [x] Wire `MaintenanceService` into `serve.ts` via callback options
+- [x] Add Maintenance tab to admin web UI with Dedup and Clean Orphans actions
+- [x] Display result summaries (groups merged, items removed, orphans cleaned)
+- [x] Write tests for dedup logic, orphan cleanup, and progress notifications
+
+---
+
 ## Phase Summary
 
 | Phase | Description | Key Deliverable |
@@ -748,3 +775,4 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 | 14 | Polish & Production Readiness | Error handling, performance, docs, cross-platform testing |
 | 15 | Web Frontend | React SPA with folder browsing, lightbox, people/faces, settings |
 | 16 | Web Frontend V2 | Full feature coverage: metadata, keywords, ratings, search, faces, map, admin, auth |
+| 17 | Database Maintenance | Deduplication of re-indexed media, orphaned record cleanup, admin UI |

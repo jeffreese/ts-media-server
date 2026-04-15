@@ -11,9 +11,16 @@ import { z } from 'zod/v4';
 import * as schema from '../../db/schema.js';
 import { hasAdminAccess, assertSafePath } from './shared.js';
 
+export interface MaintenanceResult {
+  dedup?: { duplicateGroups: number; mergedMediaItems: number; removedMediaItems: number };
+  orphans?: { mediaMatches: number; featureMatches: number; keywords: number; persons: number; places: number; folders: number };
+}
+
 export interface AdminPluginOptions {
   db: Database.Database;
   onIndexDirectory?: (directory: string, concurrency: number) => void;
+  onDeduplicate?: () => Promise<MaintenanceResult['dedup']>;
+  onCleanOrphans?: () => Promise<MaintenanceResult['orphans']>;
 }
 
 type Db = BetterSQLite3Database<typeof schema>;
@@ -60,6 +67,9 @@ const downloadQuerySchema = z.object({
  * - `POST /admin/dir/upload` — upload files to server
  * - `GET /admin/dir/download` — download a file from server
  * - `POST /admin/index` — trigger directory indexing
+ * - `POST /admin/reindex` — re-index existing paths
+ * - `POST /admin/deduplicate` — merge duplicate media items
+ * - `POST /admin/clean-orphans` — remove orphaned database records
  */
 export const adminPlugin = fp<AdminPluginOptions>(
   async function adminPlugin(
@@ -473,6 +483,42 @@ export const adminPlugin = fp<AdminPluginOptions>(
       }
 
       return reply.send({ status: 'started', directories: uniqueDirs });
+    });
+
+    // -----------------------------------------------------------------------
+    // POST /admin/deduplicate — merge duplicate media items
+    // -----------------------------------------------------------------------
+
+    app.post('/admin/deduplicate', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const authError = requireAdmin(db, request.userId);
+      if (authError) return reply.code(authError.code).send({ error: authError.error });
+
+      if (!opts.onDeduplicate) {
+        return reply.code(501).send({ error: 'Deduplication not available in this server configuration' });
+      }
+
+      const result = await opts.onDeduplicate();
+      return reply.send({ status: 'complete', ...result });
+    });
+
+    // -----------------------------------------------------------------------
+    // POST /admin/clean-orphans — remove orphaned database records
+    // -----------------------------------------------------------------------
+
+    app.post('/admin/clean-orphans', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const authError = requireAdmin(db, request.userId);
+      if (authError) return reply.code(authError.code).send({ error: authError.error });
+
+      if (!opts.onCleanOrphans) {
+        return reply.code(501).send({ error: 'Orphan cleanup not available in this server configuration' });
+      }
+
+      const result = await opts.onCleanOrphans();
+      return reply.send({ status: 'complete', ...result });
     });
   },
   { name: 'admin-routes', dependencies: ['auth'] },
