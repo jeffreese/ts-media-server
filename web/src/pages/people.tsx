@@ -1,6 +1,6 @@
 import { Users } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { EmptyState } from '~/components/empty-state'
 import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
@@ -26,6 +26,13 @@ export function PeoplePage() {
 
   const [batchData, setBatchData] = useState<Map<number, PersonBatchItem>>(new Map())
   const pendingIdsRef = useRef<Set<number>>(new Set())
+  const [unlinkedCount, setUnlinkedCount] = useState<{ clusters: number; faces: number } | null>(null)
+
+  useEffect(() => {
+    api.unlinkedClusters({ limit: 1 }).then((res) => {
+      setUnlinkedCount({ clusters: res.total, faces: res.totalUnlinkedFaces })
+    }).catch(() => {})
+  }, [items])
 
   useEffect(() => {
     const newIds = items
@@ -82,6 +89,20 @@ export function PeoplePage() {
 
   return (
     <div>
+      {unlinkedCount && unlinkedCount.clusters > 0 && (
+        <Link
+          to="/people/triage"
+          className="mb-4 flex items-center justify-between rounded-xl border border-accent/30 bg-accent-surface px-4 py-3 transition-colors hover:border-accent/50"
+        >
+          <span className="text-sm font-medium text-accent">
+            {unlinkedCount.clusters} unassigned face cluster{unlinkedCount.clusters !== 1 ? 's' : ''}{' '}
+            <span className="font-normal text-foreground-muted">
+              ({unlinkedCount.faces} face{unlinkedCount.faces !== 1 ? 's' : ''})
+            </span>
+          </span>
+          <span className="text-sm font-medium text-accent">Review now →</span>
+        </Link>
+      )}
       <h1 className="mb-6 text-xl font-semibold">
         People <span className="text-foreground-muted font-normal">({total})</span>
       </h1>

@@ -4,12 +4,16 @@ import { join, basename, extname, resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
-import { eq, sql } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type Database from 'better-sqlite3';
 import { z } from 'zod/v4';
 import * as schema from '../../db/schema.js';
 import { hasAdminAccess, assertSafePath } from './shared.js';
+import { FaceMatcher } from '../../services/face-matcher.js';
+import { loadModel } from '../../services/onnx-models.js';
+import { alignFace, extractEmbedding, type FaceLandmarks } from '../../services/face-recognition.js';
+import { loadImage } from '../../utils/image.js';
 
 export interface MaintenanceResult {
   dedup?: { duplicateGroups: number; mergedMediaItems: number; removedMediaItems: number };
@@ -520,6 +524,235 @@ export const adminPlugin = fp<AdminPluginOptions>(
       const result = await opts.onCleanOrphans();
       return reply.send({ status: 'complete', ...result });
     });
+
+    // -----------------------------------------------------------------------
+    // POST /admin/reset-face-assignments — unlink all person_feature records
+    // -----------------------------------------------------------------------
+
+    app.post('/admin/reset-face-assignments', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const authError = requireAdmin(db, request.userId);
+      if (authError) return reply.code(authError.code).send({ error: authError.error });
+
+      const countBefore = Number(
+        db.select({ count: sql<number>`count(*)` }).from(schema.personFeature).get()?.count ?? 0,
+      );
+
+      db.delete(schema.personFeature).run();
+
+      return reply.send({ status: 'complete', removed: countBefore });
+    });
+
+    // -----------------------------------------------------------------------
+    // POST /admin/backfill-face-matches — populate feature_match for existing embeddings
+    // -----------------------------------------------------------------------
+
+    app.post('/admin/backfill-face-matches', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const authError = requireAdmin(db, request.userId);
+      if (authError) return reply.code(authError.code).send({ error: authError.error });
+
+      const BATCH_SIZE = 500;
+      const faceMatcher = new FaceMatcher(db);
+
+      let offset = 0;
+      let processed = 0;
+      let matchesFound = 0;
+
+      for (;;) {
+        const rows = db
+          .select({ id: schema.feature.id, info: schema.feature.info })
+          .from(schema.feature)
+          .limit(BATCH_SIZE)
+          .offset(offset)
+          .all();
+
+        if (rows.length === 0) break;
+
+        for (const row of rows) {
+          const embedding = extractEmbeddingFromInfo(row.info);
+          if (!embedding) continue;
+
+          const matches = await faceMatcher.matchFace(row.id, embedding);
+          matchesFound += matches.length;
+          processed++;
+        }
+
+        if (rows.length < BATCH_SIZE) break;
+        offset += BATCH_SIZE;
+      }
+
+      faceMatcher.clearCache();
+
+      const totalMatches = Number(
+        db.select({ count: sql<number>`count(*)` }).from(schema.featureMatch).get()?.count ?? 0,
+      );
+
+      return reply.send({
+        status: 'complete',
+        featuresProcessed: processed,
+        newMatchesFound: matchesFound,
+        totalFeatureMatches: totalMatches,
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // POST /admin/re-embed-faces — re-extract all face embeddings with current model
+    // -----------------------------------------------------------------------
+
+    app.post('/admin/re-embed-faces', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const authError = requireAdmin(db, request.userId);
+      if (authError) return reply.code(authError.code).send({ error: authError.error });
+
+      const modelPath = db
+        .select({ value: schema.setting.value })
+        .from(schema.setting)
+        .where(eq(schema.setting.key, 'faceRecognitionModelPath'))
+        .get()?.value;
+
+      if (!modelPath) {
+        return reply.code(400).send({ error: 'faceRecognitionModelPath not configured in settings' });
+      }
+
+      let session;
+      try {
+        session = await loadModel(modelPath, 'Face recognition');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return reply.code(500).send({ error: `Failed to load recognition model: ${msg}` });
+      }
+
+      try {
+        // Clear stale matches from old embedding space
+        db.delete(schema.featureMatch).run();
+
+        const BATCH_SIZE = 100;
+        let offset = 0;
+        let updated = 0;
+        let skipped = 0;
+        let failed = 0;
+
+        for (;;) {
+          const rows = db
+            .select({
+              featureId: schema.feature.id,
+              info: schema.feature.info,
+              dir: schema.path.dir,
+              fileName: schema.file.name,
+              fileExt: schema.file.extension,
+            })
+            .from(schema.feature)
+            .innerJoin(schema.mediaItem, eq(schema.mediaItem.id, schema.feature.itemId))
+            .innerJoin(schema.mediaItemFile, and(
+              eq(schema.mediaItemFile.mediaItemId, schema.mediaItem.id),
+              eq(schema.mediaItemFile.isPrimary, true),
+            ))
+            .innerJoin(schema.file, eq(schema.file.id, schema.mediaItemFile.fileId))
+            .innerJoin(schema.path, eq(schema.path.id, schema.file.pathId))
+            .limit(BATCH_SIZE)
+            .offset(offset)
+            .all();
+
+          if (rows.length === 0) break;
+
+          for (const row of rows) {
+            const landmarks = extractLandmarks(row.info);
+            if (!landmarks) {
+              skipped++;
+              continue;
+            }
+
+            const filePath = row.dir + '/' + row.fileName + (row.fileExt ? '.' + row.fileExt : '');
+            try {
+              const image = loadImage(filePath);
+              const aligned = await alignFace(image, landmarks);
+              const embedding = await extractEmbedding(session, aligned);
+
+              const info = (row.info && typeof row.info === 'object' ? row.info : {}) as Record<string, unknown>;
+              info.embedding = Array.from(embedding);
+
+              db.update(schema.feature)
+                .set({ info })
+                .where(eq(schema.feature.id, row.featureId))
+                .run();
+
+              updated++;
+            } catch {
+              failed++;
+            }
+          }
+
+          if (rows.length < BATCH_SIZE) break;
+          offset += BATCH_SIZE;
+        }
+
+        // Re-run face matching with the new embeddings
+        const faceMatcher = new FaceMatcher(db);
+        let matchesFound = 0;
+        offset = 0;
+
+        for (;;) {
+          const rows = db
+            .select({ id: schema.feature.id, info: schema.feature.info })
+            .from(schema.feature)
+            .limit(500)
+            .offset(offset)
+            .all();
+
+          if (rows.length === 0) break;
+
+          for (const row of rows) {
+            const embedding = extractEmbeddingFromInfo(row.info);
+            if (!embedding) continue;
+            const matches = await faceMatcher.matchFace(row.id, embedding);
+            matchesFound += matches.length;
+          }
+
+          if (rows.length < 500) break;
+          offset += 500;
+        }
+
+        faceMatcher.clearCache();
+
+        return reply.send({
+          status: 'complete',
+          embeddingsUpdated: updated,
+          skipped,
+          failed,
+          newMatchesFound: matchesFound,
+        });
+      } finally {
+        await session.release();
+      }
+    });
   },
   { name: 'admin-routes', dependencies: ['auth'] },
 );
+
+function extractEmbeddingFromInfo(info: unknown): Float32Array | null {
+  if (!info || typeof info !== 'object') return null;
+  const record = info as Record<string, unknown>;
+  const raw = record.embedding;
+  if (!Array.isArray(raw)) return null;
+  if (!raw.every((v) => typeof v === 'number' && !Number.isNaN(v))) return null;
+  return new Float32Array(raw);
+}
+
+function extractLandmarks(info: unknown): FaceLandmarks | null {
+  if (!info || typeof info !== 'object') return null;
+  const record = info as Record<string, unknown>;
+  const lm = record.landmarks;
+  if (!lm || typeof lm !== 'object') return null;
+  const l = lm as Record<string, unknown>;
+  if (!isPoint(l.leftEye) || !isPoint(l.rightEye) || !isPoint(l.noseTip) ||
+      !isPoint(l.leftMouthCorner) || !isPoint(l.rightMouthCorner)) return null;
+  return l as unknown as FaceLandmarks;
+}
+
+function isPoint(v: unknown): v is { x: number; y: number } {
+  return !!v && typeof v === 'object' && typeof (v as Record<string, unknown>).x === 'number' && typeof (v as Record<string, unknown>).y === 'number';
+}

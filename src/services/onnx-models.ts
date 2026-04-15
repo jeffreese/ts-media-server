@@ -9,14 +9,14 @@ import { basename, resolve } from 'node:path';
 
 /** Expected on-disk filename for the YuNet face detection weights (OpenCV Zoo). */
 export const FACE_DETECTION_MODEL = 'face_detection_yunet_2023mar.onnx';
-/** Expected on-disk filename for the SFace embedding weights (OpenCV Zoo). */
-export const FACE_RECOGNITION_MODEL = 'face_recognition_sface_2021dec.onnx';
+/** Expected on-disk filename for the ArcFace embedding weights (InsightFace buffalo_l). */
+export const FACE_RECOGNITION_MODEL = 'w600k_r50.onnx';
 
 const MODEL_DOWNLOAD_URLS: Record<string, string> = {
   [FACE_DETECTION_MODEL]:
     'https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx',
   [FACE_RECOGNITION_MODEL]:
-    'https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx',
+    'https://huggingface.co/Aitrepreneur/insightface/resolve/main/models/buffalo_l/w600k_r50.onnx',
 };
 
 // ---------------------------------------------------------------------------

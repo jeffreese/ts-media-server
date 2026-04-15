@@ -56,6 +56,10 @@ const mergeBodySchema = z.object({
   sourcePersonId: z.number().int().positive(),
 });
 
+const bulkUnlinkBodySchema = z.object({
+  personFeatureIds: z.array(z.number().int().positive()).min(1).max(500),
+});
+
 export interface PeoplePluginOptions {
   db: Database.Database;
   notificationService?: NotificationService;
@@ -606,6 +610,38 @@ export const peoplePlugin = fp<PeoplePluginOptions>(
       db.delete(schema.personFeature).where(eq(schema.personFeature.id, body.data.id)).run();
       notifications?.notify('update', 'person', { id: personId });
       return reply.send({ success: true });
+    });
+
+    app.post('/person/:personId/features/unlink', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const params = personIdParams.safeParse(request.params);
+      if (!params.success) return reply.code(400).send({ error: 'Invalid person ID' });
+      const { personId } = params.data;
+
+      if (!assertPerson(personId)) return reply.code(404).send({ error: 'Person not found' });
+
+      const body = bulkUnlinkBodySchema.safeParse(request.body);
+      if (!body.success) return reply.code(400).send({ error: 'Request body must include a "personFeatureIds" array' });
+      const { personFeatureIds } = body.data;
+
+      let removed = 0;
+      for (const pfId of personFeatureIds) {
+        const existing = db
+          .select({ id: schema.personFeature.id })
+          .from(schema.personFeature)
+          .where(and(eq(schema.personFeature.id, pfId), eq(schema.personFeature.personId, personId)))
+          .get();
+
+        if (existing) {
+          db.delete(schema.personFeature).where(eq(schema.personFeature.id, pfId)).run();
+          removed++;
+        }
+      }
+
+      notifications?.notify('update', 'person', { id: personId });
+      notifications?.notify('update', 'personFeature', { personId });
+      return reply.send({ success: true, removed });
     });
 
     // -----------------------------------------------------------------------

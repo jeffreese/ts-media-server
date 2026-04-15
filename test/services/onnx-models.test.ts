@@ -148,7 +148,7 @@ describe('onnx-models service', () => {
       const urls = getModelDownloadUrls();
 
       expect(urls[FACE_DETECTION_MODEL]).toContain('yunet');
-      expect(urls[FACE_RECOGNITION_MODEL]).toContain('sface');
+      expect(urls[FACE_RECOGNITION_MODEL]).toContain('w600k_r50');
     });
 
     it('returns a new object each time (not a shared reference)', () => {
@@ -171,7 +171,7 @@ describe('onnx-models service', () => {
 
     it('exports expected recognition model filename', () => {
       expect(FACE_RECOGNITION_MODEL).toBe(
-        'face_recognition_sface_2021dec.onnx',
+        'w600k_r50.onnx',
       );
     });
   });

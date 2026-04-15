@@ -166,7 +166,7 @@ describe('FaceMatcher', () => {
   // -------------------------------------------------------------------------
 
   describe('deduplication', () => {
-    it('only compares when sourceId < targetId', async () => {
+    it('finds matches regardless of ID ordering', async () => {
       const embedding = makeEmbedding(1);
       const itemA = insertMediaItem(db);
       const itemB = insertMediaItem(db);
@@ -181,7 +181,7 @@ describe('FaceMatcher', () => {
 
       const matcher2 = new FaceMatcher(db);
       const reverse = await matcher2.matchFace(id2, embedding);
-      expect(reverse).toHaveLength(0);
+      expect(reverse).toHaveLength(1);
     });
 
     it('does not insert duplicate match records', async () => {
@@ -221,9 +221,10 @@ describe('FaceMatcher', () => {
       const matches = await matcher.matchFace(features[1], embedding);
       expect(matcher.cacheSize).toBe(2);
 
-      // features[1] > features[0] → skip (dedup). features[1] < features[2] → match.
-      expect(matches).toHaveLength(1);
-      expect(matches[0].matchingFeatureId).toBe(features[2]);
+      // features[1] matches features[0] (cache) and features[2] (DB scan)
+      expect(matches).toHaveLength(2);
+      const matchedIds = matches.map((m) => m.matchingFeatureId).sort((a, b) => a - b);
+      expect(matchedIds).toEqual([features[0], features[2]].sort((a, b) => a - b));
     });
 
     it('clearCache resets the cache', async () => {

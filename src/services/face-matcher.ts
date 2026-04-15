@@ -3,7 +3,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { cosineSimilarity } from './face-recognition.js';
 import * as schema from '../db/schema.js';
 
-const DEFAULT_SIMILARITY_THRESHOLD = 0.363;
+const DEFAULT_SIMILARITY_THRESHOLD = 0.5;
 const DB_SCAN_BATCH_SIZE = 500;
 const MAX_BFS_DEPTH = 10;
 
@@ -61,7 +61,7 @@ export class FaceMatcher {
 
     // Phase 1: in-memory cache
     for (const entry of this.cache.values()) {
-      if (!this.shouldCompare(featureId, entry.featureId)) continue;
+      if (entry.featureId === featureId) continue;
 
       const similarity = cosineSimilarity(embedding, entry.embedding);
       if (similarity >= this.threshold) {
@@ -86,7 +86,6 @@ export class FaceMatcher {
       for (const row of rows) {
         if (row.id === featureId) continue;
         if (cachedIds.has(row.id)) continue;
-        if (!this.shouldCompare(featureId, row.id)) continue;
 
         const rowEmbedding = extractEmbedding(row.info);
         if (!rowEmbedding) continue;
@@ -175,14 +174,6 @@ export class FaceMatcher {
   // ---------------------------------------------------------------------------
   // Internal helpers
   // ---------------------------------------------------------------------------
-
-  /**
-   * Enforce the deduplication invariant: only compare when sourceId < targetId
-   * so each pair is evaluated at most once.
-   */
-  private shouldCompare(sourceId: number, targetId: number): boolean {
-    return sourceId < targetId;
-  }
 
   /**
    * Query both directions of the feature_match table for non-ignored matches.

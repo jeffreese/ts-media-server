@@ -755,6 +755,65 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 
 ---
 
+## Phase 18: Face Triage & People Management
+
+Improve the face-to-person assignment workflow with smarter scoring, better UX patterns, and features modeled after Google Photos, Apple Photos, and Immich.
+
+**Design brief:** `docs/plans/face-triage-v2-handoff.md` — full context on the problem, options explored, key insights, and implementation details.
+
+### 1. Sort Clusters by Candidate Confidence
+- [ ] Clusters with a high-confidence candidate suggestion appear first on the triage page
+- [ ] Clusters with no candidate appear last, grouped separately
+- [ ] Re-sort on each refresh as new assignments shift scores
+
+### 2. Face-in-Context View
+- [ ] Click a face thumbnail in the triage filmstrip to see the full source photo
+- [ ] Resolve original media item via `feature.itemId`
+- [ ] Show as a popover or slide-out panel (not a full navigation) so the user stays in triage flow
+- [ ] Include media item date and folder path for additional context
+
+### 3. Hide/Ignore Face Action
+- [ ] Add an "Ignore" action per-face in the triage UI (X button or swipe)
+- [ ] Persist ignore state on the `feature` record (new `ignored` flag or reuse existing pattern)
+- [ ] Ignored faces are excluded from clustering and triage display
+- [ ] Useful for artwork, TV screens, too-blurry crops, and other non-person detections
+- [ ] Reversible via admin or person detail page
+
+### 4. Merge Duplicate People
+- [ ] Add a "Merge into…" action on the person detail page
+- [ ] Person search/select modal to pick the target person
+- [ ] Transfer all `person_feature` links from source to target
+- [ ] Transfer all `person_name` records (mark merged names as non-preferred)
+- [ ] Delete the now-empty source person record
+- [ ] Server endpoint: `POST /person/:id/merge` with `targetPersonId` body
+- [ ] Emit notifications so the UI refreshes
+
+### 5. Keyboard Shortcuts for Cluster Triage
+- [ ] Arrow keys (↑/↓) to navigate between cluster cards
+- [ ] `A` to select all faces in the focused cluster
+- [ ] `Enter` to quick-assign to the suggested candidate (when one exists)
+- [ ] `N` to open the "Name this person" input
+- [ ] `L` to open the "Link to existing person" modal
+- [ ] Visual focus indicator on the active cluster card
+- [ ] Shortcut legend shown in the triage header
+
+### 6. Adjustable Clustering Strictness
+- [ ] Add a "Strictness" slider to the triage page header
+- [ ] Maps to the `CLUSTER_SIMILARITY_THRESHOLD` parameter (range ~0.40–0.70)
+- [ ] Passed as a query parameter to `GET /faces/unlinked/clusters`
+- [ ] Higher strictness = smaller, purer clusters; lower = larger, more inclusive
+- [ ] Persist last-used value in `localStorage`
+- [ ] Immich-inspired workflow: start strict, name the obvious clusters, lower gradually
+
+### 7. "Not This Person" Rejection Tracking
+- [ ] Add a "Not [Name]" button when a candidate is suggested on a cluster card
+- [ ] Store rejection as a `face_rejection` record (featureId, personId) or extend `feature_match.ignoreMatch`
+- [ ] Rejected person is excluded from future candidate suggestions for that feature
+- [ ] Improves suggestion accuracy over time without manual threshold tuning
+- [ ] Surface rejection count in admin stats for monitoring
+
+---
+
 ## Phase Summary
 
 | Phase | Description | Key Deliverable |
@@ -776,3 +835,4 @@ Complete the web UI to expose all server capabilities. Builds on Phase 15's scaf
 | 15 | Web Frontend | React SPA with folder browsing, lightbox, people/faces, settings |
 | 16 | Web Frontend V2 | Full feature coverage: metadata, keywords, ratings, search, faces, map, admin, auth |
 | 17 | Database Maintenance | Deduplication of re-indexed media, orphaned record cleanup, admin UI |
+| 18 | Face Triage & People Management | Confidence-sorted clusters, face context, ignore/merge, keyboard shortcuts, tunable strictness, rejection tracking |

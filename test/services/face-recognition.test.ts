@@ -320,12 +320,12 @@ describe('face-recognition service', () => {
       expect(compareFaces(a, b, similarity + 0.01)).toBe(false);
     });
 
-    it('uses default threshold of 0.363', () => {
+    it('uses default threshold of 0.5', () => {
       const a = l2Normalize(new Float32Array([1, 0, 0]));
       const b = l2Normalize(new Float32Array([0.4, 0.9, 0]));
       const similarity = cosineSimilarity(a, b);
 
-      if (similarity >= 0.363) {
+      if (similarity >= 0.5) {
         expect(compareFaces(a, b)).toBe(true);
       } else {
         expect(compareFaces(a, b)).toBe(false);
