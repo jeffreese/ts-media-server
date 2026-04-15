@@ -762,9 +762,9 @@ Improve the face-to-person assignment workflow with smarter scoring, better UX p
 **Design brief:** `docs/plans/face-triage-v2-handoff.md` — full context on the problem, options explored, key insights, and implementation details.
 
 ### 1. Sort Clusters by Candidate Confidence
-- [ ] Clusters with a high-confidence candidate suggestion appear first on the triage page
-- [ ] Clusters with no candidate appear last, grouped separately
-- [ ] Re-sort on each refresh as new assignments shift scores
+- [x] Clusters with a high-confidence candidate suggestion appear first on the triage page
+- [x] Clusters with no candidate appear last, grouped separately
+- [x] Re-sort on each refresh as new assignments shift scores
 
 ### 2. Face-in-Context View
 - [ ] Click a face thumbnail in the triage filmstrip to see the full source photo

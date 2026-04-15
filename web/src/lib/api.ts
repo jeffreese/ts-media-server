@@ -202,6 +202,8 @@ export interface FaceCluster {
   representativeFeatureId: number
   featureIds: number[]
   size: number
+  topCandidateScore: number | null
+  topCandidatePersonId: number | null
 }
 
 export interface UnlinkedClustersResponse {

@@ -100,15 +100,18 @@ describe('face triage routes', () => {
       expect(body.total).toBe(2);
       expect(body.totalUnlinkedFaces).toBe(4);
 
-      // Largest cluster first (3 faces: A, B, C)
+      // Largest cluster first (3 faces: A, B, C) — both have null candidate so size breaks tie
       expect(body.clusters[0].size).toBe(3);
       expect(body.clusters[0].featureIds).toContain(fA.id);
       expect(body.clusters[0].featureIds).toContain(fB.id);
       expect(body.clusters[0].featureIds).toContain(fC.id);
+      expect(body.clusters[0].topCandidateScore).toBeNull();
+      expect(body.clusters[0].topCandidatePersonId).toBeNull();
 
       // Single face cluster (D)
       expect(body.clusters[1].size).toBe(1);
       expect(body.clusters[1].featureIds).toEqual([fD.id]);
+      expect(body.clusters[1].topCandidateScore).toBeNull();
     });
 
     it('excludes features already linked to a person', async () => {
@@ -177,6 +180,59 @@ describe('face triage routes', () => {
       expect(body.total).toBe(2);
       expect(body.clusters).toHaveLength(1);
       expect(body.clusters[0].size).toBe(3);
+    });
+
+    it('sorts clusters with candidate suggestions before those without', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+
+      // Create two groups of unlinked faces with different embeddings
+      const itemX = db.insert(schema.mediaItem).values({ name: 'x', type: 'image' }).returning().get();
+      const itemY = db.insert(schema.mediaItem).values({ name: 'y', type: 'image' }).returning().get();
+      const itemZ = db.insert(schema.mediaItem).values({ name: 'z', type: 'image' }).returning().get();
+      const itemW = db.insert(schema.mediaItem).values({ name: 'w', type: 'image' }).returning().get();
+
+      // Group 1 (X, Y): direction 0 — will match the person below
+      const fX = db.insert(schema.feature).values({ itemId: itemX.id, info: { embedding: makeEmbedding(0) } }).returning().get();
+      db.insert(schema.feature).values({ itemId: itemY.id, info: { embedding: makeEmbedding(0, 128, 0.05) } }).returning().get();
+
+      // Group 2 (Z, W): direction 64 — no matching person
+      db.insert(schema.feature).values({ itemId: itemZ.id, info: { embedding: makeEmbedding(64) } }).returning().get();
+      db.insert(schema.feature).values({ itemId: itemW.id, info: { embedding: makeEmbedding(64, 128, 0.05) } }).returning().get();
+
+      // Create a person linked to a feature in direction 0 (matches group 1)
+      const personItem = db.insert(schema.mediaItem).values({ name: 'p', type: 'image' }).returning().get();
+      const pF = db.insert(schema.feature).values({
+        itemId: personItem.id,
+        info: { embedding: makeEmbedding(0, 128, 0.02) },
+      }).returning().get();
+      const person = db.insert(schema.person).values({ info: null }).returning().get();
+      db.insert(schema.personName).values({ personId: person.id, name: 'Test Person', preferred: true, info: null }).run();
+      db.insert(schema.personFeature).values({ personId: person.id, featureId: pF.id, info: null }).run();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/faces/unlinked/clusters?limit=200',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+
+      // Find the cluster that contains fX (direction 0 — should have a candidate)
+      const matchedCluster = body.clusters.find((c: { featureIds: number[] }) => c.featureIds.includes(fX.id));
+      expect(matchedCluster).toBeDefined();
+      expect(matchedCluster.topCandidateScore).toBeGreaterThan(0);
+      expect(matchedCluster.topCandidatePersonId).toBe(person.id);
+
+      // Clusters with candidates should appear before those without
+      const firstWithCandidate = body.clusters.findIndex((c: { topCandidateScore: number | null }) => c.topCandidateScore !== null);
+      const firstWithout = body.clusters.findIndex((c: { topCandidateScore: number | null }) => c.topCandidateScore === null);
+      expect(firstWithCandidate).toBeGreaterThanOrEqual(0);
+      expect(firstWithout).toBeGreaterThanOrEqual(0);
+      expect(firstWithCandidate).toBeLessThan(firstWithout);
     });
   });
 

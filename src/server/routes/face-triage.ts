@@ -165,6 +165,60 @@ function loadUnlinkedFeatures(db: Db): FeatureWithEmbedding[] {
   return features;
 }
 
+/**
+ * Load all person embeddings (from linked features) grouped by personId.
+ */
+function loadPersonEmbeddings(db: Db): Map<number, Float32Array[]> {
+  const linkedRows = db
+    .select({
+      featureId: schema.personFeature.featureId,
+      personId: schema.personFeature.personId,
+      info: schema.feature.info,
+    })
+    .from(schema.personFeature)
+    .innerJoin(schema.feature, eq(schema.feature.id, schema.personFeature.featureId))
+    .all();
+
+  const personEmbeddings = new Map<number, Float32Array[]>();
+  for (const row of linkedRows) {
+    const embedding = extractEmbedding(row.info);
+    if (!embedding) continue;
+    const list = personEmbeddings.get(row.personId) ?? [];
+    list.push(embedding);
+    personEmbeddings.set(row.personId, list);
+  }
+  return personEmbeddings;
+}
+
+/**
+ * Score a representative embedding against all known persons using the top-K
+ * average similarity approach. Returns the best scoring person (if any meets
+ * the minimum threshold).
+ */
+function scoreTopCandidate(
+  representativeEmbedding: Float32Array,
+  personEmbeddings: Map<number, Float32Array[]>,
+): { personId: number; score: number } | null {
+  let bestPersonId = -1;
+  let bestScore = -1;
+
+  for (const [personId, embeddings] of personEmbeddings) {
+    const sims = embeddings
+      .map((e) => cosineSimilarity(representativeEmbedding, e))
+      .sort((a, b) => b - a);
+    const topK = sims.slice(0, Math.min(CANDIDATE_TOP_K, sims.length));
+    const avgTopK = topK.reduce((a, b) => a + b, 0) / topK.length;
+
+    if (avgTopK >= CANDIDATE_MIN_SCORE && avgTopK > bestScore) {
+      bestScore = avgTopK;
+      bestPersonId = personId;
+    }
+  }
+
+  if (bestPersonId < 0) return null;
+  return { personId: bestPersonId, score: Math.round(bestScore * 1000) / 1000 };
+}
+
 function extractEmbedding(info: unknown): Float32Array | null {
   if (!info || typeof info !== 'object') return null;
   const record = info as Record<string, unknown>;
@@ -217,16 +271,42 @@ export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
 
       const rawClusters = buildClusters(features, CLUSTER_SIMILARITY_THRESHOLD, MAX_CLUSTER_SIZE);
 
+      const personEmbeddings = loadPersonEmbeddings(db);
+      const featureEmbeddingMap = new Map<number, Float32Array>();
+      for (const f of features) featureEmbeddingMap.set(f.id, f.embedding);
+
       const clusters = rawClusters
         .map((c) => {
           const sorted = [...c.featureIds].sort((a, b) => a - b);
+          const representativeId = sorted[0]!;
+          const repEmbedding = featureEmbeddingMap.get(representativeId);
+
+          let topCandidateScore: number | null = null;
+          let topCandidatePersonId: number | null = null;
+
+          if (repEmbedding && personEmbeddings.size > 0) {
+            const result = scoreTopCandidate(repEmbedding, personEmbeddings);
+            if (result) {
+              topCandidateScore = result.score;
+              topCandidatePersonId = result.personId;
+            }
+          }
+
           return {
-            representativeFeatureId: sorted[0]!,
+            representativeFeatureId: representativeId,
             featureIds: sorted,
             size: sorted.length,
+            topCandidateScore,
+            topCandidatePersonId,
           };
         })
-        .sort((a, b) => b.size - a.size || a.representativeFeatureId - b.representativeFeatureId);
+        .sort((a, b) => {
+          const aScore = a.topCandidateScore ?? -1;
+          const bScore = b.topCandidateScore ?? -1;
+          if (aScore !== bScore) return bScore - aScore;
+          if (a.size !== b.size) return b.size - a.size;
+          return a.representativeFeatureId - b.representativeFeatureId;
+        });
 
       const total = clusters.length;
       const page = clusters.slice(offset, offset + limit);
@@ -257,7 +337,6 @@ export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
         return reply.code(404).send({ error: 'Feature not found' });
       }
 
-      // Re-cluster to find which cluster this feature belongs to
       const features = loadUnlinkedFeatures(db);
       const rawClusters = buildClusters(features, CLUSTER_SIMILARITY_THRESHOLD, MAX_CLUSTER_SIZE);
       const cluster = rawClusters.find((c) => c.featureIds.includes(featureId));
@@ -266,33 +345,12 @@ export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
         return reply.send({ candidates: [] });
       }
 
-      // Build a centroid for each known person from their linked feature embeddings
-      const linkedRows = db
-        .select({
-          featureId: schema.personFeature.featureId,
-          personId: schema.personFeature.personId,
-          info: schema.feature.info,
-        })
-        .from(schema.personFeature)
-        .innerJoin(schema.feature, eq(schema.feature.id, schema.personFeature.featureId))
-        .all();
-
-      const personEmbeddings = new Map<number, Float32Array[]>();
-      for (const row of linkedRows) {
-        const embedding = extractEmbedding(row.info);
-        if (!embedding) continue;
-        const list = personEmbeddings.get(row.personId) ?? [];
-        list.push(embedding);
-        personEmbeddings.set(row.personId, list);
-      }
+      const personEmbeddings = loadPersonEmbeddings(db);
 
       if (personEmbeddings.size === 0) {
         return reply.send({ candidates: [] });
       }
 
-      // Score each person using the representative face's average similarity
-      // to that person's top-K nearest linked faces. This is more discriminative
-      // than centroid-to-centroid, which washes out with diverse person faces.
       const representativeEmbedding = extractEmbedding(
         db.select({ info: schema.feature.info })
           .from(schema.feature)
