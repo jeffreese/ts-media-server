@@ -13,8 +13,12 @@ const DEFAULT_SIMILARITY_THRESHOLD = 0.5;
 
 /**
  * Canonical landmark positions for a 112x112 aligned face.
- * Standard ArcFace/SFace reference coordinates (insightface convention).
- * Order: left eye, right eye, nose tip, left mouth corner, right mouth corner.
+ * Standard ArcFace reference coordinates (insightface convention).
+ * Order uses **image-relative** positioning (not subject-relative):
+ *   image-left eye, image-right eye, nose, image-left mouth, image-right mouth.
+ *
+ * Our FaceLandmarks use subject-relative naming (leftEye = subject's left =
+ * image-right), so alignFace maps rightEye→ref[0], leftEye→ref[1], etc.
  */
 const REFERENCE_LANDMARKS: [number, number][] = [
   [38.2946, 51.6963],
@@ -153,11 +157,11 @@ export async function alignFace(
   const scaleY = height / origHeight;
 
   const srcPoints: [number, number][] = [
-    [landmarks.leftEye.x * scaleX, landmarks.leftEye.y * scaleY],
     [landmarks.rightEye.x * scaleX, landmarks.rightEye.y * scaleY],
+    [landmarks.leftEye.x * scaleX, landmarks.leftEye.y * scaleY],
     [landmarks.noseTip.x * scaleX, landmarks.noseTip.y * scaleY],
-    [landmarks.leftMouthCorner.x * scaleX, landmarks.leftMouthCorner.y * scaleY],
     [landmarks.rightMouthCorner.x * scaleX, landmarks.rightMouthCorner.y * scaleY],
+    [landmarks.leftMouthCorner.x * scaleX, landmarks.leftMouthCorner.y * scaleY],
   ];
 
   const affine = estimateSimilarityTransform(srcPoints, REFERENCE_LANDMARKS);

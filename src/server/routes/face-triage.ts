@@ -9,7 +9,7 @@ import type { NotificationService } from '../../services/notification.js';
 
 const CLUSTER_SIMILARITY_THRESHOLD = 0.55;
 const MAX_CLUSTER_SIZE = 20;
-const CANDIDATE_MIN_SCORE = 0.70;
+const CANDIDATE_MIN_SCORE = 0.65;
 const CANDIDATE_TOP_K = 5;
 
 const paginationSchema = z.object({
