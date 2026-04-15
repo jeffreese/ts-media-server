@@ -1,4 +1,4 @@
-import { Users } from 'lucide-react'
+import { Check, GitMerge, Users, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { EmptyState } from '~/components/empty-state'
@@ -28,6 +28,10 @@ export function PeoplePage() {
   const pendingIdsRef = useRef<Set<number>>(new Set())
   const [unlinkedCount, setUnlinkedCount] = useState<{ clusters: number; faces: number } | null>(null)
 
+  const [selecting, setSelecting] = useState(false)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [merging, setMerging] = useState(false)
+
   useEffect(() => {
     api.unlinkedClusters({ limit: 1 }).then((res) => {
       setUnlinkedCount({ clusters: res.total, faces: res.totalUnlinkedFaces })
@@ -56,6 +60,40 @@ export function PeoplePage() {
       for (const id of newIds) pendingIdsRef.current.delete(id)
     })
   }, [items, batchData])
+
+  function toggleSelect(personId: number) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(personId)) next.delete(personId)
+      else next.add(personId)
+      return next
+    })
+  }
+
+  function exitSelecting() {
+    setSelecting(false)
+    setSelected(new Set())
+  }
+
+  async function mergeSelected() {
+    if (selected.size < 2) return
+    const ids = [...selected].sort((a, b) => a - b)
+    const targetId = ids[0]!
+    const sourceIds = ids.slice(1)
+
+    setMerging(true)
+    try {
+      for (const sourceId of sourceIds) {
+        await api.mergePerson(targetId, sourceId)
+      }
+      exitSelecting()
+      refetch()
+    } catch {
+      // stay in selection mode so user can retry
+    } finally {
+      setMerging(false)
+    }
+  }
 
   if (error) {
     return <FetchError message={`Failed to load people: ${error.message}`} onRetry={refetch} />
@@ -87,9 +125,17 @@ export function PeoplePage() {
     )
   }
 
+  const targetName = selecting && selected.size >= 2
+    ? (() => {
+        const targetId = [...selected].sort((a, b) => a - b)[0]!
+        const batch = batchData.get(targetId)
+        return batch?.names.find((n) => n.preferred)?.name ?? batch?.names[0]?.name ?? `Person ${targetId}`
+      })()
+    : null
+
   return (
     <div>
-      {unlinkedCount && unlinkedCount.clusters > 0 && (
+      {unlinkedCount && unlinkedCount.clusters > 0 && !selecting && (
         <Link
           to="/people/triage"
           className="mb-4 flex items-center justify-between rounded-xl border border-accent/30 bg-accent-surface px-4 py-3 transition-colors hover:border-accent/50"
@@ -103,9 +149,33 @@ export function PeoplePage() {
           <span className="text-sm font-medium text-accent">Review now →</span>
         </Link>
       )}
-      <h1 className="mb-6 text-xl font-semibold">
-        People <span className="text-foreground-muted font-normal">({total})</span>
-      </h1>
+
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-semibold">
+          People <span className="text-foreground-muted font-normal">({total})</span>
+        </h1>
+        {!selecting && items.length >= 2 && (
+          <button
+            type="button"
+            onClick={() => setSelecting(true)}
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
+          >
+            <GitMerge className="h-3.5 w-3.5" />
+            Merge people…
+          </button>
+        )}
+      </div>
+
+      {selecting && (
+        <MergeToolbar
+          count={selected.size}
+          targetName={targetName}
+          merging={merging}
+          onMerge={mergeSelected}
+          onCancel={exitSelecting}
+        />
+      )}
+
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {items.map((person) => {
           const batch = batchData.get(person.id)
@@ -114,7 +184,9 @@ export function PeoplePage() {
               key={person.id}
               person={person}
               batch={batch}
-              onClick={() => navigate(`/people/${person.id}`)}
+              selecting={selecting}
+              isSelected={selected.has(person.id)}
+              onClick={selecting ? () => toggleSelect(person.id) : () => navigate(`/people/${person.id}`)}
             />
           )
         })}
@@ -128,13 +200,65 @@ export function PeoplePage() {
   )
 }
 
+function MergeToolbar({
+  count,
+  targetName,
+  merging,
+  onMerge,
+  onCancel,
+}: {
+  count: number
+  targetName: string | null
+  merging: boolean
+  onMerge: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="mb-4 flex items-center gap-3 rounded-lg border border-border bg-surface-raised px-3 py-2">
+      <GitMerge className="h-4 w-4 shrink-0 text-foreground-muted" />
+      <span className="text-sm">
+        {count < 2 ? (
+          <span className="text-foreground-muted">Select 2+ people to merge</span>
+        ) : (
+          <>
+            <span className="font-medium">{count} selected</span>
+            <span className="text-foreground-muted"> — will merge into {targetName} (lowest ID)</span>
+          </>
+        )}
+      </span>
+      <div className="flex-1" />
+      <button
+        type="button"
+        onClick={onMerge}
+        disabled={count < 2 || merging}
+        className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent/80 disabled:opacity-40"
+      >
+        <GitMerge className="h-3.5 w-3.5" />
+        {merging ? 'Merging…' : 'Merge'}
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={merging}
+        className="rounded-md p-1.5 text-foreground-muted transition-colors hover:bg-surface hover:text-foreground disabled:opacity-40"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
 function BatchPersonCard({
   person,
   batch,
+  selecting,
+  isSelected,
   onClick,
 }: {
   person: Person
   batch: PersonBatchItem | undefined
+  selecting: boolean
+  isSelected: boolean
   onClick: () => void
 }) {
   const displayName = batch
@@ -147,18 +271,33 @@ function BatchPersonCard({
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-center gap-2 rounded-xl p-3 transition-colors hover:bg-surface-raised"
+      className={`relative flex flex-col items-center gap-2 rounded-xl p-3 transition-colors hover:bg-surface-raised ${
+        selecting && isSelected ? 'ring-2 ring-accent ring-offset-2 ring-offset-background' : ''
+      }`}
     >
-      <div className="aspect-square w-full max-w-[120px] overflow-hidden rounded-full bg-control">
+      <div className="relative aspect-square w-full max-w-[120px] overflow-hidden rounded-full bg-control">
         {featureId ? (
           <img
             src={api.faceUrl(featureId)}
             alt={displayName}
-            className="h-full w-full object-cover"
+            className={`h-full w-full object-cover ${selecting && isSelected ? 'brightness-75' : ''}`}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-foreground-faint">
             {displayName.charAt(0).toUpperCase()}
+          </div>
+        )}
+        {selecting && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-full border-2 ${
+                isSelected
+                  ? 'border-accent bg-accent text-white'
+                  : 'border-white/70 bg-black/20'
+              }`}
+            >
+              {isSelected && <Check className="h-4 w-4" />}
+            </div>
           </div>
         )}
       </div>

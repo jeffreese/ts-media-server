@@ -1,8 +1,9 @@
-import { ArrowLeft, Check, Pencil, Trash2, X } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { ArrowLeft, Check, GitMerge, Pencil, Trash2, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { FetchError } from '~/components/fetch-error'
 import { LoadMoreSentinel } from '~/components/load-more-sentinel'
+import { PersonSearchList } from '~/components/person-search-list'
 import { IconButton, Skeleton } from '~/components/primitives'
 import { useAutoRefresh } from '~/hooks/use-auto-refresh'
 import { useBreadcrumb } from '~/hooks/use-breadcrumb'
@@ -65,6 +66,8 @@ function PersonContent({
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [removing, setRemoving] = useState(false)
+  const [showMergeModal, setShowMergeModal] = useState(false)
+  const [merging, setMerging] = useState(false)
 
   function toggleSelect(personFeatureId: number) {
     setSelected((prev) => {
@@ -97,6 +100,17 @@ function PersonContent({
     }
   }
 
+  async function handleMerge(targetPersonId: number) {
+    setMerging(true)
+    try {
+      await api.mergePerson(targetPersonId, personId)
+      setShowMergeModal(false)
+      navigate(`/people/${targetPersonId}`)
+    } catch {
+      setMerging(false)
+    }
+  }
+
   const error = namesError || featuresError
   if (error) {
     return (
@@ -123,6 +137,16 @@ function PersonContent({
           <Skeleton className="h-7 w-40" />
         ) : (
           <h1 className="text-xl font-semibold">{displayName}</h1>
+        )}
+        {!isLoading && (
+          <button
+            type="button"
+            onClick={() => setShowMergeModal(true)}
+            className="ml-auto flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
+          >
+            <GitMerge className="h-3.5 w-3.5" />
+            Merge into…
+          </button>
         )}
       </div>
 
@@ -213,6 +237,16 @@ function PersonContent({
             variant="grid"
           />
         </section>
+      )}
+
+      {showMergeModal && (
+        <MergePersonModal
+          personId={personId}
+          displayName={displayName}
+          merging={merging}
+          onSelect={handleMerge}
+          onClose={() => setShowMergeModal(false)}
+        />
       )}
     </div>
   )
@@ -313,5 +347,69 @@ function FaceThumbnail({
         </div>
       )}
     </button>
+  )
+}
+
+function MergePersonModal({
+  personId,
+  displayName,
+  merging,
+  onSelect,
+  onClose,
+}: {
+  personId: number
+  displayName: string
+  merging: boolean
+  onSelect: (targetPersonId: number) => void
+  onClose: () => void
+}) {
+  const backdropRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div
+      ref={backdropRef}
+      role="presentation"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={(e) => {
+        if (e.target === backdropRef.current) onClose()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose()
+      }}
+    >
+      <div className="w-full max-w-md rounded-xl border border-border bg-surface shadow-xl">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h3 className="text-sm font-medium">
+            Merge "{displayName}" into…
+          </h3>
+          <IconButton label="Close" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </IconButton>
+        </div>
+        <div className="p-4">
+          <p className="mb-3 text-xs text-foreground-muted">
+            All face links and names will be transferred to the selected person. "{displayName}" will be deleted.
+          </p>
+          {merging ? (
+            <div className="flex justify-center py-8">
+              <Skeleton className="h-6 w-32" />
+            </div>
+          ) : (
+            <PersonSearchList
+              onSelect={onSelect}
+              excludePersonIds={[personId]}
+            />
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
