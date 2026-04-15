@@ -85,20 +85,38 @@ export function FaceTriagePage() {
     )
   }
 
-  const multiClusters = clusters.filter((c) => c.size > 1)
+  const suggestedClusters = clusters.filter((c) => c.size > 1 && c.topCandidateScore !== null)
+  const unsuggestedClusters = clusters.filter((c) => c.size > 1 && c.topCandidateScore === null)
   const singleClusters = clusters.filter((c) => c.size === 1)
 
   return (
     <div>
       <TriageHeader total={total} totalFaces={totalFaces} />
 
-      {multiClusters.length > 0 && (
+      {suggestedClusters.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-3 text-sm font-medium text-foreground-muted">
-            Clusters ({multiClusters.length})
+            Suggested ({suggestedClusters.length})
           </h2>
           <div className="space-y-3">
-            {multiClusters.map((cluster) => (
+            {suggestedClusters.map((cluster) => (
+              <ClusterCard
+                key={cluster.representativeFeatureId}
+                cluster={cluster}
+                onAssigned={fetchClusters}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {unsuggestedClusters.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 text-sm font-medium text-foreground-muted">
+            Clusters ({unsuggestedClusters.length})
+          </h2>
+          <div className="space-y-3">
+            {unsuggestedClusters.map((cluster) => (
               <ClusterCard
                 key={cluster.representativeFeatureId}
                 cluster={cluster}
