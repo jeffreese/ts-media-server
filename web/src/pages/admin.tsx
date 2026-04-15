@@ -17,6 +17,7 @@ import {
   Upload,
   Users,
   Video,
+  Wrench,
 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -27,13 +28,14 @@ import { useFetch } from '~/hooks/use-fetch'
 import { useNotifications } from '~/hooks/use-notifications'
 import { type DirEntry, type Setting, api } from '~/lib/api'
 
-type Tab = 'overview' | 'settings' | 'files' | 'indexing'
+type Tab = 'overview' | 'settings' | 'files' | 'indexing' | 'maintenance'
 
 const TABS: { id: Tab; label: string; icon: typeof Database }[] = [
   { id: 'overview', label: 'Overview', icon: Activity },
   { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'files', label: 'File Browser', icon: HardDrive },
   { id: 'indexing', label: 'Indexing', icon: FolderSync },
+  { id: 'maintenance', label: 'Maintenance', icon: Wrench },
 ]
 
 export function AdminPage() {
@@ -76,6 +78,7 @@ export function AdminPage() {
       {tab === 'settings' && <SettingsTab />}
       {tab === 'files' && <FileBrowserTab />}
       {tab === 'indexing' && <IndexingTab />}
+      {tab === 'maintenance' && <MaintenanceTab />}
     </div>
   )
 }
@@ -652,6 +655,168 @@ function IndexingTab() {
           {indexStatus}
         </div>
       )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Maintenance Tab
+// ---------------------------------------------------------------------------
+
+interface DedupResult {
+  status: string
+  duplicateGroups: number
+  mergedMediaItems: number
+  removedMediaItems: number
+}
+
+interface OrphanResult {
+  status: string
+  mediaMatches: number
+  featureMatches: number
+  keywords: number
+  persons: number
+  places: number
+  folders: number
+}
+
+function MaintenanceTab() {
+  const [deduplicating, setDeduplicating] = useState(false)
+  const [dedupResult, setDedupResult] = useState<DedupResult | null>(null)
+  const [dedupError, setDedupError] = useState<string | null>(null)
+
+  const [cleaningOrphans, setCleaningOrphans] = useState(false)
+  const [orphanResult, setOrphanResult] = useState<OrphanResult | null>(null)
+  const [orphanError, setOrphanError] = useState<string | null>(null)
+
+  const runDedup = async () => {
+    setDeduplicating(true)
+    setDedupResult(null)
+    setDedupError(null)
+    try {
+      const result = await api.adminDeduplicate()
+      setDedupResult(result)
+    } catch (err) {
+      setDedupError(err instanceof Error ? err.message : 'Deduplication failed')
+    } finally {
+      setDeduplicating(false)
+    }
+  }
+
+  const runOrphanCleanup = async () => {
+    setCleaningOrphans(true)
+    setOrphanResult(null)
+    setOrphanError(null)
+    try {
+      const result = await api.adminCleanOrphans()
+      setOrphanResult(result)
+    } catch (err) {
+      setOrphanError(err instanceof Error ? err.message : 'Orphan cleanup failed')
+    } finally {
+      setCleaningOrphans(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <SectionCard
+        title="Deduplicate Media Items"
+        action={
+          <button
+            type="button"
+            onClick={runDedup}
+            disabled={deduplicating || cleaningOrphans}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+          >
+            {deduplicating ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Database className="h-3.5 w-3.5" />
+            )}
+            Run Deduplication
+          </button>
+        }
+      >
+        <p className="text-sm text-foreground-muted">
+          Finds media items with identical perceptual hashes and merges them. The oldest entry is
+          kept and all file links, keywords, ratings, faces, and folder entries are transferred to
+          it. Duplicates are then removed.
+        </p>
+
+        {dedupError && (
+          <div className="mt-3 rounded-lg bg-error/10 px-4 py-3 text-sm text-error">
+            {dedupError}
+          </div>
+        )}
+
+        {dedupResult && (
+          <div className="mt-3 space-y-2">
+            <div className="rounded-lg bg-accent-surface px-4 py-3 text-sm text-accent">
+              Deduplication complete
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <ResultStat label="Duplicate Groups" value={dedupResult.duplicateGroups} />
+              <ResultStat label="Items Merged" value={dedupResult.mergedMediaItems} />
+              <ResultStat label="Items Removed" value={dedupResult.removedMediaItems} />
+            </div>
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard
+        title="Clean Orphaned Records"
+        action={
+          <button
+            type="button"
+            onClick={runOrphanCleanup}
+            disabled={cleaningOrphans || deduplicating}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+          >
+            {cleaningOrphans ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Wrench className="h-3.5 w-3.5" />
+            )}
+            Clean Orphans
+          </button>
+        }
+      >
+        <p className="text-sm text-foreground-muted">
+          Removes database records that have lost their parent references: dangling match records,
+          unused keywords, unlinked persons and places, and empty folders.
+        </p>
+
+        {orphanError && (
+          <div className="mt-3 rounded-lg bg-error/10 px-4 py-3 text-sm text-error">
+            {orphanError}
+          </div>
+        )}
+
+        {orphanResult && (
+          <div className="mt-3 space-y-2">
+            <div className="rounded-lg bg-accent-surface px-4 py-3 text-sm text-accent">
+              Orphan cleanup complete
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <ResultStat label="Media Matches" value={orphanResult.mediaMatches} />
+              <ResultStat label="Feature Matches" value={orphanResult.featureMatches} />
+              <ResultStat label="Keywords" value={orphanResult.keywords} />
+              <ResultStat label="Persons" value={orphanResult.persons} />
+              <ResultStat label="Places" value={orphanResult.places} />
+              <ResultStat label="Folders" value={orphanResult.folders} />
+            </div>
+          </div>
+        )}
+      </SectionCard>
+    </div>
+  )
+}
+
+function ResultStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-border bg-background px-3 py-2 text-center">
+      <p className="text-lg font-semibold tabular-nums">{value.toLocaleString()}</p>
+      <p className="text-xs text-foreground-muted">{label}</p>
     </div>
   )
 }

@@ -807,4 +807,31 @@ export const api = {
       body: JSON.stringify({}),
     })
   },
+
+  adminDeduplicate() {
+    return request<{
+      status: string
+      duplicateGroups: number
+      mergedMediaItems: number
+      removedMediaItems: number
+    }>('/admin/deduplicate', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
+  },
+
+  adminCleanOrphans() {
+    return request<{
+      status: string
+      mediaMatches: number
+      featureMatches: number
+      keywords: number
+      persons: number
+      places: number
+      folders: number
+    }>('/admin/clean-orphans', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
+  },
 }

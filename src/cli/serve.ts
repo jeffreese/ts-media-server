@@ -8,6 +8,7 @@ import { seedDatabase } from '../db/seed.js';
 import * as schema from '../db/schema.js';
 import { NotificationService } from '../services/notification.js';
 import { FileIndex } from '../services/file-index.js';
+import { MaintenanceService } from '../services/maintenance.js';
 import { MediaLogService } from '../services/media-log.js';
 import { loadModels, type OnnxModels } from '../services/onnx-models.js';
 import { FFmpeg } from '../utils/ffmpeg.js';
@@ -110,11 +111,22 @@ export const serveCommand = new Command('serve')
           .catch((err) => logger.error({ err, directory }, 'indexing failed'));
       };
 
+      const maintenance = new MaintenanceService({
+        db,
+        logger,
+        notifications: notificationService,
+      });
+
+      const onDeduplicate = () => maintenance.deduplicate();
+      const onCleanOrphans = () => maintenance.cleanOrphans();
+
       const { server, close } = await createApp({
         config,
         db: client.db,
         notificationService,
         onIndexDirectory,
+        onDeduplicate,
+        onCleanOrphans,
         loggerOptions: { level: config.logLevel, name: 'media-server' },
       });
 
