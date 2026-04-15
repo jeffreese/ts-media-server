@@ -102,6 +102,7 @@ export interface MediaItemDetail {
   endDate: string | null
   hash: string | null
   info: unknown
+  folderPath: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -198,9 +199,15 @@ export interface MatchingFace {
 // Face triage
 // ---------------------------------------------------------------------------
 
+export interface ClusterFeature {
+  featureId: number
+  itemId: number
+}
+
 export interface FaceCluster {
   representativeFeatureId: number
   featureIds: number[]
+  features: ClusterFeature[]
   size: number
   topCandidateScore: number | null
   topCandidatePersonId: number | null

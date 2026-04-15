@@ -45,6 +45,7 @@ type Db = BetterSQLite3Database<typeof schema>;
 
 interface FeatureWithEmbedding {
   id: number;
+  itemId: number;
   embedding: Float32Array;
 }
 
@@ -149,7 +150,7 @@ function buildClusters(
  */
 function loadUnlinkedFeatures(db: Db): FeatureWithEmbedding[] {
   const rows = db
-    .select({ id: schema.feature.id, info: schema.feature.info })
+    .select({ id: schema.feature.id, itemId: schema.feature.itemId, info: schema.feature.info })
     .from(schema.feature)
     .leftJoin(schema.personFeature, eq(schema.personFeature.featureId, schema.feature.id))
     .where(isNull(schema.personFeature.id))
@@ -159,7 +160,7 @@ function loadUnlinkedFeatures(db: Db): FeatureWithEmbedding[] {
   for (const row of rows) {
     const embedding = extractEmbedding(row.info);
     if (embedding) {
-      features.push({ id: row.id, embedding });
+      features.push({ id: row.id, itemId: row.itemId, embedding });
     }
   }
   return features;
@@ -275,7 +276,11 @@ export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
 
       const personEmbeddings = loadPersonEmbeddings(db);
       const featureEmbeddingMap = new Map<number, Float32Array>();
-      for (const f of features) featureEmbeddingMap.set(f.id, f.embedding);
+      const featureItemMap = new Map<number, number>();
+      for (const f of features) {
+        featureEmbeddingMap.set(f.id, f.embedding);
+        featureItemMap.set(f.id, f.itemId);
+      }
 
       const clusters = rawClusters
         .map((c) => {
@@ -297,6 +302,12 @@ export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
           return {
             representativeFeatureId: representativeId,
             featureIds: sorted,
+            features: sorted
+              .map((fId) => {
+                const iId = featureItemMap.get(fId);
+                return iId !== undefined ? { featureId: fId, itemId: iId } : null;
+              })
+              .filter((f): f is NonNullable<typeof f> => f !== null),
             size: sorted.length,
             topCandidateScore,
             topCandidatePersonId,
