@@ -540,10 +540,14 @@ export const api = {
   },
 
   mergePerson(targetPersonId: number, sourcePersonId: number) {
-    return request<{ success: boolean; reassigned: number }>(`/person/${targetPersonId}/merge`, {
+    return request<{ success: boolean; reassigned: number; namesMoved: number }>(`/person/${targetPersonId}/merge`, {
       method: 'POST',
       body: JSON.stringify({ sourcePersonId }),
     })
+  },
+
+  deletePerson(personId: number) {
+    return request<{ success: boolean }>(`/person/${personId}`, { method: 'DELETE' })
   },
 
   // -- Features (faces) for a media item --

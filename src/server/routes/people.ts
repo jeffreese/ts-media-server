@@ -287,10 +287,29 @@ export const peoplePlugin = fp<PeoplePluginOptions>(
         }
       }
 
-      notifications?.notify('update', 'person', { id: targetId });
-      notifications?.notify('update', 'person', { id: sourcePersonId });
+      const sourceNames = db
+        .select()
+        .from(schema.personName)
+        .where(eq(schema.personName.personId, sourcePersonId))
+        .all();
 
-      return reply.send({ success: true, reassigned, sourcePersonId, targetPersonId: targetId });
+      let namesMoved = 0;
+      for (const name of sourceNames) {
+        db.update(schema.personName)
+          .set({ personId: targetId, preferred: false })
+          .where(eq(schema.personName.id, name.id))
+          .run();
+        namesMoved++;
+      }
+
+      db.delete(schema.personContact).where(eq(schema.personContact.personId, sourcePersonId)).run();
+      db.delete(schema.personAddress).where(eq(schema.personAddress.personId, sourcePersonId)).run();
+      db.delete(schema.person).where(eq(schema.person.id, sourcePersonId)).run();
+
+      notifications?.notify('update', 'person', { id: targetId });
+      notifications?.notify('delete', 'person', { id: sourcePersonId });
+
+      return reply.send({ success: true, reassigned, namesMoved, sourcePersonId, targetPersonId: targetId });
     });
 
     // -----------------------------------------------------------------------

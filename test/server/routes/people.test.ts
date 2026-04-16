@@ -832,7 +832,7 @@ describe('people routes', () => {
         method: 'GET',
         url: `/person/${sourceId}/features`,
       });
-      expect(sourceFeatures.json().items).toHaveLength(0);
+      expect(sourceFeatures.statusCode).toBe(404);
     });
 
     it('skips duplicate features already linked to target', async () => {
@@ -911,7 +911,7 @@ describe('people routes', () => {
       expect(res.statusCode).toBe(404);
     });
 
-    it('emits update notifications for both source and target', async () => {
+    it('emits update notification for target and delete for source', async () => {
       const client = setupDb();
       const targetId = createPerson(client);
       const sourceId = createPerson(client);
@@ -926,10 +926,74 @@ describe('people routes', () => {
         payload: { sourcePersonId: sourceId },
       });
 
-      const personEvents = (events as Array<{ action: string; source: string }>).filter(
+      const updateEvents = (events as Array<{ action: string; source: string }>).filter(
         (e) => e.action === 'update' && e.source === 'person',
       );
-      expect(personEvents).toHaveLength(2);
+      expect(updateEvents).toHaveLength(1);
+
+      const deleteEvents = (events as Array<{ action: string; source: string }>).filter(
+        (e) => e.action === 'delete' && e.source === 'person',
+      );
+      expect(deleteEvents).toHaveLength(1);
+    });
+
+    it('transfers names from source to target as non-preferred', async () => {
+      const client = setupDb();
+      const targetId = createPerson(client);
+      const sourceId = createPerson(client);
+      await setupApp(client);
+
+      await app.server.inject({
+        method: 'POST',
+        url: `/person/${targetId}/names`,
+        payload: { name: 'Alice', preferred: true },
+      });
+      await app.server.inject({
+        method: 'POST',
+        url: `/person/${sourceId}/names`,
+        payload: { name: 'Bob', preferred: true },
+      });
+      await app.server.inject({
+        method: 'POST',
+        url: `/person/${sourceId}/names`,
+        payload: { name: 'Bobby' },
+      });
+
+      const res = await app.server.inject({
+        method: 'POST',
+        url: `/person/${targetId}/merge`,
+        payload: { sourcePersonId: sourceId },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().namesMoved).toBe(2);
+
+      const names = await app.server.inject({
+        method: 'GET',
+        url: `/person/${targetId}/names`,
+      });
+      const items = names.json().items;
+      expect(items).toHaveLength(3);
+      expect(items.find((n: { name: string }) => n.name === 'Alice').preferred).toBe(true);
+      expect(items.find((n: { name: string }) => n.name === 'Bob').preferred).toBe(false);
+      expect(items.find((n: { name: string }) => n.name === 'Bobby').preferred).toBe(false);
+    });
+
+    it('deletes the source person after merge', async () => {
+      const client = setupDb();
+      const targetId = createPerson(client);
+      const sourceId = createPerson(client);
+      await setupApp(client);
+
+      await app.server.inject({
+        method: 'POST',
+        url: `/person/${targetId}/merge`,
+        payload: { sourcePersonId: sourceId },
+      });
+
+      const db = drizzle(client.db, { schema });
+      const sourcePerson = db.select().from(schema.person).where(eq(schema.person.id, sourceId)).get();
+      expect(sourcePerson).toBeUndefined();
     });
   });
 

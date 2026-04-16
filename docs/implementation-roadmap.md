@@ -780,13 +780,13 @@ Improve the face-to-person assignment workflow with smarter scoring, better UX p
 - [x] Reversible via admin or person detail page
 
 ### 4. Merge Duplicate People
-- [ ] Add a "Merge into…" action on the person detail page
-- [ ] Person search/select modal to pick the target person
-- [ ] Transfer all `person_feature` links from source to target
-- [ ] Transfer all `person_name` records (mark merged names as non-preferred)
-- [ ] Delete the now-empty source person record
-- [ ] Server endpoint: `POST /person/:id/merge` with `targetPersonId` body
-- [ ] Emit notifications so the UI refreshes
+- [x] Add a "Merge into…" action on the person detail page
+- [x] Person search/select modal to pick the target person
+- [x] Transfer all `person_feature` links from source to target
+- [x] Transfer all `person_name` records (mark merged names as non-preferred)
+- [x] Delete the now-empty source person record
+- [x] Server endpoint: `POST /person/:id/merge` with `targetPersonId` body
+- [x] Emit notifications so the UI refreshes
 
 ### 5. Keyboard Shortcuts for Cluster Triage
 - [ ] Arrow keys (↑/↓) to navigate between cluster cards

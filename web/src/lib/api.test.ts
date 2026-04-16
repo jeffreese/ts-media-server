@@ -121,6 +121,25 @@ describe('api', () => {
       )
     })
 
+    it('sends POST body for mergePerson', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ success: true, reassigned: 3, namesMoved: 1 }), { status: 200 }),
+      )
+
+      const result = await api.mergePerson(1, 2)
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/person/1/merge',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ sourcePersonId: 2 }),
+        }),
+      )
+      expect(result.success).toBe(true)
+      expect(result.reassigned).toBe(3)
+      expect(result.namesMoved).toBe(1)
+    })
+
     it('attaches Authorization header when token accessor is set', async () => {
       setTokenAccessor(() => 'my-jwt-token')
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
