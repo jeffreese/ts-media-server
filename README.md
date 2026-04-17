@@ -1,31 +1,42 @@
 # ts-media-server
 
-A self-hosted media server for photo and video libraries. Indexes directories of media files, extracts metadata, generates thumbnails at multiple resolutions, detects and matches faces using ONNX models, and serves everything through a REST API with real-time WebSocket notifications.
+A self-hosted media server for photo and video libraries. Index your directories, browse them in a responsive web UI, and let the server handle metadata extraction, thumbnail generation, face detection, duplicate finding, and geotagged maps — all backed by SQLite and served through a REST API with real-time WebSocket updates.
 
 ## Features
 
-- **Web UI** — browse folders, view images in a lightbox, play video, explore detected faces and people — all from a responsive dark-first interface
+### Web UI
+
+- **Folder browsing** — navigate your library's folder hierarchy with infinite-scroll thumbnail grids
+- **Lightbox** — full-screen image viewer with keyboard navigation and an info panel showing metadata
+- **Video playback** — native HTML5 player with poster thumbnails and range-request streaming
+- **Media detail** — EXIF/IPTC metadata, camera info, GPS coordinates, dimensions, detected faces, duplicate matches, keyword tags, and star ratings
+- **People & face triage** — review detected face clusters, assign them to people, merge duplicates, and browse all photos of a person; keyboard-driven triage workflow with suggested matches
+- **Places & map** — Leaflet map with clustered markers for GPS-tagged media; manage place names and addresses
+- **Search** — filter by name, keyword, media type, and date range
+- **Keywords** — tag cloud with per-keyword media views
+- **Admin dashboard** — server stats, indexed paths, filesystem browser with upload/download, indexing controls with live progress, and maintenance tools (deduplication, orphan cleanup, face embedding backfill)
+- **User management** — users, groups, preferences, per-user activity histograms
+- **Dark/light theme** — toggle from the topbar, persisted per-browser
+- **Real-time updates** — WebSocket-driven auto-refresh across all pages as media is indexed or changed
+
+### Backend
+
 - **Directory indexing** — recursively scans directories, registers files, and mirrors the folder hierarchy in a virtual folder tree
-- **Metadata extraction** — pulls EXIF, IPTC, GPS, and video metadata from images and videos (via [exifr](https://github.com/nickaknudson/exifr) and FFmpeg)
-- **Thumbnail generation** — creates JPEG thumbnails at configurable sizes (default: 1920×1080 down to 150×100) using [sharp](https://sharp.pixelplumbing.com/)
-- **Face detection & recognition** — ONNX Runtime models detect faces in images, extract embeddings, and match faces across photos
-- **Perceptual hashing** — computes pHash values and finds near-duplicate media items
-- **Image & video serving** — streams originals and thumbnails with range request support; auto-converts non-MP4 video to MP4
-- **Virtual folder browsing** — navigate the indexed library through a folder hierarchy API with pagination and recursive listing
-- **People & places** — associate detected faces with people, track names, addresses, and geotagged locations
-- **User management** — users, groups, role-based access control, preferences, ratings, and activity tracking
+- **Metadata extraction** — EXIF, IPTC, GPS, and video metadata via [exifr](https://github.com/nickaknudson/exifr) and FFmpeg
+- **Thumbnail generation** — multi-resolution JPEG thumbnails (default: 1920 down to 150px) via [sharp](https://sharp.pixelplumbing.com/)
+- **Face detection & recognition** — YuNet and SFace ONNX models detect faces, extract embeddings, and match across photos
+- **Perceptual hashing** — pHash-based near-duplicate detection
 - **JWT authentication** — bcrypt password hashing, token-based auth with configurable expiration (or bypass for local use)
-- **Generic CRUD** — auto-generated REST endpoints for all 27+ database models
-- **Real-time updates** — WebSocket endpoint pushes create/update/delete notifications to connected clients
-- **Orphan cleanup** — detects and removes database records for files that no longer exist on disk
+- **Generic CRUD** — auto-generated REST endpoints for all 31 database models
+- **WebSocket notifications** — real-time create/update/delete events and indexing progress
 
 ## Prerequisites
 
 - **Node.js** >= 22
 - **pnpm** (v10+)
-- **FFmpeg** / **FFprobe** — required for video metadata extraction, frame capture, and MP4 conversion
-- **SpatiaLite** (`mod_spatialite`) — required for geospatial features (GPS coordinate storage, spatial indexing). Install via `brew install libspatialite` (macOS) or `apt install libsqlite3-mod-spatialite` (Debian/Ubuntu). The extension is auto-detected from common install paths; set `spatialitePath` in the database client options to override.
-- **ONNX models** (optional) — for face detection and recognition (see [ONNX Model Setup](#onnx-model-setup) below)
+- **FFmpeg** / **FFprobe** — for video metadata, frame capture, and MP4 conversion
+- **SpatiaLite** (`mod_spatialite`) — for geospatial features. Install via `brew install libspatialite` (macOS) or `apt install libsqlite3-mod-spatialite` (Debian/Ubuntu). Auto-detected from common paths; override with `spatialitePath` in config.
+- **ONNX models** (optional) — for face detection and recognition (see [ONNX Model Setup](#onnx-model-setup))
 
 ## Quick Start
 
@@ -35,7 +46,7 @@ A self-hosted media server for photo and video libraries. Indexes directories of
 pnpm install
 pnpm build
 
-# First time only — make the `media-server` command available globally
+# First time only — make the CLI available globally
 pnpm setup
 source ~/.zshrc          # or restart your terminal
 pnpm link --global
@@ -47,11 +58,21 @@ pnpm link --global
 media-server serve
 ```
 
-The server starts on port **8080** by default. Auth is disabled initially, so no token is needed for API calls.
+The server starts on port **8080** by default. Open **http://localhost:8080** to use the web UI. Auth is disabled initially, so everything is accessible out of the box.
 
-### 3. (Optional) Set up face detection
+### 3. Index a media directory
 
-In a separate terminal, download the ONNX models and configure their paths:
+From the **Admin** page in the web UI, enter a directory path and click **Index**. You'll see a live progress bar as files are scanned, thumbnails generated, and faces detected.
+
+Or use the CLI:
+
+```bash
+media-server add directory --path /path/to/your/photos
+```
+
+### 4. (Optional) Set up face detection
+
+Download the ONNX models and register their paths:
 
 ```bash
 mkdir -p models
@@ -69,90 +90,13 @@ curl -X POST http://localhost:8080/setting/faceRecognitionModelPath \
   -d "{\"value\": \"$(pwd)/models/face_recognition_sface_2021dec.onnx\"}"
 ```
 
-Skip this step if you don't need face detection — the indexer will work without it.
+You can also configure these from the **Admin > Settings** tab in the web UI.
 
-### 4. Index a media directory
-
-```bash
-media-server add directory --path /path/to/your/photos
-```
-
-This scans the directory, extracts metadata, generates thumbnails, detects faces (if models are configured), and finds near-duplicate images. Progress is printed as it runs.
-
-### 5. Explore your library
-
-With the server running, open **http://localhost:8080** in your browser to use the web UI. You can browse folders, view images in a full-screen lightbox, play videos, and explore detected faces grouped by person.
-
-You can also interact with the library through the REST API.
-
-**Browse folders** — the indexer mirrors your directory structure as a virtual folder tree:
-
-```bash
-# List top-level folders
-curl http://localhost:8080/index | jq
-
-# Browse into a subfolder
-curl 'http://localhost:8080/index/vacation/2024' | jq
-
-# List everything recursively (paginated)
-curl 'http://localhost:8080/index?recursive=true&limit=20' | jq
-```
-
-Each response includes `folders` (subfolders) and `items` (media items with IDs you can use below).
-
-**View images and video** — serve originals or pick a thumbnail size:
-
-```bash
-# Download a 300px thumbnail
-curl http://localhost:8080/image/1?width=300 --output thumb.jpg
-
-# Download the full-resolution original
-curl http://localhost:8080/image/1 --output full.jpg
-
-# Stream a video
-curl http://localhost:8080/video/2 --output clip.mp4
-```
-
-**Get media item details** — metadata, dates, camera info, dimensions:
-
-```bash
-curl http://localhost:8080/mediaItem/1 | jq
-```
-
-**Browse detected faces** — view face crops and find photos of the same person:
-
-```bash
-# Get a face thumbnail (by feature ID)
-curl http://localhost:8080/face/1 --output face.jpg
-
-# Find other media items with the same face
-curl http://localhost:8080/matchingFaces/1 | jq
-```
-
-**Tag media with keywords:**
-
-```bash
-# Add a keyword
-curl -X POST http://localhost:8080/mediaItem/1/keywords \
-  -H "Content-Type: application/json" \
-  -d '{"word": "beach"}'
-
-# List keywords for an item
-curl http://localhost:8080/mediaItem/1/keywords | jq
-```
-
-**Check available thumbnail sizes** for a media item:
-
-```bash
-curl http://localhost:8080/thumbnails/1 | jq
-# → { "widths": [150, 300, 640, 1280, 1920] }
-```
-
-**Real-time updates** — connect a WebSocket client to `/ws` for live notifications as media is indexed, updated, or deleted.
+Skip this step if you don't need face detection — indexing works without it.
 
 ## Configuration
 
-Configuration is loaded from a JSON file (default: `config.json` in the working directory), with environment variable overrides. If no config file exists, the server uses sensible defaults: port 8080, an in-memory JWT secret (tokens won't survive restarts), and a SQLite database at `data/database.sqlite`.
+Configuration is loaded from a JSON file (default: `config.json` in the working directory), with environment variable overrides. If no config file exists, the server uses sensible defaults: port 8080, an in-memory JWT secret, and a SQLite database at `data/database.sqlite`.
 
 ### Config file
 
@@ -191,9 +135,11 @@ Configuration is loaded from a JSON file (default: `config.json` in the working 
 | `JWT_SECRET` | `jwt.secret` | `my-secret` |
 | `JWT_EXPIRES_IN` | `jwt.expiresIn` | `48h` |
 
-Relative paths in the config file resolve relative to the config file's directory, not the process working directory.
+Relative paths resolve relative to the config file's directory, not the process working directory.
 
 ## CLI
+
+The `media-server` CLI provides commands for server management and offline tasks.
 
 ```
 media-server <command>
@@ -207,6 +153,7 @@ Commands:
   add directory             Index a directory of media files
     --path <path>           Directory to index
     --concurrency <number>  Parallel file processing limit
+    --profile               Print per-phase timing breakdown
 
   delete thumbnails         Delete generated thumbnails for a directory
     --path <path>           Directory to delete thumbnails from
@@ -214,12 +161,12 @@ Commands:
 
   test ffmpeg               Verify FFmpeg installation
   test metadata --file <p>  Extract and display metadata from a file
-  test faces --file <path>  Detect faces in an image
+  test faces --file <path>  Detect faces in an image (requires --model)
 ```
 
 ## API
 
-All routes (except auth) require authentication when `auth_status` is enabled. Pass a JWT token via the `Authorization: Bearer <token>` header.
+All routes (except auth) require authentication when enabled. Pass a JWT token via the `Authorization: Bearer <token>` header.
 
 ### Authentication
 
@@ -232,8 +179,7 @@ All routes (except auth) require authentication when `auth_status` is enabled. P
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/index` | List root-level folders and items |
-| `GET` | `/index/*` | Browse a folder path (e.g. `/index/Photos/2024`) |
+| `GET` | `/index`, `/index/*` | Browse the virtual folder hierarchy |
 
 Query: `?recursive=true&offset=0&limit=50`
 
@@ -242,11 +188,12 @@ Query: `?recursive=true&offset=0&limit=50`
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/image/:id` | Serve an image (optional `?width=&height=` for thumbnails) |
-| `GET` | `/image` | Serve image by path (`?dir=&file=`) |
 | `GET` | `/video/:id` | Stream a video (supports range requests) |
-| `GET` | `/face/:id` | Get a face detection thumbnail |
+| `GET` | `/face/:id` | Get a face detection crop |
 | `GET` | `/thumbnail/:id` | Get a media item thumbnail |
 | `GET` | `/media-item/:id` | Get media item details with files and metadata |
+| `GET` | `/search` | Search by name, keyword, type, date range |
+| `GET` | `/map/media` | GPS-tagged media items for map rendering |
 
 ### Directory Management
 
@@ -259,19 +206,18 @@ Query: `?recursive=true&offset=0&limit=50`
 
 ### Generic CRUD
 
-Every model in the database gets auto-generated endpoints:
+Every database model gets auto-generated endpoints:
 
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/:model` | List records (paginated) |
 | `GET` | `/:model/:id` | Get a single record |
 | `POST` | `/:model` | Create a record |
-| `PUT` | `/:model/:id` | Update a record |
 | `DELETE` | `/:model/:id` | Delete a record |
 
 ### WebSocket
 
-Connect to `/ws` for real-time notifications. Messages arrive as comma-delimited strings: `action,source,id,userId`.
+Connect to `/ws` for real-time notifications. Messages are comma-delimited: `action,source,id,userId`.
 
 ## Tech Stack
 
@@ -279,19 +225,19 @@ Connect to `/ws` for real-time notifications. Messages arrive as comma-delimited
 |---|---|
 | Runtime | Node.js 22+ |
 | Language | TypeScript 6 (strict mode) |
-| HTTP | [Fastify](https://fastify.dev) |
-| Database | SQLite via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) |
+| HTTP | [Fastify](https://fastify.dev) 5 |
+| Database | SQLite via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) + [SpatiaLite](https://www.gaia-gis.it/fossil/libspatialite) |
 | ORM | [Drizzle ORM](https://orm.drizzle.team) |
 | Image processing | [sharp](https://sharp.pixelplumbing.com) |
-| Video processing | FFmpeg (via child process) |
-| Face detection | [ONNX Runtime](https://onnxruntime.ai) |
+| Video processing | FFmpeg |
+| Face detection | [ONNX Runtime](https://onnxruntime.ai) (YuNet + SFace) |
 | Auth | JWT + bcrypt |
 | Validation | [Zod](https://zod.dev) v4 |
 | Logging | [Pino](https://getpino.io) |
-| Build | [tsup](https://tsup.egoist.dev) |
+| Build | [tsup](https://tsup.egoist.dev) (server), [Vite](https://vite.dev) 6 (frontend) |
 | Test | [Vitest](https://vitest.dev) |
-| Frontend | React 19, Vite 6, Tailwind CSS 4, react-router-dom 7 |
-| Linting (frontend) | [Biome](https://biomejs.dev) |
+| Frontend | [React](https://react.dev) 19, [Tailwind CSS](https://tailwindcss.com) 4, [react-router-dom](https://reactrouter.com) 7, [Leaflet](https://leafletjs.com), [Lucide](https://lucide.dev) icons |
+| Linting | [Biome](https://biomejs.dev) (frontend) |
 
 ## Development
 
@@ -307,7 +253,7 @@ pnpm test:watch     # Run server tests in watch mode
 pnpm typecheck      # Type-check server code
 ```
 
-The project is a pnpm workspace monorepo with the server at the root and the web frontend in `web/`. During development, `pnpm dev` starts both in parallel — the Vite dev server on port 5173 proxies API requests to the Fastify server on port 8080. For production, `pnpm build` compiles the SPA into `web/dist/`, and the server serves it when `webDir` is set (e.g. `"webDir": "./web/dist"` in `config.json` or `media-server serve --web ./web/dist`).
+The project is a pnpm workspace monorepo with the server at the root and the web frontend in `web/`. During development, `pnpm dev` starts both in parallel — the Vite dev server on port 5173 proxies API requests to the Fastify server on port 8080. For production, `pnpm build` compiles the SPA into `web/dist/`, and the server serves it when `webDir` is set.
 
 After `pnpm build`, re-run `pnpm link --global` to update the global `media-server` command with the latest build.
 
@@ -315,18 +261,14 @@ After `pnpm build`, re-run `pnpm link --global` to update the global `media-serv
 
 Face detection and recognition require two ONNX model files from the [OpenCV Zoo](https://github.com/opencv/opencv_zoo). These are optional — the server and indexing pipeline work without them, but face features will be skipped.
 
-See [Quick Start step 3](#3-optional-set-up-face-detection) for the short version. The details below cover what happens under the hood.
-
-The model paths are stored in the database `setting` table and read by the CLI at indexing time. Paths **must be absolute** — relative paths are rejected. You can update them at any time; the new paths take effect on the next `add directory` run.
+The model paths are stored in the database `setting` table. Paths **must be absolute**. You can update them at any time via the Admin Settings page or the REST API; changes take effect on the next indexing run.
 
 | Setting key | Model | File |
 |---|---|---|
 | `faceDetectionModelPath` | YuNet (face detection) | `face_detection_yunet_2023mar.onnx` |
 | `faceRecognitionModelPath` | SFace (face recognition) | `face_recognition_sface_2021dec.onnx` |
 
-When auth is enabled, the `POST /setting/:key` endpoint requires a valid JWT token with SysAdmin access. When auth is disabled (the default), no token is needed.
-
-For more details on model inputs, outputs, and licensing, see [docs/onnx-models.md](docs/onnx-models.md).
+For model details, see [docs/onnx-models.md](docs/onnx-models.md).
 
 ## Project Structure
 
@@ -339,16 +281,17 @@ src/
 │   ├── app.ts        Fastify app factory
 │   ├── auth.ts       JWT authentication plugin
 │   ├── websocket.ts  WebSocket notifications
-│   └── routes/       Route plugins (index, image, video, face, CRUD, …)
-├── services/         Core logic (file indexing, thumbnails, faces, hashing, …)
+│   └── routes/       Route plugins (index, image, video, face, search, CRUD, …)
+├── services/         Core logic (file indexing, thumbnails, faces, hashing, maintenance)
 └── utils/            Shared utilities (image, ffmpeg, file, logger)
 test/                 Mirrors src/ structure with *.test.ts files
 web/
 ├── src/
-│   ├── components/   Sidebar, topbar, media grid, lightbox, primitives
-│   ├── hooks/        useFetch, useTheme
+│   ├── components/   Sidebar, topbar, media grid, lightbox, search bar, detail panels
+│   ├── hooks/        useFetch, useTheme, useAutoRefresh
 │   ├── lib/          Typed API client
-│   └── pages/        Route-level components (browse, media-item, people, settings)
+│   └── pages/        Route pages (browse, media-item, people, face-triage, places, map,
+│                       search, keywords, admin, settings, login)
 ├── index.html        SPA entry point
 └── vite.config.ts    Vite + Tailwind + API proxy
 ```
