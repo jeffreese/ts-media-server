@@ -129,7 +129,7 @@ The Drizzle schema will mirror the Java version's `models/schema.sql` with these
 - **TIMESTAMP WITH TIME ZONE** → SQLite `text` columns storing ISO 8601 strings (or integer Unix timestamps)
 - **bytea** → SQLite `blob`
 
-### Tables (36 tables, matching Java version)
+### Tables (37 tables)
 
 Core media tables:
 - `media_item`, `file`, `path`, `host`, `folder`, `folder_entry`
@@ -137,7 +137,7 @@ Core media tables:
 - `keyword`, `media_match`, `media_access`, `media_log`
 
 Feature/face tables:
-- `feature`, `feature_match`, `person_feature`
+- `feature`, `feature_match`, `person_feature`, `face_rejection`
 
 People/places:
 - `person`, `person_name`, `person_address`, `person_contact`

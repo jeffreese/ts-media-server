@@ -20,7 +20,7 @@ describe('runMigrations', () => {
     clients.length = 0;
   });
 
-  it('creates all 36 application tables', () => {
+  it('creates all 37 application tables', () => {
     const client = tracked(
       createDatabaseClient({ path: ':memory:', enableSpatialite: false }),
     );
@@ -53,7 +53,8 @@ describe('runMigrations', () => {
     expect(tableNames).toContain('setting');
     expect(tableNames).toContain('data');
     expect(tableNames).toContain('datatype');
-    expect(tableNames.length).toBe(36);
+    expect(tableNames).toContain('face_rejection');
+    expect(tableNames.length).toBe(37);
   });
 
   it('creates unique indexes', () => {

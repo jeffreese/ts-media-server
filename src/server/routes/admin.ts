@@ -120,6 +120,10 @@ export const adminPlugin = fp<AdminPluginOptions>(
         db.select({ count: sql<number>`count(*)` }).from(schema.user).get()?.count ?? 0,
       );
 
+      const rejectionCount = Number(
+        db.select({ count: sql<number>`count(*)` }).from(schema.faceRejection).get()?.count ?? 0,
+      );
+
       const imageCount = Number(
         db.select({ count: sql<number>`count(*)` })
           .from(schema.mediaItem)
@@ -145,6 +149,7 @@ export const adminPlugin = fp<AdminPluginOptions>(
         places: placeCount,
         keywords: keywordCount,
         users: userCount,
+        faceRejections: rejectionCount,
       });
     });
 

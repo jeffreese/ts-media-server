@@ -386,6 +386,7 @@ export interface AdminStats {
   places: number
   keywords: number
   users: number
+  faceRejections: number
 }
 
 export interface IndexedPath {
@@ -617,6 +618,20 @@ export const api = {
   ignoredFaces(options?: PaginationOptions) {
     const query = buildQuery({ offset: options?.offset, limit: options?.limit })
     return request<PaginatedResponse<{ id: number; itemId: number; label: string | null }>>(`/faces/ignored${query}`)
+  },
+
+  rejectFace(featureId: number, personId: number) {
+    return request<{ success: boolean }>(`/faces/${featureId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ personId }),
+    })
+  },
+
+  unrejectFace(featureId: number, personId: number) {
+    return request<{ success: boolean }>(`/faces/${featureId}/reject`, {
+      method: 'DELETE',
+      body: JSON.stringify({ personId }),
+    })
   },
 
   // -- Duplicate matches for a media item --
