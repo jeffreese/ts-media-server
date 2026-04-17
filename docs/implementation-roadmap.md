@@ -789,13 +789,13 @@ Improve the face-to-person assignment workflow with smarter scoring, better UX p
 - [x] Emit notifications so the UI refreshes
 
 ### 5. Keyboard Shortcuts for Cluster Triage
-- [ ] Arrow keys (↑/↓) to navigate between cluster cards
-- [ ] `A` to select all faces in the focused cluster
-- [ ] `Enter` to quick-assign to the suggested candidate (when one exists)
-- [ ] `N` to open the "Name this person" input
-- [ ] `L` to open the "Link to existing person" modal
-- [ ] Visual focus indicator on the active cluster card
-- [ ] Shortcut legend shown in the triage header
+- [x] Arrow keys (↑/↓) to navigate between cluster cards
+- [x] `A` to select all faces in the focused cluster
+- [x] `Enter` to quick-assign to the suggested candidate (when one exists)
+- [x] `N` to open the "Name this person" input
+- [x] `L` to open the "Link to existing person" modal
+- [x] Visual focus indicator on the active cluster card
+- [x] Shortcut legend shown in the triage header
 
 ### 6. Adjustable Clustering Strictness
 - [ ] Add a "Strictness" slider to the triage page header

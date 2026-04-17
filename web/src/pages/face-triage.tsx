@@ -5,13 +5,14 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
+  Keyboard,
   Link2,
   Plus,
   Sparkles,
   UserPlus,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '~/components/empty-state'
 import { FetchError } from '~/components/fetch-error'
@@ -19,6 +20,7 @@ import { PersonSearchList } from '~/components/person-search-list'
 import { Badge, IconButton, Skeleton } from '~/components/primitives'
 import { useAutoRefresh } from '~/hooks/use-auto-refresh'
 import { useFetch } from '~/hooks/use-fetch'
+import { useTriageKeyboard } from '~/hooks/use-triage-keyboard'
 import {
   type FaceCluster,
   type PersonCandidate,
@@ -91,6 +93,15 @@ export function FaceTriagePage() {
   const unsuggestedClusters = clusters.filter((c) => c.size > 1 && c.topCandidateScore === null)
   const singleClusters = clusters.filter((c) => c.size === 1)
 
+  const allCards = useMemo(
+    () => [...suggestedClusters, ...unsuggestedClusters, ...singleClusters],
+    [suggestedClusters, unsuggestedClusters, singleClusters],
+  )
+
+  const { focusedIndex, setFocusedIndex, registerCard } = useTriageKeyboard(allCards.length)
+
+  let flatIndex = 0
+
   return (
     <div>
       <TriageHeader total={total} totalFaces={totalFaces} />
@@ -101,13 +112,20 @@ export function FaceTriagePage() {
             Suggested ({suggestedClusters.length})
           </h2>
           <div className="space-y-3">
-            {suggestedClusters.map((cluster) => (
-              <ClusterCard
-                key={cluster.representativeFeatureId}
-                cluster={cluster}
-                onAssigned={fetchClusters}
-              />
-            ))}
+            {suggestedClusters.map((cluster) => {
+              const idx = flatIndex++
+              return (
+                <ClusterCard
+                  key={cluster.representativeFeatureId}
+                  cluster={cluster}
+                  onAssigned={fetchClusters}
+                  focused={idx === focusedIndex}
+                  onFocus={() => setFocusedIndex(idx)}
+                  registerCard={registerCard}
+                  cardIndex={idx}
+                />
+              )
+            })}
           </div>
         </section>
       )}
@@ -118,13 +136,20 @@ export function FaceTriagePage() {
             Clusters ({unsuggestedClusters.length})
           </h2>
           <div className="space-y-3">
-            {unsuggestedClusters.map((cluster) => (
-              <ClusterCard
-                key={cluster.representativeFeatureId}
-                cluster={cluster}
-                onAssigned={fetchClusters}
-              />
-            ))}
+            {unsuggestedClusters.map((cluster) => {
+              const idx = flatIndex++
+              return (
+                <ClusterCard
+                  key={cluster.representativeFeatureId}
+                  cluster={cluster}
+                  onAssigned={fetchClusters}
+                  focused={idx === focusedIndex}
+                  onFocus={() => setFocusedIndex(idx)}
+                  registerCard={registerCard}
+                  cardIndex={idx}
+                />
+              )
+            })}
           </div>
         </section>
       )}
@@ -135,13 +160,20 @@ export function FaceTriagePage() {
             Individual Faces ({singleClusters.length})
           </h2>
           <div className="space-y-3">
-            {singleClusters.map((cluster) => (
-              <ConfirmationCard
-                key={cluster.representativeFeatureId}
-                cluster={cluster}
-                onAssigned={fetchClusters}
-              />
-            ))}
+            {singleClusters.map((cluster) => {
+              const idx = flatIndex++
+              return (
+                <ConfirmationCard
+                  key={cluster.representativeFeatureId}
+                  cluster={cluster}
+                  onAssigned={fetchClusters}
+                  focused={idx === focusedIndex}
+                  onFocus={() => setFocusedIndex(idx)}
+                  registerCard={registerCard}
+                  cardIndex={idx}
+                />
+              )
+            })}
           </div>
         </section>
       )}
@@ -215,6 +247,8 @@ function IgnoredFacesSection({ onRestored }: { onRestored: () => void }) {
 }
 
 function TriageHeader({ total, totalFaces }: { total: number; totalFaces: number }) {
+  const [showShortcuts, setShowShortcuts] = useState(false)
+
   return (
     <div className="mb-6 flex items-center gap-3">
       <Link
@@ -223,7 +257,7 @@ function TriageHeader({ total, totalFaces }: { total: number; totalFaces: number
       >
         <ArrowLeft className="h-5 w-5" />
       </Link>
-      <div>
+      <div className="flex-1">
         <h1 className="text-xl font-semibold">Face Triage</h1>
         {totalFaces > 0 && (
           <p className="text-sm text-foreground-muted">
@@ -231,6 +265,71 @@ function TriageHeader({ total, totalFaces }: { total: number; totalFaces: number
           </p>
         )}
       </div>
+      <div className="relative">
+        <IconButton
+          label="Keyboard shortcuts"
+          onClick={() => setShowShortcuts((v) => !v)}
+        >
+          <Keyboard className="h-4 w-4" />
+        </IconButton>
+        {showShortcuts && <ShortcutLegend onClose={() => setShowShortcuts(false)} />}
+      </div>
+    </div>
+  )
+}
+
+const SHORTCUTS = [
+  { keys: ['↑', 'k'], label: 'Previous cluster' },
+  { keys: ['↓', 'j'], label: 'Next cluster' },
+  { keys: ['a'], label: 'Select all faces' },
+  { keys: ['Enter'], label: 'Quick-assign to suggestion' },
+  { keys: ['n'], label: 'Name new person' },
+  { keys: ['l'], label: 'Link to existing person' },
+  { keys: ['Esc'], label: 'Clear focus' },
+] as const
+
+function ShortcutLegend({ onClose }: { onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [onClose])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div
+      ref={ref}
+      className="absolute right-0 top-full z-40 mt-2 w-64 rounded-xl border border-border bg-surface p-4 shadow-xl"
+    >
+      <h3 className="mb-3 text-sm font-medium">Keyboard Shortcuts</h3>
+      <dl className="space-y-2">
+        {SHORTCUTS.map((s) => (
+          <div key={s.label} className="flex items-center justify-between gap-3">
+            <dt className="text-xs text-foreground-muted">{s.label}</dt>
+            <dd className="flex gap-1">
+              {s.keys.map((k) => (
+                <kbd
+                  key={k}
+                  className="rounded border border-border bg-control px-1.5 py-0.5 text-[11px] font-mono text-foreground-muted"
+                >
+                  {k}
+                </kbd>
+              ))}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </div>
   )
 }
@@ -242,9 +341,17 @@ function TriageHeader({ total, totalFaces }: { total: number; totalFaces: number
 function ClusterCard({
   cluster,
   onAssigned,
+  focused,
+  onFocus,
+  registerCard,
+  cardIndex,
 }: {
   cluster: FaceCluster
   onAssigned: () => void
+  focused: boolean
+  onFocus: () => void
+  registerCard: (index: number, el: HTMLDivElement | null, actions: import('~/hooks/use-triage-keyboard').ClusterActions) => void
+  cardIndex: number
 }) {
   const [expanded, setExpanded] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -253,6 +360,7 @@ function ClusterCard({
   const [assigning, setAssigning] = useState(false)
   const [busy, setBusy] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const topCandidate = cluster.candidates[0] as PersonCandidate | undefined
   const candidateName = topCandidate?.names.find((n) => n.preferred)?.name
@@ -266,6 +374,9 @@ function ClusterCard({
     if (naming) nameInputRef.current?.focus()
   }, [naming])
 
+  const selectAll = useCallback(() => setSelected(new Set(cluster.featureIds)), [cluster.featureIds])
+  const selectNone = () => setSelected(new Set())
+
   const handleQuickAssign = async () => {
     if (!topCandidate || selectedFeatureIds.length === 0) return
     setBusy(true)
@@ -276,6 +387,33 @@ function ClusterCard({
       setBusy(false)
     }
   }
+
+  const openNaming = useCallback(() => {
+    setNaming(true)
+    setAssigning(false)
+  }, [])
+
+  const openLinking = useCallback(() => {
+    setAssigning(true)
+    setNaming(false)
+  }, [])
+
+  useEffect(() => {
+    registerCard(cardIndex, cardRef.current, {
+      selectAll,
+      quickAssign: handleQuickAssign,
+      openNaming,
+      openLinking,
+      hasCandidate: !!topCandidate && selectedFeatureIds.length > 0,
+    })
+    return () => registerCard(cardIndex, null, {
+      selectAll,
+      quickAssign: handleQuickAssign,
+      openNaming,
+      openLinking,
+      hasCandidate: false,
+    })
+  })
 
   const handleCreatePerson = async () => {
     const trimmed = nameValue.trim()
@@ -332,11 +470,14 @@ function ClusterCard({
     })
   }
 
-  const selectAll = () => setSelected(new Set(cluster.featureIds))
-  const selectNone = () => setSelected(new Set())
-
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div
+      ref={cardRef}
+      onClick={onFocus}
+      className={`rounded-xl border bg-surface p-4 transition-shadow ${
+        focused ? 'border-accent ring-2 ring-accent/40' : 'border-border'
+      }`}
+    >
       <div className="flex items-start gap-4">
         {/* Left face: candidate person if available, otherwise cluster representative */}
         {topCandidate?.firstFeature ? (
@@ -424,13 +565,13 @@ function ClusterCard({
           )}
           <IconButton
             label="Name this person"
-            onClick={() => { setNaming(true); setAssigning(false) }}
+            onClick={openNaming}
           >
             <UserPlus className="h-3.5 w-3.5" />
           </IconButton>
           <IconButton
             label="Assign to existing person"
-            onClick={() => { setAssigning(true); setNaming(false) }}
+            onClick={openLinking}
           >
             <Link2 className="h-3.5 w-3.5" />
           </IconButton>
@@ -500,9 +641,17 @@ function ClusterCard({
 function ConfirmationCard({
   cluster,
   onAssigned,
+  focused,
+  onFocus,
+  registerCard,
+  cardIndex,
 }: {
   cluster: FaceCluster
   onAssigned: () => void
+  focused: boolean
+  onFocus: () => void
+  registerCard: (index: number, el: HTMLDivElement | null, actions: import('~/hooks/use-triage-keyboard').ClusterActions) => void
+  cardIndex: number
 }) {
   const [naming, setNaming] = useState(false)
   const [nameValue, setNameValue] = useState('')
@@ -523,23 +672,7 @@ function ConfirmationCard({
     if (naming) nameInputRef.current?.focus()
   }, [naming])
 
-  useEffect(() => {
-    if (!topCandidate || naming || assigning) return
-
-    const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (e.key === 'y' || e.key === 'Y') {
-        handleConfirm()
-      } else if (e.key === 'n' || e.key === 'N') {
-        handleDeny()
-      }
-    }
-
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  })
-
-  const handleConfirm = async () => {
+  const handleConfirm = useCallback(async () => {
     if (!topCandidate) return
     setBusy(true)
     try {
@@ -548,7 +681,7 @@ function ConfirmationCard({
     } finally {
       setBusy(false)
     }
-  }
+  }, [topCandidate, featureId, onAssigned])
 
   const handleDeny = async () => {
     if (!topCandidate?.firstFeature) return
@@ -598,8 +731,43 @@ function ConfirmationCard({
     }
   }
 
+  const openNaming = useCallback(() => {
+    setNaming(true)
+    setAssigning(false)
+  }, [])
+
+  const openLinking = useCallback(() => {
+    setAssigning(true)
+    setNaming(false)
+  }, [])
+
+  const selectAll = useCallback(() => {}, [])
+
+  useEffect(() => {
+    registerCard(cardIndex, cardRef.current, {
+      selectAll,
+      quickAssign: handleConfirm,
+      openNaming,
+      openLinking,
+      hasCandidate: !!topCandidate,
+    })
+    return () => registerCard(cardIndex, null, {
+      selectAll,
+      quickAssign: handleConfirm,
+      openNaming,
+      openLinking,
+      hasCandidate: false,
+    })
+  })
+
   return (
-    <div ref={cardRef} className="rounded-xl border border-border bg-surface p-4">
+    <div
+      ref={cardRef}
+      onClick={onFocus}
+      className={`rounded-xl border bg-surface p-4 transition-shadow ${
+        focused ? 'border-accent ring-2 ring-accent/40' : 'border-border'
+      }`}
+    >
       <div className="flex items-center gap-4">
         {/* Unlinked face */}
         <div className="group relative shrink-0">
@@ -682,13 +850,13 @@ function ConfirmationCard({
             <div className="ml-auto flex shrink-0 items-center gap-1">
               <IconButton
                 label="Name this person"
-                onClick={() => { setNaming(true); setAssigning(false) }}
+                onClick={openNaming}
               >
                 <UserPlus className="h-3.5 w-3.5" />
               </IconButton>
               <IconButton
                 label="Assign to existing person"
-                onClick={() => { setAssigning(true); setNaming(false) }}
+                onClick={openLinking}
               >
                 <Link2 className="h-3.5 w-3.5" />
               </IconButton>
