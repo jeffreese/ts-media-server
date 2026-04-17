@@ -571,8 +571,8 @@ export const api = {
   },
 
   // -- Face triage --
-  unlinkedClusters(options?: PaginationOptions) {
-    const query = buildQuery({ offset: options?.offset, limit: options?.limit })
+  unlinkedClusters(options?: PaginationOptions & { threshold?: number }) {
+    const query = buildQuery({ offset: options?.offset, limit: options?.limit, threshold: options?.threshold })
     return request<UnlinkedClustersResponse>(`/faces/unlinked/clusters${query}`)
   },
 

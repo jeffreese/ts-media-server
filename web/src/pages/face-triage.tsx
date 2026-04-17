@@ -8,6 +8,7 @@ import {
   Keyboard,
   Link2,
   Plus,
+  SlidersHorizontal,
   Sparkles,
   UserPlus,
   X,
@@ -27,37 +28,85 @@ import {
   api,
 } from '~/lib/api'
 
+const THRESHOLD_STORAGE_KEY = 'face-triage-threshold'
+const DEFAULT_THRESHOLD = 0.55
+const MIN_THRESHOLD = 0.40
+const MAX_THRESHOLD = 0.70
+
+function loadStoredThreshold(): number {
+  try {
+    const stored = localStorage.getItem(THRESHOLD_STORAGE_KEY)
+    if (stored !== null) {
+      const parsed = Number.parseFloat(stored)
+      if (!Number.isNaN(parsed) && parsed >= MIN_THRESHOLD && parsed <= MAX_THRESHOLD) {
+        return parsed
+      }
+    }
+  } catch {
+    // localStorage unavailable
+  }
+  return DEFAULT_THRESHOLD
+}
+
 export function FaceTriagePage() {
   const [clusters, setClusters] = useState<FaceCluster[]>([])
   const [total, setTotal] = useState(0)
   const [totalFaces, setTotalFaces] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const [threshold, setThreshold] = useState(loadStoredThreshold)
+
+  const thresholdRef = useRef(threshold)
+  thresholdRef.current = threshold
+
+  const generationRef = useRef(0)
 
   const fetchClusters = useCallback(() => {
+    const gen = ++generationRef.current
     setIsLoading(true)
     api
-      .unlinkedClusters({ limit: 200 })
+      .unlinkedClusters({ limit: 200, threshold: thresholdRef.current })
       .then((res) => {
+        if (gen !== generationRef.current) return
         setClusters(res.clusters)
         setTotal(res.total)
         setTotalFaces(res.totalUnlinkedFaces)
         setError(null)
       })
-      .catch((err) => setError(err))
-      .finally(() => setIsLoading(false))
+      .catch((err) => {
+        if (gen !== generationRef.current) return
+        setError(err)
+      })
+      .finally(() => {
+        if (gen === generationRef.current) setIsLoading(false)
+      })
   }, [])
 
+  const isInitialMount = useRef(true)
+
   useEffect(() => {
-    fetchClusters()
-  }, [fetchClusters])
+    try {
+      localStorage.setItem(THRESHOLD_STORAGE_KEY, String(threshold))
+    } catch {
+      // localStorage unavailable
+    }
+
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      fetchClusters()
+      return
+    }
+
+    const timer = setTimeout(fetchClusters, 300)
+    return () => clearTimeout(timer)
+  }, [threshold, fetchClusters])
 
   useAutoRefresh(['feature', 'personFeature', 'person'], fetchClusters)
 
   if (error) {
     return (
       <div>
-        <TriageHeader total={0} totalFaces={0} />
+        <TriageHeader total={0} totalFaces={0} threshold={threshold} onThresholdChange={setThreshold} />
         <FetchError message={`Failed to load clusters: ${error.message}`} onRetry={fetchClusters} />
       </div>
     )
@@ -66,7 +115,7 @@ export function FaceTriagePage() {
   if (isLoading) {
     return (
       <div>
-        <TriageHeader total={0} totalFaces={0} />
+        <TriageHeader total={0} totalFaces={0} threshold={threshold} onThresholdChange={setThreshold} />
         <div className="space-y-4">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} className="h-24 w-full rounded-xl" />
@@ -79,7 +128,7 @@ export function FaceTriagePage() {
   if (clusters.length === 0) {
     return (
       <div>
-        <TriageHeader total={0} totalFaces={0} />
+        <TriageHeader total={0} totalFaces={0} threshold={threshold} onThresholdChange={setThreshold} />
         <EmptyState
           icon={<Sparkles className="h-12 w-12" />}
           title="All faces assigned"
@@ -104,7 +153,7 @@ export function FaceTriagePage() {
 
   return (
     <div>
-      <TriageHeader total={total} totalFaces={totalFaces} />
+      <TriageHeader total={total} totalFaces={totalFaces} threshold={threshold} onThresholdChange={setThreshold} />
 
       {suggestedClusters.length > 0 && (
         <section className="mb-8">
@@ -246,34 +295,84 @@ function IgnoredFacesSection({ onRestored }: { onRestored: () => void }) {
   )
 }
 
-function TriageHeader({ total, totalFaces }: { total: number; totalFaces: number }) {
+function TriageHeader({
+  total,
+  totalFaces,
+  threshold,
+  onThresholdChange,
+}: {
+  total: number
+  totalFaces: number
+  threshold: number
+  onThresholdChange: (value: number) => void
+}) {
   const [showShortcuts, setShowShortcuts] = useState(false)
 
   return (
-    <div className="mb-6 flex items-center gap-3">
-      <Link
-        to="/people"
-        className="rounded-lg p-1.5 text-foreground-muted transition-colors hover:bg-control hover:text-foreground"
-      >
-        <ArrowLeft className="h-5 w-5" />
-      </Link>
-      <div className="flex-1">
-        <h1 className="text-xl font-semibold">Face Triage</h1>
-        {totalFaces > 0 && (
-          <p className="text-sm text-foreground-muted">
-            {total} cluster{total !== 1 ? 's' : ''} &middot; {totalFaces} face{totalFaces !== 1 ? 's' : ''}
-          </p>
-        )}
-      </div>
-      <div className="relative">
-        <IconButton
-          label="Keyboard shortcuts"
-          onClick={() => setShowShortcuts((v) => !v)}
+    <div className="mb-6 space-y-3">
+      <div className="flex items-center gap-3">
+        <Link
+          to="/people"
+          className="rounded-lg p-1.5 text-foreground-muted transition-colors hover:bg-control hover:text-foreground"
         >
-          <Keyboard className="h-4 w-4" />
-        </IconButton>
-        {showShortcuts && <ShortcutLegend onClose={() => setShowShortcuts(false)} />}
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div className="flex-1">
+          <h1 className="text-xl font-semibold">Face Triage</h1>
+          {totalFaces > 0 && (
+            <p className="text-sm text-foreground-muted">
+              {total} cluster{total !== 1 ? 's' : ''} &middot; {totalFaces} face{totalFaces !== 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
+        <div className="relative">
+          <IconButton
+            label="Keyboard shortcuts"
+            onClick={() => setShowShortcuts((v) => !v)}
+          >
+            <Keyboard className="h-4 w-4" />
+          </IconButton>
+          {showShortcuts && <ShortcutLegend onClose={() => setShowShortcuts(false)} />}
+        </div>
       </div>
+      <StrictnessSlider value={threshold} onChange={onThresholdChange} />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Strictness slider
+// ---------------------------------------------------------------------------
+
+function StrictnessSlider({
+  value,
+  onChange,
+}: {
+  value: number
+  onChange: (value: number) => void
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-control px-3 py-2">
+      <SlidersHorizontal className="h-4 w-4 shrink-0 text-foreground-muted" />
+      <label className="shrink-0 text-xs font-medium text-foreground-muted" htmlFor="strictness">
+        Strictness
+      </label>
+      <span className="shrink-0 text-xs text-foreground-muted">Loose</span>
+      <input
+        id="strictness"
+        type="range"
+        min={MIN_THRESHOLD}
+        max={MAX_THRESHOLD}
+        step={0.01}
+        value={value}
+        onChange={(e) => onChange(Number.parseFloat(e.target.value))}
+        className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-border accent-accent [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent"
+        title={`Cluster similarity threshold: ${value.toFixed(2)}`}
+      />
+      <span className="shrink-0 text-xs text-foreground-muted">Strict</span>
+      <span className="w-10 shrink-0 text-right text-xs font-mono tabular-nums text-foreground-muted">
+        {value.toFixed(2)}
+      </span>
     </div>
   )
 }

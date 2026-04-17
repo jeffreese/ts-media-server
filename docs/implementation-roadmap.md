@@ -798,12 +798,12 @@ Improve the face-to-person assignment workflow with smarter scoring, better UX p
 - [x] Shortcut legend shown in the triage header
 
 ### 6. Adjustable Clustering Strictness
-- [ ] Add a "Strictness" slider to the triage page header
-- [ ] Maps to the `CLUSTER_SIMILARITY_THRESHOLD` parameter (range ~0.40–0.70)
-- [ ] Passed as a query parameter to `GET /faces/unlinked/clusters`
-- [ ] Higher strictness = smaller, purer clusters; lower = larger, more inclusive
-- [ ] Persist last-used value in `localStorage`
-- [ ] Immich-inspired workflow: start strict, name the obvious clusters, lower gradually
+- [x] Add a "Strictness" slider to the triage page header
+- [x] Maps to the `CLUSTER_SIMILARITY_THRESHOLD` parameter (range ~0.40–0.70)
+- [x] Passed as a query parameter to `GET /faces/unlinked/clusters`
+- [x] Higher strictness = smaller, purer clusters; lower = larger, more inclusive
+- [x] Persist last-used value in `localStorage`
+- [x] Immich-inspired workflow: start strict, name the obvious clusters, lower gradually
 
 ### 7. "Not This Person" Rejection Tracking
 - [ ] Add a "Not [Name]" button when a candidate is suggested on a cluster card

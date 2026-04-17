@@ -190,6 +190,82 @@ describe('face triage routes', () => {
       expect(body.clusters[0].size).toBe(3);
     });
 
+    it('accepts a custom threshold to control clustering strictness', async () => {
+      const client = setupDb();
+      seedGraph(client);
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const looseRes = await app.server.inject({
+        method: 'GET',
+        url: '/faces/unlinked/clusters?limit=200&threshold=0.40',
+      });
+      expect(looseRes.statusCode).toBe(200);
+      const looseBody = looseRes.json();
+      const looseTotalClusters = looseBody.total;
+
+      const strictRes = await app.server.inject({
+        method: 'GET',
+        url: '/faces/unlinked/clusters?limit=200&threshold=0.70',
+      });
+      expect(strictRes.statusCode).toBe(200);
+      const strictBody = strictRes.json();
+      const strictTotalClusters = strictBody.total;
+
+      // Stricter threshold should produce at least as many clusters as loose
+      expect(strictTotalClusters).toBeGreaterThanOrEqual(looseTotalClusters);
+    });
+
+    it('uses the default threshold when no threshold param is provided', async () => {
+      const client = setupDb();
+      seedGraph(client);
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const defaultRes = await app.server.inject({
+        method: 'GET',
+        url: '/faces/unlinked/clusters?limit=200',
+      });
+      expect(defaultRes.statusCode).toBe(200);
+
+      const withThresholdRes = await app.server.inject({
+        method: 'GET',
+        url: '/faces/unlinked/clusters?limit=200&threshold=0.55',
+      });
+      expect(withThresholdRes.statusCode).toBe(200);
+
+      // Explicitly passing the default value should produce identical results
+      expect(defaultRes.json().total).toBe(withThresholdRes.json().total);
+    });
+
+    it('rejects threshold below 0.40', async () => {
+      const client = setupDb();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/faces/unlinked/clusters?threshold=0.30',
+      });
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('rejects threshold above 0.70', async () => {
+      const client = setupDb();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: '/faces/unlinked/clusters?threshold=0.90',
+      });
+      expect(response.statusCode).toBe(400);
+    });
+
     it('sorts clusters with candidate suggestions before those without', async () => {
       const client = setupDb();
       const db = drizzle(client.db, { schema });

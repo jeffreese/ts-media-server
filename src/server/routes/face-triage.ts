@@ -17,6 +17,10 @@ const paginationSchema = z.object({
   limit: z.coerce.number().int().positive().max(200).optional().default(20),
 });
 
+const clusterQuerySchema = paginationSchema.extend({
+  threshold: z.coerce.number().min(0.40).max(0.70).optional(),
+});
+
 const featureIdParams = z.object({
   featureId: z.coerce.number().int().positive(),
 });
@@ -207,7 +211,8 @@ function extractEmbedding(info: unknown): Float32Array | null {
 /**
  * Face triage routes for efficient bulk face-to-person assignment.
  *
- * - `GET /faces/unlinked/clusters` — grouped unlinked faces with inline candidates
+ * - `GET /faces/unlinked/clusters` — grouped unlinked faces with inline candidates.
+ *     Optional `threshold` query param (0.40–0.70, default 0.55) controls clustering strictness.
  * - `POST /faces/bulk-assign` — link multiple features to an existing person
  * - `POST /faces/bulk-create` — create a person and link multiple features
  * - `POST /faces/ignore-match` — suppress a feature match pair
@@ -230,11 +235,20 @@ export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
     app.get('/faces/unlinked/clusters', {
       preHandler: [app.authenticate],
     }, async (request, reply) => {
-      const queryParsed = paginationSchema.safeParse(request.query);
+      const queryParsed = clusterQuerySchema.safeParse(request.query);
       if (!queryParsed.success) {
-        return reply.code(400).send({ error: 'Invalid pagination parameters' });
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Invalid query parameters',
+          details: queryParsed.error.issues.map((i) => ({
+            path: i.path.join('.'),
+            message: i.message,
+          })),
+        });
       }
-      const { offset, limit } = queryParsed.data;
+      const { offset, limit, threshold } = queryParsed.data;
+      const clusterThreshold = threshold ?? CLUSTER_SIMILARITY_THRESHOLD;
 
       const features = loadUnlinkedFeatures(db);
       const totalUnlinkedFaces = features.length;
@@ -243,7 +257,7 @@ export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
         return reply.send({ clusters: [], offset, limit, total: 0, totalUnlinkedFaces: 0 });
       }
 
-      const rawClusters = buildClusters(features, CLUSTER_SIMILARITY_THRESHOLD, MAX_CLUSTER_SIZE);
+      const rawClusters = buildClusters(features, clusterThreshold, MAX_CLUSTER_SIZE);
 
       const personEmbeddings = loadPersonEmbeddings(db);
       const featureEmbeddingMap = new Map<number, Float32Array>();
