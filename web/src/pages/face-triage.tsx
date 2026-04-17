@@ -103,6 +103,26 @@ export function FaceTriagePage() {
 
   useAutoRefresh(['feature', 'personFeature', 'person'], fetchClusters)
 
+  const suggestedClusters = useMemo(
+    () => clusters.filter((c) => c.size > 1 && c.topCandidateScore !== null),
+    [clusters],
+  )
+  const unsuggestedClusters = useMemo(
+    () => clusters.filter((c) => c.size > 1 && c.topCandidateScore === null),
+    [clusters],
+  )
+  const singleClusters = useMemo(
+    () => clusters.filter((c) => c.size === 1),
+    [clusters],
+  )
+
+  const allCards = useMemo(
+    () => [...suggestedClusters, ...unsuggestedClusters, ...singleClusters],
+    [suggestedClusters, unsuggestedClusters, singleClusters],
+  )
+
+  const { focusedIndex, setFocusedIndex, registerCard } = useTriageKeyboard(allCards.length)
+
   if (error) {
     return (
       <div>
@@ -137,17 +157,6 @@ export function FaceTriagePage() {
       </div>
     )
   }
-
-  const suggestedClusters = clusters.filter((c) => c.size > 1 && c.topCandidateScore !== null)
-  const unsuggestedClusters = clusters.filter((c) => c.size > 1 && c.topCandidateScore === null)
-  const singleClusters = clusters.filter((c) => c.size === 1)
-
-  const allCards = useMemo(
-    () => [...suggestedClusters, ...unsuggestedClusters, ...singleClusters],
-    [suggestedClusters, unsuggestedClusters, singleClusters],
-  )
-
-  const { focusedIndex, setFocusedIndex, registerCard } = useTriageKeyboard(allCards.length)
 
   let flatIndex = 0
 
