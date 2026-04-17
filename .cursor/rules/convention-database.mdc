@@ -13,7 +13,7 @@ globs: ["src/db/**/*.ts", "drizzle/**/*", "drizzle.config.ts"]
 
 ## Schema Patterns
 
-- 36 tables total — see `docs/tech-spec.md` for the full list
+- 37 tables total — see `docs/tech-spec.md` for the full list
 - Use Drizzle's `sqliteTable` for table definitions
 - Geometry columns: raw SQL column definitions (SpatiaLite types don't map to Drizzle natively)
 - JSON columns: `text` columns with `{ mode: 'json' }` in Drizzle

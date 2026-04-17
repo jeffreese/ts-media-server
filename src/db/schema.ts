@@ -132,6 +132,17 @@ export const feature = sqliteTable('feature', {
   index('feature_item_id_idx').on(table.itemId),
 ]);
 
+export const faceRejection = sqliteTable('face_rejection', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  featureId: integer('feature_id').notNull().references(() => feature.id, { onDelete: 'cascade' }),
+  personId: integer('person_id').notNull().references(() => person.id, { onDelete: 'cascade' }),
+  createdAt: text('created_at').notNull(),
+}, (table) => [
+  uniqueIndex('face_rejection_feature_person_idx').on(table.featureId, table.personId),
+  index('face_rejection_feature_id_idx').on(table.featureId),
+  index('face_rejection_person_id_idx').on(table.personId),
+]);
+
 export const featureMatch = sqliteTable('feature_match', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   featureId: integer('feature_id').notNull().references(() => feature.id, { onDelete: 'cascade' }),
@@ -416,6 +427,12 @@ export const featureRelations = relations(feature, ({ one, many }) => ({
   featureMatches: many(featureMatch, { relationName: 'sourceFeatureMatches' }),
   matchedBy: many(featureMatch, { relationName: 'targetFeatureMatches' }),
   personFeatures: many(personFeature),
+  rejections: many(faceRejection),
+}));
+
+export const faceRejectionRelations = relations(faceRejection, ({ one }) => ({
+  feature: one(feature, { fields: [faceRejection.featureId], references: [feature.id] }),
+  person: one(person, { fields: [faceRejection.personId], references: [person.id] }),
 }));
 
 export const featureMatchRelations = relations(featureMatch, ({ one }) => ({
@@ -429,6 +446,7 @@ export const personRelations = relations(person, ({ many }) => ({
   contacts: many(personContact),
   features: many(personFeature),
   users: many(user),
+  rejections: many(faceRejection),
 }));
 
 export const personNameRelations = relations(personName, ({ one }) => ({

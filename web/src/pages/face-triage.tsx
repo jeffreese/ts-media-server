@@ -496,6 +496,19 @@ function ClusterCard({
     }
   }
 
+  const handleRejectCandidate = async () => {
+    if (!topCandidate) return
+    setBusy(true)
+    try {
+      await api.rejectFace(cluster.representativeFeatureId, topCandidate.personId)
+      onAssigned()
+    } catch {
+      // rejection failed — user can retry
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const openNaming = useCallback(() => {
     setNaming(true)
     setAssigning(false)
@@ -661,15 +674,27 @@ function ClusterCard({
         {/* Actions */}
         <div className="flex shrink-0 items-center gap-1">
           {topCandidate && candidateName && (
-            <button
-              type="button"
-              onClick={handleQuickAssign}
-              disabled={busy || selectedFeatureIds.length === 0}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90 disabled:opacity-40"
-            >
-              <Check className="h-3.5 w-3.5" />
-              {candidateName}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleQuickAssign}
+                disabled={busy || selectedFeatureIds.length === 0}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90 disabled:opacity-40"
+              >
+                <Check className="h-3.5 w-3.5" />
+                {candidateName}
+              </button>
+              <button
+                type="button"
+                onClick={handleRejectCandidate}
+                disabled={busy}
+                title={`Not ${candidateName}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-sm font-medium text-foreground-muted transition-colors hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 disabled:opacity-40"
+              >
+                <Ban className="h-3.5 w-3.5" />
+                Not {candidateName}
+              </button>
+            </>
           )}
           <IconButton
             label="Name this person"
@@ -792,11 +817,13 @@ function ConfirmationCard({
   }, [topCandidate, featureId, onAssigned])
 
   const handleDeny = async () => {
-    if (!topCandidate?.firstFeature) return
+    if (!topCandidate) return
     setBusy(true)
     try {
-      await api.ignoreMatch(featureId, topCandidate.firstFeature.featureId)
+      await api.rejectFace(featureId, topCandidate.personId)
       onAssigned()
+    } catch {
+      // rejection failed — user can retry
     } finally {
       setBusy(false)
     }
@@ -944,10 +971,10 @@ function ConfirmationCard({
                 type="button"
                 onClick={handleDeny}
                 disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground-muted transition-colors hover:bg-control disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground-muted transition-colors hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 disabled:opacity-40"
               >
-                <X className="h-3.5 w-3.5" />
-                No
+                <Ban className="h-3.5 w-3.5" />
+                Not {candidateName}
                 <kbd className="ml-1 rounded border border-border px-1 py-0.5 text-[10px]">N</kbd>
               </button>
             </div>

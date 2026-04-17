@@ -767,4 +767,246 @@ describe('face triage routes', () => {
       expect(body.items).toHaveLength(2);
     });
   });
+
+  describe('POST /faces/:featureId/reject', () => {
+    it('records a rejection for a feature-person pair', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const { fA } = seedGraph(client);
+
+      const person = db.insert(schema.person).values({ info: null }).returning().get();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: `/faces/${fA.id}/reject`,
+        payload: { personId: person.id },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().success).toBe(true);
+
+      const rejection = db
+        .select()
+        .from(schema.faceRejection)
+        .where(eq(schema.faceRejection.featureId, fA.id))
+        .get();
+      expect(rejection).toBeDefined();
+      expect(rejection!.personId).toBe(person.id);
+      expect(rejection!.createdAt).toBeTruthy();
+    });
+
+    it('is idempotent — duplicate rejection does not error', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const { fA } = seedGraph(client);
+
+      const person = db.insert(schema.person).values({ info: null }).returning().get();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      await app.server.inject({
+        method: 'POST',
+        url: `/faces/${fA.id}/reject`,
+        payload: { personId: person.id },
+      });
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: `/faces/${fA.id}/reject`,
+        payload: { personId: person.id },
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const rows = db
+        .select()
+        .from(schema.faceRejection)
+        .where(eq(schema.faceRejection.featureId, fA.id))
+        .all();
+      expect(rows).toHaveLength(1);
+    });
+
+    it('returns 404 for non-existent feature', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const person = db.insert(schema.person).values({ info: null }).returning().get();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: '/faces/99999/reject',
+        payload: { personId: person.id },
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('returns 404 for non-existent person', async () => {
+      const client = setupDb();
+      const { fA } = seedGraph(client);
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'POST',
+        url: `/faces/${fA.id}/reject`,
+        payload: { personId: 99999 },
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('excludes rejected person from cluster candidates', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const { fA } = seedGraph(client);
+
+      // Create a person with a similar embedding that would normally be a candidate
+      const itemE = db.insert(schema.mediaItem).values({ name: 'e', type: 'image' }).returning().get();
+      const fE = db.insert(schema.feature).values({
+        itemId: itemE.id,
+        info: { embedding: makeEmbedding(0, 128, 0.02) },
+      }).returning().get();
+
+      const person = db.insert(schema.person).values({ info: null }).returning().get();
+      db.insert(schema.personName).values({ personId: person.id, name: 'Alice', preferred: true, info: null }).run();
+      db.insert(schema.personFeature).values({ personId: person.id, featureId: fE.id, info: null }).run();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      // Verify Alice is a candidate before rejection
+      let response = await app.server.inject({
+        method: 'GET',
+        url: '/faces/unlinked/clusters?limit=200',
+      });
+      let body = response.json();
+      let cluster = body.clusters.find((c: { featureIds: number[] }) => c.featureIds.includes(fA.id));
+      expect(cluster.candidates.length).toBeGreaterThan(0);
+      expect(cluster.candidates[0].personId).toBe(person.id);
+
+      // Reject Alice for fA's cluster representative
+      const repId = cluster.representativeFeatureId;
+      await app.server.inject({
+        method: 'POST',
+        url: `/faces/${repId}/reject`,
+        payload: { personId: person.id },
+      });
+
+      // Verify Alice is no longer a candidate
+      response = await app.server.inject({
+        method: 'GET',
+        url: '/faces/unlinked/clusters?limit=200',
+      });
+      body = response.json();
+      cluster = body.clusters.find((c: { featureIds: number[] }) => c.featureIds.includes(fA.id));
+      expect(cluster.candidates).toHaveLength(0);
+      expect(cluster.topCandidateScore).toBeNull();
+      expect(cluster.topCandidatePersonId).toBeNull();
+    });
+  });
+
+  describe('DELETE /faces/:featureId/reject', () => {
+    it('removes a rejection', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const { fA } = seedGraph(client);
+
+      const person = db.insert(schema.person).values({ info: null }).returning().get();
+      db.insert(schema.faceRejection)
+        .values({ featureId: fA.id, personId: person.id, createdAt: new Date().toISOString() })
+        .run();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'DELETE',
+        url: `/faces/${fA.id}/reject`,
+        payload: { personId: person.id },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().success).toBe(true);
+
+      const rows = db
+        .select()
+        .from(schema.faceRejection)
+        .where(eq(schema.faceRejection.featureId, fA.id))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
+
+    it('succeeds even when no rejection exists', async () => {
+      const client = setupDb();
+      const { fA } = seedGraph(client);
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'DELETE',
+        url: `/faces/${fA.id}/reject`,
+        payload: { personId: 1 },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+  });
+
+  describe('GET /faces/:featureId/rejections', () => {
+    it('returns rejections for a feature', async () => {
+      const client = setupDb();
+      const db = drizzle(client.db, { schema });
+      const { fA } = seedGraph(client);
+
+      const p1 = db.insert(schema.person).values({ info: null }).returning().get();
+      const p2 = db.insert(schema.person).values({ info: null }).returning().get();
+
+      db.insert(schema.faceRejection)
+        .values({ featureId: fA.id, personId: p1.id, createdAt: new Date().toISOString() })
+        .run();
+      db.insert(schema.faceRejection)
+        .values({ featureId: fA.id, personId: p2.id, createdAt: new Date().toISOString() })
+        .run();
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: `/faces/${fA.id}/rejections`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.items).toHaveLength(2);
+      const personIds = body.items.map((r: { personId: number }) => r.personId);
+      expect(personIds).toContain(p1.id);
+      expect(personIds).toContain(p2.id);
+    });
+
+    it('returns empty array when no rejections exist', async () => {
+      const client = setupDb();
+      const { fA } = seedGraph(client);
+
+      app = await createApp({ config: makeConfig(), db: client.db, loggerOptions });
+      await app.server.ready();
+
+      const response = await app.server.inject({
+        method: 'GET',
+        url: `/faces/${fA.id}/rejections`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().items).toHaveLength(0);
+    });
+  });
 });

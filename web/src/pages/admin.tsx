@@ -121,6 +121,9 @@ function OverviewTab() {
         <StatCard icon={Users} label="People" value={stats.people} />
         <StatCard icon={HardDrive} label="Indexed Paths" value={stats.paths} />
         <StatCard icon={Activity} label="Matches" value={stats.matches} />
+        {stats.faceRejections > 0 && (
+          <StatCard icon={UserX} label="Face Rejections" value={stats.faceRejections} />
+        )}
       </div>
 
       {pathsData && pathsData.paths.length > 0 && (

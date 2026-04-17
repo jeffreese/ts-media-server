@@ -806,11 +806,11 @@ Improve the face-to-person assignment workflow with smarter scoring, better UX p
 - [x] Immich-inspired workflow: start strict, name the obvious clusters, lower gradually
 
 ### 7. "Not This Person" Rejection Tracking
-- [ ] Add a "Not [Name]" button when a candidate is suggested on a cluster card
-- [ ] Store rejection as a `face_rejection` record (featureId, personId) or extend `feature_match.ignoreMatch`
-- [ ] Rejected person is excluded from future candidate suggestions for that feature
-- [ ] Improves suggestion accuracy over time without manual threshold tuning
-- [ ] Surface rejection count in admin stats for monitoring
+- [x] Add a "Not [Name]" button when a candidate is suggested on a cluster card
+- [x] Store rejection as a `face_rejection` record (featureId, personId) or extend `feature_match.ignoreMatch`
+- [x] Rejected person is excluded from future candidate suggestions for that feature
+- [x] Improves suggestion accuracy over time without manual threshold tuning
+- [x] Surface rejection count in admin stats for monitoring
 
 ---
 

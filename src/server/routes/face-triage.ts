@@ -40,6 +40,10 @@ const ignoreMatchBodySchema = z.object({
   matchingFeatureId: z.number().int().positive(),
 });
 
+const rejectBodySchema = z.object({
+  personId: z.number().int().positive(),
+});
+
 export interface FaceTriagePluginOptions {
   db: Database.Database;
   notificationService?: NotificationService;
@@ -218,6 +222,9 @@ function extractEmbedding(info: unknown): Float32Array | null {
  * - `POST /faces/ignore-match` — suppress a feature match pair
  * - `POST /faces/:featureId/ignore` — mark a face as ignored (excluded from triage)
  * - `POST /faces/:featureId/unignore` — restore an ignored face
+ * - `POST /faces/:featureId/reject` — reject a person suggestion for a face
+ * - `DELETE /faces/:featureId/reject` — remove a rejection for a face
+ * - `GET /faces/:featureId/rejections` — list rejections for a face
  * - `GET /faces/ignored` — list all ignored faces (paginated)
  */
 export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
@@ -273,13 +280,31 @@ export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
       const allCandidatePersonIds = new Set<number>();
       const clusterCandidates = new Map<number, { personId: number; similarity: number }[]>();
 
+      // Batch-load all rejections for unlinked features so we can filter per-cluster
+      const allFeatureIds = rawClusters.flatMap((c) => c.featureIds);
+      const rejectionRows = allFeatureIds.length > 0
+        ? db.select({ featureId: schema.faceRejection.featureId, personId: schema.faceRejection.personId })
+            .from(schema.faceRejection)
+            .where(inArray(schema.faceRejection.featureId, allFeatureIds))
+            .all()
+        : [];
+      const rejectionsByFeature = new Map<number, Set<number>>();
+      for (const row of rejectionRows) {
+        const set = rejectionsByFeature.get(row.featureId) ?? new Set();
+        set.add(row.personId);
+        rejectionsByFeature.set(row.featureId, set);
+      }
+
       for (const c of rawClusters) {
         const repId = [...c.featureIds].sort((a, b) => a - b)[0]!;
         const repEmbedding = featureEmbeddingMap.get(repId);
         if (!repEmbedding || personEmbeddings.size === 0) continue;
 
+        const rejectedPersonIds = rejectionsByFeature.get(repId);
+
         const scored: { personId: number; similarity: number }[] = [];
         for (const [personId, embeddings] of personEmbeddings) {
+          if (rejectedPersonIds?.has(personId)) continue;
           const k = Math.max(CANDIDATE_TOP_K, Math.floor(embeddings.length * 0.5));
           const sims = embeddings
             .map((e) => cosineSimilarity(repEmbedding, e))
@@ -573,6 +598,118 @@ export const faceTriagePlugin = fp<FaceTriagePluginOptions>(
       notifications?.notify('update', 'feature', { id: featureId });
 
       return reply.send({ success: true });
+    });
+
+    // -------------------------------------------------------------------
+    // POST /faces/:featureId/reject — reject a person suggestion
+    // -------------------------------------------------------------------
+
+    app.post('/faces/:featureId/reject', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const paramsParsed = featureIdParams.safeParse(request.params);
+      if (!paramsParsed.success) {
+        return reply.code(400).send({ error: 'Invalid feature ID' });
+      }
+      const bodyParsed = rejectBodySchema.safeParse(request.body);
+      if (!bodyParsed.success) {
+        return reply.code(400).send({ error: 'Request body must include "personId"' });
+      }
+      const { featureId } = paramsParsed.data;
+      const { personId } = bodyParsed.data;
+
+      const feat = db
+        .select({ id: schema.feature.id })
+        .from(schema.feature)
+        .where(eq(schema.feature.id, featureId))
+        .get();
+      if (!feat) {
+        return reply.code(404).send({ error: 'Feature not found' });
+      }
+
+      const personExists = db
+        .select({ id: schema.person.id })
+        .from(schema.person)
+        .where(eq(schema.person.id, personId))
+        .get();
+      if (!personExists) {
+        return reply.code(404).send({ error: 'Person not found' });
+      }
+
+      const existing = db
+        .select({ id: schema.faceRejection.id })
+        .from(schema.faceRejection)
+        .where(and(
+          eq(schema.faceRejection.featureId, featureId),
+          eq(schema.faceRejection.personId, personId),
+        ))
+        .get();
+
+      if (!existing) {
+        db.insert(schema.faceRejection)
+          .values({ featureId, personId, createdAt: new Date().toISOString() })
+          .run();
+      }
+
+      notifications?.notify('update', 'feature', { id: featureId });
+
+      return reply.send({ success: true });
+    });
+
+    // -------------------------------------------------------------------
+    // DELETE /faces/:featureId/reject — remove a rejection
+    // -------------------------------------------------------------------
+
+    app.delete('/faces/:featureId/reject', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const paramsParsed = featureIdParams.safeParse(request.params);
+      if (!paramsParsed.success) {
+        return reply.code(400).send({ error: 'Invalid feature ID' });
+      }
+      const bodyParsed = rejectBodySchema.safeParse(request.body);
+      if (!bodyParsed.success) {
+        return reply.code(400).send({ error: 'Request body must include "personId"' });
+      }
+      const { featureId } = paramsParsed.data;
+      const { personId } = bodyParsed.data;
+
+      db.delete(schema.faceRejection)
+        .where(and(
+          eq(schema.faceRejection.featureId, featureId),
+          eq(schema.faceRejection.personId, personId),
+        ))
+        .run();
+
+      notifications?.notify('update', 'feature', { id: featureId });
+
+      return reply.send({ success: true });
+    });
+
+    // -------------------------------------------------------------------
+    // GET /faces/:featureId/rejections — list rejections for a face
+    // -------------------------------------------------------------------
+
+    app.get('/faces/:featureId/rejections', {
+      preHandler: [app.authenticate],
+    }, async (request, reply) => {
+      const paramsParsed = featureIdParams.safeParse(request.params);
+      if (!paramsParsed.success) {
+        return reply.code(400).send({ error: 'Invalid feature ID' });
+      }
+      const { featureId } = paramsParsed.data;
+
+      const rows = db
+        .select({
+          id: schema.faceRejection.id,
+          personId: schema.faceRejection.personId,
+          createdAt: schema.faceRejection.createdAt,
+        })
+        .from(schema.faceRejection)
+        .where(eq(schema.faceRejection.featureId, featureId))
+        .all();
+
+      return reply.send({ items: rows });
     });
 
     // -------------------------------------------------------------------
