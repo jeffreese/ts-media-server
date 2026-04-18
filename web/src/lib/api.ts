@@ -17,11 +17,16 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    ...getAuthHeaders(),
+  }
+  if (init?.body) {
+    headers['Content-Type'] = 'application/json'
+  }
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
+      ...headers,
       ...init?.headers,
     },
   })

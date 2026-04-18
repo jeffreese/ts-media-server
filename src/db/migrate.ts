@@ -52,7 +52,16 @@ export function runMigrations(
   const migrationsFolder = options.migrationsFolder ?? MIGRATIONS_DIR;
   const db = drizzle(client.db, { schema });
 
-  drizzleMigrate(db, { migrationsFolder });
+  // Disable FK checks so table-rebuilding migrations (e.g. changing a FK's
+  // onDelete) can DROP and re-CREATE referenced tables inside Drizzle's
+  // transaction. PRAGMA foreign_keys is ignored inside transactions, so it
+  // must be toggled before the migrator opens its BEGIN/COMMIT block.
+  client.db.pragma('foreign_keys = OFF');
+  try {
+    drizzleMigrate(db, { migrationsFolder });
+  } finally {
+    client.db.pragma('foreign_keys = ON');
+  }
 
   if (client.spatialiteLoaded) {
     applySpatialiteSetup(client, options.spatialiteSqlPath ?? SPATIALITE_SQL_PATH);

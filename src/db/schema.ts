@@ -247,7 +247,7 @@ export const address = sqliteTable('address', {
 
 export const user = sqliteTable('user', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  personId: integer('person_id').references(() => person.id),
+  personId: integer('person_id').references(() => person.id, { onDelete: 'set null' }),
   status: text('status'),
 });
 
