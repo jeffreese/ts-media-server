@@ -60,15 +60,26 @@ describe('api', () => {
       expect(result).toEqual(mockItem)
     })
 
-    it('sends correct headers', async () => {
+    it('omits Content-Type for body-less requests', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
         new Response('{}', { status: 200 }),
       )
 
       await api.mediaItem(1)
 
+      const headers = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]![1]!.headers as Record<string, string>
+      expect(headers['Content-Type']).toBeUndefined()
+    })
+
+    it('includes Content-Type for requests with a body', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ id: 1, word: 'test', alreadyTagged: false }), { status: 200 }),
+      )
+
+      await api.addKeyword(1, 'test')
+
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        '/mediaItem/1',
+        expect.any(String),
         expect.objectContaining({
           headers: expect.objectContaining({
             'Content-Type': 'application/json',
